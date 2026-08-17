@@ -1,0 +1,119 @@
+@props([
+    'nodes' => [],
+    'depth' => 0,
+])
+
+@php
+    $branchHasActive = function (\App\Data\SidebarMenuNode $branch) use (&$branchHasActive): bool {
+        $branchItem = $branch->item;
+        $branchHref = $branchItem->href;
+        $branchPath = filled($branchHref) ? (parse_url($branchHref, PHP_URL_PATH) ?: $branchHref) : null;
+
+        if (filled($branchItem->key) && request()->routeIs($branchItem->key)) {
+            return true;
+        }
+
+        if (
+            filled($branchPath)
+            && ! \Illuminate\Support\Str::startsWith($branchHref, ['http://', 'https://'])
+            && request()->is(ltrim($branchPath, '/'))
+        ) {
+            return true;
+        }
+
+        foreach ($branch->children as $childBranch) {
+            if ($branchHasActive($childBranch)) {
+                return true;
+            }
+        }
+
+        return false;
+    };
+@endphp
+
+<ul role="list" class="space-y-1">
+    @foreach ($nodes as $node)
+        @php($item = $node->item)
+        @php($children = $node->children)
+        @php($hasChildren = count($children) > 0)
+        @php($icon = \App\Support\SidebarIcons::isValid($item->icon) ? $item->icon : null)
+
+        @php($hrefValue = $item->href)
+        @php($isExternal = filled($hrefValue) && \Illuminate\Support\Str::startsWith($hrefValue, ['http://', 'https://']))
+        @php($url = filled($hrefValue) ? ($isExternal ? $hrefValue : url($hrefValue)) : null)
+        @php($path = filled($hrefValue) ? (parse_url($hrefValue, PHP_URL_PATH) ?: $hrefValue) : null)
+
+        @php($current = false)
+        @if (filled($item->key))
+            @php($current = request()->routeIs($item->key))
+        @elseif (filled($path) && ! $isExternal)
+            @php($current = request()->is(ltrim($path, '/')))
+        @endif
+
+        @php($hasCurrentChild = collect($children)->contains(fn (\App\Data\SidebarMenuNode $child): bool => $branchHasActive($child)))
+
+        @php($isExpanded = $current || $hasCurrentChild)
+        @php($indentPx = $depth > 0 ? $depth * 12 : 0)
+        @php($rowClass = $current ? 'bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
+        @php($groupClass = $isExpanded ? 'bg-sidebar-accent/60 text-sidebar-accent-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground')
+
+        <li class="space-y-1">
+            @if ($hasChildren)
+                <details class="group rounded-lg" @if ($isExpanded) open @endif>
+                    <summary
+                        class="flex list-none items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition marker:content-none {{ $groupClass }}"
+                        style="padding-left: {{ 12 + $indentPx }}px"
+                    >
+                        @if (filled($icon))
+                            <flux:icon :icon="$icon" class="size-4 shrink-0" />
+                        @endif
+                        <span class="min-w-0 flex-1 truncate">{{ __($item->label) }}</span>
+                        @if (filled($item->badge_text))
+                            <span class="inline-flex items-center rounded-full bg-sidebar-background px-2 py-0.5 text-[11px] font-medium text-sidebar-foreground">
+                                {{ $item->badge_text }}
+                            </span>
+                        @endif
+                        <flux:icon icon="chevron-right" class="size-4 shrink-0 transition group-open:rotate-90" />
+                    </summary>
+
+                    @if (filled($url))
+                        <a
+                            href="{{ $url }}"
+                            @if (! $isExternal) wire:navigate @endif
+                            @if ($isExternal) target="_blank" rel="noreferrer noopener" @endif
+                            class="mt-1 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition {{ $rowClass }}"
+                            style="padding-left: {{ 24 + $indentPx }}px"
+                            aria-current="{{ $current ? 'page' : 'false' }}"
+                        >
+                            <flux:icon icon="arrow-right" class="size-4 shrink-0 opacity-70" />
+                            <span class="min-w-0 flex-1 truncate">{{ __('Open :label', ['label' => $item->label]) }}</span>
+                        </a>
+                    @endif
+
+                    <div class="mt-1 border-s border-sidebar-border/70 ps-2">
+                        <x-sidebar-menu-nodes :nodes="$children" :depth="$depth + 1" />
+                    </div>
+                </details>
+            @else
+                <a
+                    href="{{ $url ?? '#' }}"
+                    @if (! $isExternal && $url) wire:navigate @endif
+                    @if ($isExternal) target="_blank" rel="noreferrer noopener" @endif
+                    class="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition {{ $rowClass }}"
+                    style="padding-left: {{ 12 + $indentPx }}px"
+                    aria-current="{{ $current ? 'page' : 'false' }}"
+                >
+                    @if (filled($icon))
+                        <flux:icon :icon="$icon" class="size-4 shrink-0" />
+                    @endif
+                    <span class="min-w-0 flex-1 truncate">{{ __($item->label) }}</span>
+                    @if (filled($item->badge_text))
+                        <span class="inline-flex items-center rounded-full bg-sidebar-accent px-2 py-0.5 text-[11px] font-medium text-sidebar-accent-foreground">
+                            {{ $item->badge_text }}
+                        </span>
+                    @endif
+                </a>
+            @endif
+        </li>
+    @endforeach
+</ul>
