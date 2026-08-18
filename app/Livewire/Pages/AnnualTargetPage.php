@@ -2,13 +2,15 @@
 
 namespace App\Livewire\Pages;
 
+use App\Support\KraCategory;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
-use Flux\Flux;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -19,24 +21,61 @@ class AnnualTargetPage extends Component
     use WithPagination;
 
     public int $perPage = 10;
+
     public string $search = '';
+
     public string $yearFilter = '';
+
     public string $categoryFilter = '';
+
     public string $semesterFilter = '';
 
     public string $fullName = '';
+
     public string $position = '';
+
     public string $designation = '';
+
     public string $divisionName = '';
+
     public string $sectionName = '';
+
     public ?int $editingRowId = null;
+
     public ?int $editingIndicatorId = null;
+
     public bool $showDeleteModal = false;
+
+    public bool $showAddModal = false;
+
     public ?int $deletingRowId = null;
+
     public ?int $deletingIndicatorId = null;
+
+    public ?int $addingKraCategory = null;
+
+    public ?int $addingYear = null;
+
+    public string $addActivity = '';
+
+    public string $addSemester = '';
+
+    public string $addDescription = '';
+
+    public string $addEfficiency = '';
+
+    public string $addQuality = '';
+
+    public string $addTimeliness = '';
+
+    public string $addMovs = '';
+
+    public string $addRemarks = '';
+
     public string $editActivity = '';
+
     public string $editCategory = '';
-    public string $editSemester = '';
+
     /** @var array<int, array{semester:string, description:string, efficiency:string, quality:string, timeliness:string, movs:string, remarks:string}> */
     public array $editRows = [];
 
@@ -73,7 +112,7 @@ class AnnualTargetPage extends Component
             return;
         }
 
-        $this->fullName = trim(($user->last_name ?? '') . (filled($user->last_name) ? ', ' : '') . collect([$user->first_name, $user->middle_name])->filter()->join(' '));
+        $this->fullName = trim(($user->last_name ?? '').(filled($user->last_name) ? ', ' : '').collect([$user->first_name, $user->middle_name])->filter()->join(' '));
         $this->position = (string) ($user->position ?? '');
         $this->designation = (string) ($user->designation ?? '');
         $this->divisionName = (string) ($user->division_name ?? '');
@@ -82,10 +121,15 @@ class AnnualTargetPage extends Component
 
     public function render(): View
     {
+        $categories = $this->categories();
+
         return view('livewire.pages.annual-target-page', [
             'annualTargets' => $this->annualTargets(),
             'years' => $this->years(),
-            'categories' => $this->categories(),
+            'categories' => $categories,
+            'visibleCategories' => $this->categoryFilter === ''
+                ? $categories
+                : $categories->where('value', $this->categoryFilter)->values(),
             'semesters' => $this->semesters(),
             'perPageOptions' => $this->perPageOptions(),
         ]);
@@ -183,13 +227,13 @@ class AnnualTargetPage extends Component
             ])
             ->mapWithKeys(fn (object $item): array => [
                 (int) $item->id => [
-                    'semester' => (string) ($item->new_semester ?? ''),
-                    'description' => (string) ($item->description ?? ''),
-                    'efficiency' => (string) ($item->rg_efficiency_ ?? ''),
-                    'quality' => (string) ($item->rg_quality_ ?? ''),
-                    'timeliness' => (string) ($item->rg_timeliness_ ?? ''),
-                    'movs' => (string) ($item->rg_mov_ ?? ''),
-                    'remarks' => (string) ($item->rg_remarks_ ?? ''),
+                    'semester' => $this->normalizeSemesterValue($item->new_semester ?? null),
+                    'description' => $this->normalizeTextareaValue($item->description ?? ''),
+                    'efficiency' => $this->normalizeTextareaValue($item->rg_efficiency_ ?? ''),
+                    'quality' => $this->normalizeTextareaValue($item->rg_quality_ ?? ''),
+                    'timeliness' => $this->normalizeTextareaValue($item->rg_timeliness_ ?? ''),
+                    'movs' => $this->normalizeTextareaValue($item->rg_mov_ ?? ''),
+                    'remarks' => $this->normalizeTextareaValue($item->rg_remarks_ ?? ''),
                 ],
             ])
             ->all();
@@ -201,8 +245,108 @@ class AnnualTargetPage extends Component
         $this->editingIndicatorId = null;
         $this->editActivity = '';
         $this->editCategory = '';
-        $this->editSemester = '';
         $this->editRows = [];
+    }
+
+    public function openAddModal(int $kraCategory): void
+    {
+        $userId = Auth::id();
+
+        if ($userId === null || ! in_array($kraCategory, [1, 2, 3], true)) {
+            return;
+        }
+
+        $this->cancelEdit();
+        $this->showAddModal = true;
+        $this->addingKraCategory = $kraCategory;
+        $this->addingYear = ctype_digit($this->yearFilter) ? (int) $this->yearFilter : now()->year;
+        $this->addActivity = '';
+        $this->addSemester = ctype_digit($this->semesterFilter) ? (string) $this->semesterFilter : '1';
+        $this->addDescription = '';
+        $this->addEfficiency = '';
+        $this->addQuality = '';
+        $this->addTimeliness = '';
+        $this->addMovs = '';
+        $this->addRemarks = '';
+    }
+
+    public function cancelAdd(): void
+    {
+        $this->showAddModal = false;
+        $this->addingKraCategory = null;
+        $this->addingYear = null;
+        $this->addActivity = '';
+        $this->addSemester = '';
+        $this->addDescription = '';
+        $this->addEfficiency = '';
+        $this->addQuality = '';
+        $this->addTimeliness = '';
+        $this->addMovs = '';
+        $this->addRemarks = '';
+    }
+
+    public function saveAdd(): void
+    {
+        $userId = Auth::id();
+
+        if ($userId === null || $this->addingKraCategory === null) {
+            return;
+        }
+
+        validator([
+            'addActivity' => $this->addActivity,
+            'addSemester' => $this->addSemester,
+            'addDescription' => $this->addDescription,
+            'addEfficiency' => $this->addEfficiency,
+            'addQuality' => $this->addQuality,
+            'addTimeliness' => $this->addTimeliness,
+            'addMovs' => $this->addMovs,
+            'addRemarks' => $this->addRemarks,
+        ], [
+            'addActivity' => ['required', 'string'],
+            'addSemester' => ['required', 'regex:/^\d+$/'],
+            'addDescription' => ['required', 'string'],
+            'addEfficiency' => ['required', 'string'],
+            'addQuality' => ['required', 'string'],
+            'addTimeliness' => ['required', 'string'],
+            'addMovs' => ['required', 'string'],
+            'addRemarks' => ['nullable', 'string'],
+        ])->validate();
+
+        $now = now();
+        $year = $this->addingYear ?? now()->year;
+
+        DB::transaction(function () use ($userId, $now, $year): void {
+            $indicatorId = (int) DB::table('ipc_targets_indicators')->insertGetId([
+                'target_group_id' => null,
+                'user_id' => $userId,
+                'target_sem' => null,
+                'target_year' => $year,
+                'kra_category' => $this->addingKraCategory,
+                'activity' => $this->addActivity,
+                'target_status' => 1,
+                'created_by' => $userId,
+                'date_created' => $now,
+            ]);
+
+            DB::table('ipc_targets_indicators_itemlist')->insert([
+                'ind_id' => $indicatorId,
+                'new_semester' => $this->semesterToDatabaseValue($this->addSemester),
+                'description' => $this->addDescription,
+                'rg_efficiency_' => $this->addEfficiency,
+                'rg_quality_' => $this->addQuality,
+                'rg_timeliness_' => $this->addTimeliness,
+                'rg_mov_' => $this->addMovs,
+                'rg_remarks_' => $this->addRemarks,
+                'created_by' => $userId,
+                'modified_by' => $userId,
+                'indi_status' => 1,
+                'date_created' => $now,
+            ]);
+        });
+
+        $this->cancelAdd();
+        Flux::toast(variant: 'success', text: __('Annual target added.'));
     }
 
     public function saveEdit(): void
@@ -211,52 +355,64 @@ class AnnualTargetPage extends Component
             return;
         }
 
-        $row = DB::table('ipc_targets_indicators_itemlist as itl')
-            ->leftJoin('ipc_targets_indicators as iti', 'itl.ind_id', '=', 'iti.id')
-            ->where('itl.id', $this->editingRowId)
-            ->where('iti.user_id', Auth::id())
-            ->select(['itl.id'])
-            ->first();
+        $userId = Auth::id();
 
-        if ($row === null) {
+        if ($userId === null) {
             return;
         }
 
-        foreach ($this->editRows as $itemId => $rowValues) {
-            DB::table('ipc_targets_indicators_itemlist')
-                ->where('id', $itemId)
+        $rules = $this->buildSaveRules();
+        $validated = validator([
+            'editActivity' => $this->editActivity,
+            'editCategory' => $this->editCategory,
+            'editRows' => $this->editRows,
+        ], $rules)->validate();
+
+        $this->editActivity = (string) ($validated['editActivity'] ?? '');
+        $this->editCategory = (string) ($validated['editCategory'] ?? '');
+        $this->editRows = (array) ($validated['editRows'] ?? []);
+
+        DB::transaction(function () use ($userId): void {
+            $row = DB::table('ipc_targets_indicators_itemlist as itl')
+                ->leftJoin('ipc_targets_indicators as iti', 'itl.ind_id', '=', 'iti.id')
+                ->where('itl.id', $this->editingRowId)
+                ->where('iti.user_id', $userId)
+                ->select(['itl.id'])
+                ->first();
+
+            if ($row === null) {
+                return;
+            }
+
+            foreach ($this->editRows as $itemId => $rowValues) {
+                DB::table('ipc_targets_indicators_itemlist')
+                    ->where('id', (int) $itemId)
+                    ->where('ind_id', $this->editingIndicatorId)
+                    ->update([
+                        'new_semester' => $this->semesterToDatabaseValue($rowValues['semester'] ?? null),
+                        'description' => $rowValues['description'] ?? '',
+                        'rg_efficiency_' => $rowValues['efficiency'] ?? '',
+                        'rg_quality_' => $rowValues['quality'] ?? '',
+                        'rg_timeliness_' => $rowValues['timeliness'] ?? '',
+                        'rg_mov_' => $rowValues['movs'] ?? '',
+                        'rg_remarks_' => $rowValues['remarks'] ?? '',
+                    ]);
+            }
+
+            DB::table('ipc_targets_indicators')
+                ->where('id', $this->editingIndicatorId)
+                ->where('user_id', $userId)
                 ->update([
-                    'new_semester' => filled($rowValues['semester'] ?? '')
-                        ? (int) $rowValues['semester']
-                        : $this->semesterDefaultValue(),
-                    'description' => $rowValues['description'] ?? '',
-                    'rg_efficiency_' => $rowValues['efficiency'] ?? '',
-                    'rg_quality_' => $rowValues['quality'] ?? '',
-                    'rg_timeliness_' => $rowValues['timeliness'] ?? '',
-                    'rg_mov_' => $rowValues['movs'] ?? '',
-                    'rg_remarks_' => $rowValues['remarks'] ?? '',
+                    'activity' => $this->editActivity,
+                    'kra_category' => $this->editCategory,
                 ]);
-        }
-
-        DB::table('ipc_targets_indicators')
-            ->where('id', $this->editingIndicatorId)
-            ->update([
-                'activity' => $this->editActivity,
-                'kra_category' => $this->editCategory,
-            ]);
-
-        DB::table('ipc_targets_indicators_itemlist')
-            ->where('id', $this->editingRowId)
-            ->update([
-                'new_semester' => filled($this->editSemester)
-                    ? (int) $this->editSemester
-                    : $this->semesterDefaultValue(),
-            ]);
+        });
 
         $this->cancelEdit();
         Flux::toast(variant: 'success', text: __('Annual target updated.'));
     }
 
+    #[On('annual-target-delete-requested')]
     public function deleteRow(int $rowId): void
     {
         $row = DB::table('ipc_targets_indicators_itemlist as itl')
@@ -304,21 +460,55 @@ class AnnualTargetPage extends Component
         return 'annual-target.'.$name;
     }
 
-    protected function semesterDefaultValue(): ?int
+    protected function normalizeSemesterValue(mixed $value): string
     {
-        $row = DB::selectOne(
-            "SELECT COLUMN_DEFAULT AS default_value
-             FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = DATABASE()
-               AND TABLE_NAME = 'ipc_targets_indicators_itemlist'
-               AND COLUMN_NAME = 'new_semester'"
-        );
+        $semester = trim((string) ($value ?? ''));
 
-        if ($row === null || $row->default_value === null || $row->default_value === '') {
+        return $semester === '-' ? '' : $semester;
+    }
+
+    protected function semesterToDatabaseValue(mixed $value): ?int
+    {
+        $semester = $this->normalizeSemesterValue($value);
+
+        if ($semester === '') {
             return null;
         }
 
-        return (int) $row->default_value;
+        if (! ctype_digit($semester)) {
+            return null;
+        }
+
+        return (int) $semester;
+    }
+
+    protected function buildSaveRules(): array
+    {
+        $rules = [
+            'editActivity' => ['required', 'string'],
+            'editCategory' => ['required', 'in:1,2,3'],
+            'editRows' => ['required', 'array', 'min:1'],
+        ];
+
+        foreach (array_keys($this->editRows) as $itemId) {
+            $prefix = 'editRows.'.$itemId.'.';
+            $rules[$prefix.'semester'] = ['required', 'regex:/^\d+$/'];
+            $rules[$prefix.'description'] = ['required', 'string'];
+            $rules[$prefix.'efficiency'] = ['required', 'string'];
+            $rules[$prefix.'quality'] = ['required', 'string'];
+            $rules[$prefix.'timeliness'] = ['required', 'string'];
+            $rules[$prefix.'movs'] = ['required', 'string'];
+            $rules[$prefix.'remarks'] = ['nullable', 'string'];
+        }
+
+        return $rules;
+    }
+
+    protected function normalizeTextareaValue(mixed $value): string
+    {
+        $text = html_entity_decode((string) ($value ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return preg_replace('/<br\s*\/?>/i', "\n", $text) ?? '';
     }
 
     /** @return LengthAwarePaginator<int, object> */
@@ -351,22 +541,14 @@ class AnnualTargetPage extends Component
                 'iti.activity',
                 'iti.target_status',
                 'itl.date_created',
-                'iti.created_by',
                 'itl.id',
                 'itl.description',
-                'itl.weight',
-                'itl.quantity',
-                'itl.quality',
-                'itl.timeliness',
-                'itl.remarks',
                 'itl.rg_efficiency_',
                 'itl.rg_quality_',
                 'itl.rg_timeliness_',
                 'itl.rg_mov_',
                 'itl.rg_remarks_',
                 'itl.indi_status',
-                DB::raw('CASE WHEN iti.kra_category = 1 THEN 2 WHEN iti.kra_category = 2 THEN 1 ELSE 3 END as newsort'),
-                DB::raw('(select count(id) from ipc_targets_indicators_itemlist where ind_id = iti.id) as cnt'),
             ])
             ->when($this->yearFilter !== '', function ($query): void {
                 $query->where('iti.target_year', $this->yearFilter);
@@ -375,7 +557,17 @@ class AnnualTargetPage extends Component
                 $query->where('iti.kra_category', $this->categoryFilter);
             })
             ->when($this->semesterFilter !== '', function ($query): void {
-                $query->where('iti.target_sem', $this->semesterFilter);
+                $query->where(function ($semesterQuery): void {
+                    if ($this->semesterFilter === '1') {
+                        $semesterQuery->whereIn('iti.target_sem', [1, 3]);
+                    } elseif ($this->semesterFilter === '2') {
+                        $semesterQuery->whereIn('iti.target_sem', [2, 3]);
+                    } elseif ($this->semesterFilter === '3') {
+                        $semesterQuery->whereIn('iti.target_sem', [1, 2, 3]);
+                    } else {
+                        $semesterQuery->where('iti.target_sem', $this->semesterFilter);
+                    }
+                });
             })
             ->when(trim($this->search) !== '', function ($query): void {
                 $search = trim($this->search);
@@ -389,7 +581,8 @@ class AnnualTargetPage extends Component
             ->orderBy('iti.kra_category', 'asc')
             ->orderBy('itl.ind_id', 'asc')
             ->orderBy('iti.date_created', 'asc')
-            ->orderBy('itl.date_created', 'asc');
+            ->orderBy('itl.date_created', 'asc')
+            ->orderBy('itl.id', 'asc');
 
         if ($this->perPage === -1) {
             $items = $query->get();

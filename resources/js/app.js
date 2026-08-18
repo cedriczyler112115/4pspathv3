@@ -734,26 +734,33 @@ document.addEventListener('livewire:rendered', () => {
     initAutosizeTextareas();
 });
 
-const autosizeObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-        mutation.addedNodes.forEach((node) => {
-            if (! (node instanceof HTMLElement)) {
-                return;
-            }
-
-            if (node.matches?.('textarea[data-autosize="true"]')) {
-                initAutosizeTextareas(node.parentElement ?? document);
-                return;
-            }
-
-            if (node.querySelector?.('textarea[data-autosize="true"]')) {
-                initAutosizeTextareas(node);
-            }
+document.addEventListener('livewire:init', () => {
+    if (window.Livewire?.hook) {
+        window.Livewire.hook('morph.updated', () => {
+            requestAnimationFrame(() => initAutosizeTextareas());
         });
     }
 });
 
-autosizeObserver.observe(document.body, { childList: true, subtree: true });
+let autosizeFrame = null;
+
+const autosizeObserver = new MutationObserver(() => {
+    if (autosizeFrame !== null) {
+        return;
+    }
+
+    // A Livewire table replacement can add hundreds of nodes at once. Scan once
+    // after the batch instead of rescanning every nested node independently.
+    autosizeFrame = requestAnimationFrame(() => {
+        autosizeFrame = null;
+        initAutosizeTextareas();
+    });
+});
+
+autosizeObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+});
 
 window.addEventListener('storage', (event) => {
     if (event.key === THEME_STORAGE_KEY) {
