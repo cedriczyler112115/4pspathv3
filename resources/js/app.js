@@ -661,8 +661,42 @@ function updateSidebarActiveLinks() {
     });
 }
 
+function resizeTextarea(textarea) {
+    if (! textarea || textarea.tagName !== 'TEXTAREA') {
+        return;
+    }
+
+    textarea.style.overflow = 'hidden';
+    textarea.style.resize = 'none';
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+function initAutosizeTextareas(root = document) {
+    root.querySelectorAll('textarea[data-autosize="true"]').forEach((textarea) => {
+        if (textarea.dataset.autosizeBound === 'true') {
+            resizeTextarea(textarea);
+            return;
+        }
+
+        const handleInput = () => {
+            requestAnimationFrame(() => resizeTextarea(textarea));
+        };
+
+        textarea.addEventListener('input', handleInput);
+        textarea.addEventListener('focus', handleInput);
+        textarea.addEventListener('keyup', handleInput);
+        textarea.addEventListener('change', handleInput);
+        textarea.dataset.autosizeBound = 'true';
+        textarea.dataset.autosizeReady = 'true';
+        resizeTextarea(textarea);
+        setTimeout(() => resizeTextarea(textarea), 0);
+    });
+}
+
 ensureThemeAndAppearance();
 updateSidebarActiveLinks();
+initAutosizeTextareas();
 
 (() => {
     const setAppearanceCookie = () => {
@@ -693,7 +727,33 @@ new MutationObserver(() => {
 document.addEventListener('livewire:navigated', () => {
     ensureThemeAndAppearance();
     updateSidebarActiveLinks();
+    initAutosizeTextareas();
 });
+
+document.addEventListener('livewire:rendered', () => {
+    initAutosizeTextareas();
+});
+
+const autosizeObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+            if (! (node instanceof HTMLElement)) {
+                return;
+            }
+
+            if (node.matches?.('textarea[data-autosize="true"]')) {
+                initAutosizeTextareas(node.parentElement ?? document);
+                return;
+            }
+
+            if (node.querySelector?.('textarea[data-autosize="true"]')) {
+                initAutosizeTextareas(node);
+            }
+        });
+    }
+});
+
+autosizeObserver.observe(document.body, { childList: true, subtree: true });
 
 window.addEventListener('storage', (event) => {
     if (event.key === THEME_STORAGE_KEY) {

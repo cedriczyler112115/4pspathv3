@@ -60,17 +60,39 @@
 }
 
 [data-flux-field]:not(ui-radio, ui-checkbox) {
-    @apply grid gap-2;
+    @apply grid gap-1;
 }
 
 [data-flux-label] {
-    @apply  !mb-0 !leading-tight;
+    @apply !mb-0 !text-[11px] !leading-none;
+}
+
+input[data-flux-control],
+textarea[data-flux-control],
+select[data-flux-control],
+button[data-flux-control] {
+    @apply text-sm;
+}
+
+input[data-flux-control],
+textarea[data-flux-control],
+select[data-flux-control] {
+    @apply min-h-8 px-2.5 py-1.5;
+}
+
+button[data-flux-control] {
+    @apply min-h-8 px-2.5 py-1.5;
 }
 
 input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+}
+
+table th,
+table td {
+    @apply px-2.5 py-1.5;
 }
 
 /* \[:where(&)\]:size-4 {
@@ -144,7 +166,7 @@ select:focus[data-flux-control] {
     --chart-3: oklch(0.439 0 0);
     --chart-4: oklch(0.371 0 0);
     --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
+    --radius: 0.45rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.205 0 0);

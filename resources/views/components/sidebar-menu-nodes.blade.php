@@ -61,7 +61,7 @@
             @if ($hasChildren)
                 <details class="group rounded-lg" @if ($isExpanded) open @endif>
                     <summary
-                        class="flex list-none items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition marker:content-none {{ $groupClass }}"
+                        class="flex list-none items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition marker:content-none cursor-pointer {{ $groupClass }}"
                         style="padding-left: {{ 12 + $indentPx }}px"
                     >
                         @if (filled($icon))
@@ -81,7 +81,7 @@
                             href="{{ $url }}"
                             @if (! $isExternal) wire:navigate @endif
                             @if ($isExternal) target="_blank" rel="noreferrer noopener" @endif
-                            class="mt-1 flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition {{ $rowClass }}"
+                            class="mt-1 flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition {{ $rowClass }}"
                             style="padding-left: {{ 24 + $indentPx }}px"
                             aria-current="{{ $current ? 'page' : 'false' }}"
                         >
@@ -99,7 +99,7 @@
                     href="{{ $url ?? '#' }}"
                     @if (! $isExternal && $url) wire:navigate @endif
                     @if ($isExternal) target="_blank" rel="noreferrer noopener" @endif
-                    class="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition {{ $rowClass }}"
+                    class="flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition {{ $rowClass }}"
                     style="padding-left: {{ 12 + $indentPx }}px"
                     aria-current="{{ $current ? 'page' : 'false' }}"
                 >

@@ -24,10 +24,10 @@
             }
         @endphp
 
-        <div x-data="{ sidebarOpen: false }" class="flex min-h-screen w-full">
+        <div x-data="{ sidebarOpen: false }" class="flex min-h-screen w-full text-[0.98rem]">
             @persist('app-sidebar')
-                <aside data-debug-sidebar="desktop" class="hidden sm:flex sticky top-0 h-dvh min-h-screen w-60 shrink-0 self-stretch flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground">
-                    <div class="flex h-13 shrink-0 items-center gap-2.5 px-4">
+                <aside data-debug-sidebar="desktop" class="hidden sm:flex sticky top-0 h-dvh min-h-screen w-48 shrink-0 self-stretch flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground">
+                    <div class="flex h-10 shrink-0 items-center gap-2 px-2.5">
                         <x-app-logo
                             :sidebar="true"
                             href="{{ route('dashboard') }}"
@@ -35,13 +35,13 @@
                         />
                     </div>
 
-                    <nav class="flex-1 overflow-y-auto px-3 pb-4">
-                        <div class="space-y-4">
+                    <nav class="flex-1 overflow-y-auto px-2 pb-2.5">
+                        <div class="space-y-2.5">
                             <div class="space-y-0.5">
                                 @if (! empty($menuNodes))
                                     <x-sidebar-menu-nodes :nodes="$menuNodes" />
                                 @else
-                                    <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                                    <a href="{{ route('dashboard') }}" wire:navigate class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.25 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                                         {{ __('Dashboard') }}
                                     </a>
                                 @endif
@@ -53,11 +53,16 @@
             @endpersist
 
             <div class="flex min-w-0 flex-1 flex-col">
-                <header class="hidden h-13 items-center justify-end gap-2 border-b border-border bg-background px-4 sm:flex">
-                    <div x-data class="flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">
+                <header class="hidden h-10 items-center justify-between gap-2 border-b border-border bg-background px-2.5 sm:flex">
+                    <div class="min-w-0 overflow-hidden">
+                        <x-breadcrumbs />
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div x-data class="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center rounded-md px-1.5 py-1 text-xs transition"
+                            class="inline-flex items-center justify-center rounded-md px-1 py-0.5 text-xs transition"
                             x-on:click="$flux.appearance = 'light'"
                             :class="$flux.appearance === 'light' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
                             aria-label="{{ __('Light mode') }}"
@@ -66,14 +71,14 @@
                         </button>
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center rounded-md px-1.5 py-1 text-xs transition"
+                            class="inline-flex items-center justify-center rounded-md px-1 py-0.5 text-xs transition"
                             x-on:click="$flux.appearance = 'dark'"
                             :class="$flux.appearance === 'dark' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
                             aria-label="{{ __('Dark mode') }}"
                         >
                             <flux:icon icon="moon" class="size-4" />
                         </button>
-                    </div>
+                        </div>
 
                     <flux:dropdown position="bottom" align="end" x-data="themePreferences()" x-init="init()">
                         <flux:profile :initials="auth()->user()->initials()" icon-trailing="chevron-down" />
@@ -114,12 +119,13 @@
                             </form>
                         </flux:menu>
                     </flux:dropdown>
+                    </div>
                 </header>
 
-                <header class="flex h-13 items-center justify-between gap-2 border-b border-border bg-background px-3 sm:hidden">
+                <header class="flex h-10 items-center justify-between gap-2 border-b border-border bg-background px-2 sm:hidden">
                     <button
                         type="button"
-                        class="inline-flex items-center justify-center rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium shadow-sm hover:bg-muted"
+                        class="inline-flex items-center justify-center rounded-md border border-border bg-background px-2 py-1 text-xs font-medium shadow-sm hover:bg-muted"
                         x-on:click="sidebarOpen = true"
                         aria-label="{{ __('Open sidebar') }}"
                     >
@@ -135,10 +141,10 @@
                     </div>
 
                     <div class="flex items-center gap-1.5">
-                        <div x-data class="flex items-center gap-0.5 rounded-lg border border-border bg-background p-0.5">
+                        <div x-data class="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center rounded-md px-1.5 py-1 text-xs transition"
+                                class="inline-flex items-center justify-center rounded-md px-1 py-0.5 text-xs transition"
                                 x-on:click="$flux.appearance = 'light'"
                                 :class="$flux.appearance === 'light' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
                                 aria-label="{{ __('Light mode') }}"
@@ -147,7 +153,7 @@
                             </button>
                             <button
                                 type="button"
-                                class="inline-flex items-center justify-center rounded-md px-1.5 py-1 text-xs transition"
+                                class="inline-flex items-center justify-center rounded-md px-1 py-0.5 text-xs transition"
                                 x-on:click="$flux.appearance = 'dark'"
                                 :class="$flux.appearance === 'dark' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'"
                                 aria-label="{{ __('Dark mode') }}"
@@ -198,7 +204,7 @@
                     </div>
                 </header>
 
-                <main class="w-full max-w-full flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+                <main class="w-full max-w-full flex-1 min-w-0 px-3 py-2 sm:px-4 sm:py-3 lg:px-6 lg:py-4">
                     {{ $slot }}
                 </main>
             </div>
@@ -211,8 +217,8 @@
             >
                 <div class="fixed inset-0 bg-black/50" x-on:click="sidebarOpen = false"></div>
 
-                <aside data-debug-sidebar="mobile" class="relative flex h-full w-60 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground">
-                    <div class="flex h-13 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-4">
+                <aside data-debug-sidebar="mobile" class="relative flex h-full w-48 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground">
+                    <div class="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-2.5">
                         <x-app-logo
                             :sidebar="true"
                             href="{{ route('dashboard') }}"
@@ -221,7 +227,7 @@
 
                         <button
                             type="button"
-                            class="inline-flex items-center justify-center rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium shadow-sm hover:bg-muted"
+                            class="inline-flex items-center justify-center rounded-md border border-border bg-background px-2 py-1 text-xs font-medium shadow-sm hover:bg-muted"
                             x-on:click="sidebarOpen = false"
                             aria-label="{{ __('Close sidebar') }}"
                         >
@@ -229,12 +235,12 @@
                         </button>
                     </div>
 
-                    <nav class="flex-1 overflow-y-auto px-3 pb-4 pt-3">
+                    <nav class="flex-1 overflow-y-auto px-2 pb-2.5 pt-2">
                         <div class="space-y-0.5">
                             @if (! empty($menuNodes))
                                 <x-sidebar-menu-nodes :nodes="$menuNodes" />
                             @else
-                                <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                                <a href="{{ route('dashboard') }}" wire:navigate class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-xs font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                                     {{ __('Dashboard') }}
                                 </a>
                             @endif
