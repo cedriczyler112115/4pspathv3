@@ -21,22 +21,26 @@
                         <option value="{{ $division->id }}">{{ $division->division_name }}</option>
                     @endforeach
                 </flux:select>
-                <div class="relative">
-                    <flux:select wire:model="section_id" :label="__('Section')" wire:loading.attr="disabled" wire:target="division_id">
-                        <option value="">{{ __('Select section') }}</option>
-                        @foreach ($this->sections as $section)
-                            <option value="{{ $section->id }}">{{ $section->section_name }}</option>
-                        @endforeach
-                    </flux:select>
-                    <div class="pointer-events-none absolute inset-y-0 right-3 top-7 flex items-center">
-                        <div wire:loading.flex wire:target="division_id" class="items-center justify-center">
-                            <svg class="h-4 w-4 animate-spin text-muted-foreground" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <flux:field>
+                    <flux:label>{{ __('Section') }}</flux:label>
+                    <div class="relative" style="position: relative;">
+                        <flux:select wire:model="section_id" style="padding-left: 2.25rem;"
+                            wire:loading.attr="disabled" wire:target="division_id">
+                            <option value="">{{ __('Select section') }}</option>
+                            @foreach ($this->sections as $section)
+                                <option value="{{ $section->id }}">{{ $section->section_name }}</option>
+                            @endforeach
+                        </flux:select>
+                        <div wire:loading.flex wire:target="division_id"
+                            class="pointer-events-none items-center justify-center text-muted-foreground"
+                            style="position: absolute; left: 0.75rem; top: 50%; z-index: 10; transform: translateY(-50%);">
+                            <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
                             </svg>
                         </div>
                     </div>
-                </div>
+                </flux:field>
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
