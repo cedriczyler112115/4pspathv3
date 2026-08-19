@@ -53,7 +53,7 @@ data-theme="{{ $htmlTheme }}" @endif>
         @persist('app-sidebar')
         <aside data-debug-sidebar="desktop"
             class="hidden sm:flex sticky top-0 h-dvh min-h-screen w-64 shrink-0 self-stretch flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div class="flex h-10 shrink-0 items-center gap-2 px-2.5">
+            <div class="flex h-10 shrink-0 items-center gap-2 border-b-2 border-red-500 px-2.5">
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
             </div>
 
@@ -234,7 +234,7 @@ data-theme="{{ $htmlTheme }}" @endif>
             <aside data-debug-sidebar="mobile"
                 class="relative flex h-full w-48 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground">
                 <div
-                    class="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-sidebar-border px-2.5">
+                    class="flex h-10 shrink-0 items-center justify-between gap-2 border-b-2 border-red-500 px-2.5">
                     <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
 
                     <button type="button"

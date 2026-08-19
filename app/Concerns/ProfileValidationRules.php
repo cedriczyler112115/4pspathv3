@@ -17,15 +17,14 @@ trait ProfileValidationRules
     {
         return [
             'name' => $this->nameRules(),
-            'email' => $this->emailRules($userId),
             'last_name' => $this->nullableTextRule(100),
             'first_name' => $this->nullableTextRule(100),
             'middle_name' => $this->nullableTextRule(100),
             'extension_name' => $this->nullableTextRule(50),
             'position' => $this->nullableTextRule(100),
             'designation' => $this->nullableTextRule(100),
-            'division' => $this->nullableTextRule(255),
-            'section' => $this->nullableTextRule(255),
+            'division_id' => ['nullable', 'integer', Rule::exists('lib_division', 'id')],
+            'section_id' => ['nullable', 'integer', Rule::exists('lib_section', 'id')],
             'contact_number' => $this->nullableTextRule(100),
             'supervisor_id' => ['nullable', 'integer', Rule::exists(User::class, 'id')],
         ];
@@ -39,24 +38,6 @@ trait ProfileValidationRules
     protected function nameRules(): array
     {
         return ['required', 'string', 'max:255'];
-    }
-
-    /**
-     * Get the validation rules used to validate user emails.
-     *
-     * @return array<int, ValidationRule|array<mixed>|string>
-     */
-    protected function emailRules(?int $userId = null): array
-    {
-        return [
-            'required',
-            'string',
-            'email',
-            'max:255',
-            $userId === null
-                ? Rule::unique(User::class)
-                : Rule::unique(User::class)->ignore($userId),
-        ];
     }
 
     /**

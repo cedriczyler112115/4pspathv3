@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\ApplicationSetting;
 use App\View\Composers\SidebarMenuComposer;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -26,7 +27,17 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureApplicationSettings();
         $this->configureViewComposers();
+    }
+
+    protected function configureApplicationSettings(): void
+    {
+        $appName = ApplicationSetting::valueFor('app_name');
+
+        if (filled($appName)) {
+            config(['app.name' => (string) $appName]);
+        }
     }
 
     protected function configureViewComposers(): void

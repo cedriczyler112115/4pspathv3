@@ -289,3 +289,9 @@ table td {
     --color-accent-content: var(--theme-dark-primary);
     --color-accent-foreground: var(--theme-dark-primary-foreground);
 }
+
+html.annual-target-is-dragging,
+html.annual-target-is-dragging body,
+html.annual-target-is-dragging body * {
+    cursor: grabbing !important;
+}

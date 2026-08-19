@@ -193,7 +193,10 @@
                             $categoryRows = collect($annualTargets->items())->where('kra_category', $category->value);
                             $groupedByIndicator = $categoryRows->groupBy('ind_id');
                         @endphp
-                <tbody wire:key="annual-target-category-heading-{{ $category->value }}">
+                <tbody wire:key="annual-target-category-heading-{{ $category->value }}"
+                    x-data
+                    x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
+                    x-on:drop.prevent="const raw = $event.dataTransfer.getData('application/json'); if (raw) { $dispatch('annual-target-target-dropped', { source: JSON.parse(raw), target: { type: 'category', kra: {{ (int) $category->value }}, indicatorId: 0, itemId: 0 } }); }">
                         <tr wire:key="annual-target-category-{{ $category->value }}" class="bg-muted/30">
                             <td colspan="9" class="border-b border-border px-3 py-2">
                                 <div class="flex items-center justify-between gap-3">
@@ -222,7 +225,7 @@
                             <livewire:annual-target.indicator-rows
                                 :indicator-id="(int) $indId"
                                 :rows="$groupRows->map(fn ($row) => (array) $row)->all()"
-                                :key="'annual-target-indicator-'.$indId"
+                                :key="'annual-target-indicator-'.$indId.'-'.$groupRows->pluck('id')->join('-')"
                             />
                         @empty
                             <tbody wire:key="annual-target-empty-{{ $category->value }}">
@@ -407,6 +410,27 @@
                 <flux:button variant="primary" type="button" class="bg-red-600 text-white hover:bg-red-700"
                     wire:click="confirmDelete">
                     {{ __('Delete') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal wire:model="showMoveConfirmModal" dismissible>
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Move target to another KRA?') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('This target will be moved to a different Key Result Area category. Confirm to save the new category and position.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <flux:button variant="ghost" type="button" wire:click="cancelTargetMove">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" class="bg-blue-600 text-white hover:bg-blue-700"
+                    wire:click="confirmTargetMove">
+                    {{ __('Confirm move') }}
                 </flux:button>
             </div>
         </div>

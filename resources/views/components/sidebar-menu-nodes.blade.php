@@ -31,7 +31,35 @@
     };
 @endphp
 
-<ul role="list" class="space-y-1">
+@php
+    $activeNodeId = null;
+
+    foreach ($nodes as $node) {
+        $item = $node->item;
+        $children = $node->children;
+        $hasChildren = count($children) > 0;
+
+        $hrefValue = $item->href;
+        $isExternal = filled($hrefValue) && \Illuminate\Support\Str::startsWith($hrefValue, ['http://', 'https://']);
+        $path = filled($hrefValue) ? (parse_url($hrefValue, PHP_URL_PATH) ?: $hrefValue) : null;
+
+        $current = false;
+        if (filled($item->key)) {
+            $current = request()->routeIs($item->key);
+        } elseif (filled($path) && ! $isExternal) {
+            $current = request()->is(ltrim($path, '/'));
+        }
+
+        $hasCurrentChild = collect($children)->contains(fn (\App\Data\SidebarMenuNode $child): bool => $branchHasActive($child));
+
+        if (($current || $hasCurrentChild) && $hasChildren) {
+            $activeNodeId = $item->id;
+            break;
+        }
+    }
+@endphp
+
+<ul role="list" class="space-y-1" x-data="{ openItem: {{ $activeNodeId ?? 'null' }} }">
     @foreach ($nodes as $node)
         @php($item = $node->item)
         @php($children = $node->children)
@@ -59,10 +87,11 @@
 
         <li class="space-y-1">
             @if ($hasChildren)
-                <details class="group rounded-lg" @if ($isExpanded) open @endif>
+                <details class="group rounded-lg" x-bind:open="openItem === {{ $item->id }} || {{ $isExpanded ? 'true' : 'false' }}">
                     <summary
                         class="flex list-none items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition marker:content-none cursor-pointer {{ $groupClass }}"
                         style="padding-left: {{ 12 + $indentPx }}px"
+                        x-on:click.prevent="openItem = openItem === {{ $item->id }} ? null : {{ $item->id }}"
                     >
                         @if (filled($icon))
                             <flux:icon :icon="$icon" class="size-4 shrink-0" />

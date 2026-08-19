@@ -38,7 +38,7 @@ class UsersPage extends Component
     public string $editSection = '';
     public string $editSupervisorId = '';
     public string $editContactNumber = '';
-    public string $editIsSupervisor = '0';
+    public bool $editIsSupervisor = false;
 
     protected string $paginationTheme = 'tailwind';
 
@@ -107,7 +107,7 @@ class UsersPage extends Component
         $this->editSection = (string) ($user->section_id ?? '');
         $this->editSupervisorId = (string) ($user->supervisor_id ?? '');
         $this->editContactNumber = (string) ($user->contact_number ?? '');
-        $this->editIsSupervisor = (string) ((int) ($user->is_supervisor ?? 0));
+        $this->editIsSupervisor = (int) ($user->is_supervisor ?? 0) === 1;
         $this->showEditModal = true;
     }
 
@@ -123,17 +123,17 @@ class UsersPage extends Component
         }
 
         $data = $this->validate([
-            'editLastName' => ['nullable', 'string', 'max:255'],
-            'editFirstName' => ['nullable', 'string', 'max:255'],
-            'editMiddleName' => ['nullable', 'string', 'max:255'],
+            'editLastName' => ['required', 'string', 'max:255'],
+            'editFirstName' => ['required', 'string', 'max:255'],
+            'editMiddleName' => ['required', 'string', 'max:255'],
             'editExtensionName' => ['nullable', 'string', 'max:10'],
-            'editPosition' => ['nullable', 'string', 'max:100'],
-            'editDesignation' => ['nullable', 'string', 'max:100'],
-            'editDivision' => ['nullable', 'string', Rule::exists('lib_division', 'id')],
-            'editSection' => ['nullable', 'string', Rule::exists('lib_section', 'id')],
-            'editSupervisorId' => ['nullable', 'string', Rule::exists('users', 'id')->where(fn ($query) => $query->where('id', '!=', $this->editUserId))],
-            'editContactNumber' => ['nullable', 'string', 'max:255'],
-            'editIsSupervisor' => ['required', Rule::in(['0', '1'])],
+            'editPosition' => ['required', 'string', 'max:100'],
+            'editDesignation' => ['required', 'string', 'max:100'],
+            'editDivision' => ['required', 'string', Rule::exists('lib_division', 'id')],
+            'editSection' => ['required', 'string', Rule::exists('lib_section', 'id')],
+            'editSupervisorId' => ['required', 'string', Rule::exists('users', 'id')->where(fn ($query) => $query->where('id', '!=', $this->editUserId))],
+            'editContactNumber' => ['required', 'string', 'max:255'],
+            'editIsSupervisor' => ['required', 'boolean'],
         ]);
 
         DB::table('users')
@@ -149,8 +149,8 @@ class UsersPage extends Component
                 'section_id' => $data['editSection'] !== '' ? $data['editSection'] : null,
                 'supervisor_id' => $data['editSupervisorId'] !== '' ? $data['editSupervisorId'] : null,
                 'contact_number' => $data['editContactNumber'] ?: null,
-                'is_supervisor' => $data['editIsSupervisor'],
-                'date_modified' => now(),
+                'is_supervisor' => (int) $data['editIsSupervisor'],
+                'updated_at' => now(),
             ]);
 
         $this->showEditModal = false;
@@ -173,7 +173,7 @@ class UsersPage extends Component
         $this->editSection = '';
         $this->editSupervisorId = '';
         $this->editContactNumber = '';
-        $this->editIsSupervisor = '0';
+        $this->editIsSupervisor = false;
     }
 
     public function confirmDelete(int $userId): void
@@ -241,6 +241,7 @@ class UsersPage extends Component
                 'users.last_name',
                 'users.first_name',
                 'users.middle_name',
+                'users.extension_name',
                 'users.email',
                 'users.contact_number',
                 'users.position',
@@ -256,7 +257,7 @@ class UsersPage extends Component
 
                 $query->where(function ($subQuery) use ($search): void {
                     $subQuery->whereRaw(
-                        "CONCAT_WS(' ', users.last_name, users.first_name, users.middle_name) like ?",
+                        "CONCAT_WS(' ', users.last_name, users.first_name, users.middle_name, users.extension_name) like ?",
                         ['%'.$search.'%']
                     )
                         ->orWhere('users.position', 'like', '%'.$search.'%')
@@ -272,7 +273,7 @@ class UsersPage extends Component
             ->when($this->statusFilter !== '', function ($query): void {
                 $query->where('users.is_status', $this->statusFilter);
             })
-            ->orderByDesc('users.id');
+            ->orderBy('users.id');
 
         return $query->paginate($this->perPage);
     }
@@ -313,7 +314,7 @@ class UsersPage extends Component
         return DB::table('users')
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->get(['id', 'last_name', 'first_name', 'middle_name']);
+            ->get(['id', 'last_name', 'first_name', 'middle_name', 'extension_name']);
     }
 
     public function render(): View

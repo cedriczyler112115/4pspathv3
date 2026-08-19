@@ -18,9 +18,9 @@
     $trail = collect();
 
     if ($routeName === 'dashboard' || $segments->isEmpty()) {
-        $trail->push(['label' => __('Dashboard'), 'url' => route('dashboard')]);
+        $trail->push(['label' => '', 'url' => route('dashboard')]);
     } else {
-        $trail->push(['label' => __('Dashboard'), 'url' => route('dashboard')]);
+        $trail->push(['label' => '', 'url' => route('dashboard')]);
 
         $path = '';
         foreach ($segments as $segment) {
@@ -39,11 +39,15 @@
         <ol class="flex min-w-0 items-center gap-2 whitespace-nowrap overflow-x-auto">
             @foreach ($trail as $index => $item)
                 <li class="flex items-center gap-2">
-                    @if ($index > 0)
+                    @if ($index > 1)
                         <span class="text-red-500/70">/</span>
                     @endif
 
-                    @if (! is_null($item['url']) && $index !== $trail->count() - 1)
+                    @if ($index === 0)
+                        <a href="{{ $item['url'] }}" wire:navigate class="font-medium text-foreground hover:text-red-600" aria-label="{{ __('Dashboard') }}">
+                            <span class="sr-only">{{ __('Dashboard') }}</span>
+                        </a>
+                    @elseif (! is_null($item['url']) && $index !== $trail->count() - 1)
                         <a href="{{ $item['url'] }}" wire:navigate class="font-medium text-foreground hover:text-red-600">
                             {{ $item['label'] }}
                         </a>

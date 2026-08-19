@@ -63,11 +63,15 @@
                         <tr class="odd:bg-background even:bg-muted/25 hover:bg-accent/45 transition-colors">
                             <td
                                 class="border-b border-r border-border px-2 py-3 text-center text-muted-foreground whitespace-nowrap">
-                                {{ $user->id }}
+                                {{ ($users->firstItem() ?? 1) + $loop->index }}
                             </td>
                             <td class="border-b border-r border-border px-3 py-3">
                                 @php
-                                    $fullName = trim(($user->last_name ?? '') . (filled($user->last_name) ? ', ' : '') . collect([$user->first_name, $user->middle_name])->filter()->join(' '));
+                                    $fullName = trim(
+                                        ($user->last_name ?? '') .
+                                        (filled($user->last_name) ? ', ' : '') .
+                                        collect([$user->first_name, $user->middle_name, $user->extension_name])->filter()->join(' ')
+                                    );
                                 @endphp
                                 {{ strtoupper($fullName) }}
                             </td>
@@ -120,7 +124,8 @@
         </div>
     </div>
 
-    <flux:modal wire:model="showEditModal" dismissible class="max-w-lg">
+    <flux:modal wire:model="showEditModal" dismissible
+        style="width: min(64rem, calc(100vw - 2rem)); max-width: min(64rem, calc(100vw - 2rem));">
         <div class="space-y-5">
             <div class="space-y-1">
                 <flux:heading size="lg">{{ __('Edit user') }}</flux:heading>
@@ -149,12 +154,16 @@
                     </flux:select>
                     <flux:select wire:model.live="editSupervisorId" :label="__('Supervisor')">
                         <option value="">{{ __('Select supervisor') }}</option>
-                        @foreach ($supervisors as $supervisor)
-                            @php
-                                $supervisorName = trim(($supervisor->last_name ?? '') . (filled($supervisor->last_name) ? ', ' : '') . collect([$supervisor->first_name, $supervisor->middle_name])->filter()->join(' '));
-                            @endphp
-                            <option value="{{ $supervisor->id }}">{{ strtoupper($supervisorName) }}</option>
-                        @endforeach
+                            @foreach ($supervisors as $supervisor)
+                                @php
+                                    $supervisorName = trim(
+                                        ($supervisor->last_name ?? '') .
+                                        (filled($supervisor->last_name) ? ', ' : '') .
+                                        collect([$supervisor->first_name, $supervisor->middle_name, $supervisor->extension_name])->filter()->join(' ')
+                                    );
+                                @endphp
+                                <option value="{{ $supervisor->id }}">{{ strtoupper($supervisorName) }}</option>
+                            @endforeach
                     </flux:select>
                     <flux:input wire:model.live="editContactNumber" :label="__('Contact Number')" />
                     <div class="space-y-2">
@@ -162,7 +171,7 @@
                         <label
                             class="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3">
                             <input type="checkbox" class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                                wire:model.live="editIsSupervisor" value="1">
+                                wire:model.live="editIsSupervisor">
                             <span class="text-sm text-foreground">
                                 {{ __('Make as Supervisor') }}
                             </span>

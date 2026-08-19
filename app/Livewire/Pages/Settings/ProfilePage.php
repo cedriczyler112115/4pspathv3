@@ -7,11 +7,12 @@ use App\Models\User;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Profile settings')]
+#[Title('My Account')]
 class ProfilePage extends Component
 {
     use ProfileValidationRules;
@@ -25,8 +26,8 @@ class ProfilePage extends Component
     public string $extension_name = '';
     public string $position = '';
     public string $designation = '';
-    public string $division = '';
-    public string $section = '';
+    public string $division_id = '';
+    public string $section_id = '';
     public string $contact_number = '';
     public ?int $supervisor_id = null;
 
@@ -47,8 +48,8 @@ class ProfilePage extends Component
         $this->extension_name = $user->extension_name ?? '';
         $this->position = $user->position ?? '';
         $this->designation = $user->designation ?? '';
-        $this->division = $user->division ?? '';
-        $this->section = $user->section ?? '';
+        $this->division_id = (string) ($user->division_id ?? '');
+        $this->section_id = (string) ($user->section_id ?? '');
         $this->contact_number = $user->contact_number ?? '';
         $this->supervisor_id = $user->supervisor_id;
     }
@@ -60,6 +61,13 @@ class ProfilePage extends Component
         $validated = $this->validate($this->profileRules($user->id));
         $validated['supervisor_id'] = $validated['supervisor_id'] ?: null;
 
+        $divisionName = $this->division_id !== ''
+            ? (string) (DB::table('lib_division')->where('id', $this->division_id)->value('division_name') ?? '')
+            : '';
+        $sectionName = $this->section_id !== ''
+            ? (string) (DB::table('lib_section')->where('id', $this->section_id)->value('section_name') ?? '')
+            : '';
+
         $user->fill($validated);
         $user->name = trim(collect([
             $validated['first_name'] ?? '',
@@ -67,20 +75,12 @@ class ProfilePage extends Component
             $validated['last_name'] ?? '',
             $validated['extension_name'] ?? '',
         ])->filter()->join(' '));
-
-        if ($user->isDirty('email')) {
-            $user->email_verified_at = null;
-        }
+        $user->division = $divisionName;
+        $user->section = $sectionName;
 
         $user->save();
 
         Flux::toast(variant: 'success', text: __('Profile updated.'));
-    }
-
-    #[Computed]
-    public function showDeleteUser(): bool
-    {
-        return Auth::user()->hasVerifiedEmail();
     }
 
     #[Computed]
@@ -91,6 +91,30 @@ class ProfilePage extends Component
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get(['id', 'name', 'last_name', 'first_name', 'middle_name', 'extension_name']);
+    }
+
+    #[Computed]
+    public function divisions()
+    {
+        return DB::table('lib_division')
+            ->orderBy('division_name')
+            ->get(['id', 'division_name']);
+    }
+
+    #[Computed]
+    public function sections()
+    {
+        return DB::table('lib_section')
+            ->when($this->division_id !== '', function ($query): void {
+                $query->where('division_id', $this->division_id);
+            })
+            ->orderBy('section_name')
+            ->get(['id', 'section_name', 'division_id']);
+    }
+
+    public function updatedDivisionId(): void
+    {
+        $this->section_id = '';
     }
 
     public function render(): View

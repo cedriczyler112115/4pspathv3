@@ -28,10 +28,10 @@ class SidebarMenuItemSeeder extends Seeder
 
             SidebarMenuItem::query()->create([
                 'parent_id' => $platform->id,
-                'label' => 'Profile',
-                'key' => 'profile.edit',
-                'href' => '/settings/profile',
-                'icon' => 'user-circle',
+                'label' => 'Users List',
+                'key' => 'administration.users.index',
+                'href' => '/libraries/users/users-list',
+                'icon' => 'users',
                 'sort_order' => 10,
                 'is_active' => true,
             ]);
@@ -50,7 +50,7 @@ class SidebarMenuItemSeeder extends Seeder
                 'parent_id' => $platform->id,
                 'label' => 'Security',
                 'key' => 'security.edit',
-                'href' => '/settings/security',
+                'href' => '/myaccount/security',
                 'icon' => 'shield-check',
                 'sort_order' => 30,
                 'is_active' => true,
@@ -60,7 +60,7 @@ class SidebarMenuItemSeeder extends Seeder
                 'parent_id' => $platform->id,
                 'label' => 'Sidebar Menu',
                 'key' => 'sidebar-menu.index',
-                'href' => '/settings/sidebar-menu',
+                'href' => '/administration/sidebar-menu',
                 'icon' => 'bars-3-bottom-left',
                 'sort_order' => 40,
                 'is_active' => true,

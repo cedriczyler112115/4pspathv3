@@ -1,9 +1,5 @@
 <section class="w-full">
-    @include('partials.settings-heading')
-
-    <flux:heading class="sr-only">{{ __('Profile settings') }}</flux:heading>
-
-    <x-pages::settings.layout :heading="__('Profile')" :subheading="__('Update your personal and work details')"
+    <x-pages::settings.layout :heading="__('My Account')" :subheading="__('Manage your personal, work, and contact information from this page.')"
         content-class="mt-3 w-full max-w-3xl">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
             <div class="grid gap-4 md:grid-cols-2">
@@ -19,8 +15,28 @@
             <div class="grid gap-4 md:grid-cols-2">
                 <flux:input wire:model="position" :label="__('Position')" type="text" />
                 <flux:input wire:model="designation" :label="__('Designation')" type="text" />
-                <flux:input wire:model="division" :label="__('Division')" type="text" />
-                <flux:input wire:model="section" :label="__('Section')" type="text" />
+                <flux:select wire:model.live="division_id" :label="__('Division')">
+                    <option value="">{{ __('Select division') }}</option>
+                    @foreach ($this->divisions as $division)
+                        <option value="{{ $division->id }}">{{ $division->division_name }}</option>
+                    @endforeach
+                </flux:select>
+                <div class="relative">
+                    <flux:select wire:model="section_id" :label="__('Section')" wire:loading.attr="disabled" wire:target="division_id">
+                        <option value="">{{ __('Select section') }}</option>
+                        @foreach ($this->sections as $section)
+                            <option value="{{ $section->id }}">{{ $section->section_name }}</option>
+                        @endforeach
+                    </flux:select>
+                    <div class="pointer-events-none absolute inset-y-0 right-3 top-7 flex items-center">
+                        <div wire:loading.flex wire:target="division_id" class="items-center justify-center">
+                            <svg class="h-4 w-4 animate-spin text-muted-foreground" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="grid gap-4 md:grid-cols-2">
@@ -36,8 +52,9 @@
                 </flux:select>
             </div>
 
-            <div>
-                <flux:input wire:model="email" :label="__('Email')" type="email" required autocomplete="email" />
+            <div class="rounded-xl border border-border bg-muted/20 p-4">
+                <div class="text-sm font-medium text-foreground">{{ __('Email') }}</div>
+                <div class="mt-1 text-sm text-muted-foreground">{{ $email }}</div>
             </div>
 
             <div class="flex items-center gap-4">
@@ -49,8 +66,5 @@
             </div>
         </form>
 
-        @if ($this->showDeleteUser)
-            @livewire(\App\Livewire\Pages\Settings\DeleteUserForm::class)
-        @endif
     </x-pages::settings.layout>
 </section>

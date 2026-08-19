@@ -1,7 +1,11 @@
 <section class="w-full">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="min-w-0 flex-1">
-            @include('partials.settings-heading')
+            <div class="relative mb-4 w-full">
+                <flux:heading size="lg" level="1">{{ __('Administration') }}</flux:heading>
+                <flux:subheading size="sm">{{ __('Manage the administration sidebar menu structure and navigation links.') }}</flux:subheading>
+                <flux:separator variant="subtle" class="mt-2" />
+            </div>
         </div>
 
         <flux:button

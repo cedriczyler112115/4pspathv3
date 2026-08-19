@@ -10,7 +10,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Security settings')]
+#[Title('My Account')]
 class SecurityPage extends Component
 {
     use PasswordValidationRules;

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Models\ApplicationSetting;
 use App\Support\KraCategory;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -40,6 +42,8 @@ class AnnualTargetPage extends Component
 
     public string $sectionName = '';
 
+    public bool $includeStrategicFunction = true;
+
     public ?int $editingRowId = null;
 
     public ?int $editingIndicatorId = null;
@@ -47,6 +51,17 @@ class AnnualTargetPage extends Component
     public bool $showDeleteModal = false;
 
     public bool $showAddModal = false;
+
+    public bool $showMoveConfirmModal = false;
+
+    #[Locked]
+    public ?int $pendingMoveIndicatorId = null;
+
+    #[Locked]
+    public ?int $pendingMoveTargetIndicatorId = null;
+
+    #[Locked]
+    public ?int $pendingMoveTargetKra = null;
 
     public ?int $deletingRowId = null;
 
@@ -81,11 +96,17 @@ class AnnualTargetPage extends Component
 
     public function mount(): void
     {
+        $this->includeStrategicFunction = ApplicationSetting::boolean('include_strategic_function', true);
         $this->perPage = (int) Session::get($this->sessionKey('perPage'), 10);
         $this->search = (string) Session::get($this->sessionKey('search'), '');
         $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), now()->year);
         $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
         $this->semesterFilter = (string) Session::get($this->sessionKey('semesterFilter'), '');
+
+        if (! $this->includeStrategicFunction && $this->categoryFilter === '1') {
+            $this->categoryFilter = '';
+            Session::forget($this->sessionKey('categoryFilter'));
+        }
 
         $userId = Auth::id();
 
@@ -155,6 +176,10 @@ class AnnualTargetPage extends Component
 
     public function updatedCategoryFilter(): void
     {
+        if ($this->categoryFilter !== '' && ! in_array((int) $this->categoryFilter, $this->allowedKraCategories(), true)) {
+            $this->categoryFilter = '';
+        }
+
         Session::put($this->sessionKey('categoryFilter'), $this->categoryFilter);
         $this->resetPage();
     }
@@ -252,7 +277,7 @@ class AnnualTargetPage extends Component
     {
         $userId = Auth::id();
 
-        if ($userId === null || ! in_array($kraCategory, [1, 2, 3], true)) {
+        if ($userId === null || ! in_array($kraCategory, $this->allowedKraCategories(), true)) {
             return;
         }
 
@@ -289,7 +314,7 @@ class AnnualTargetPage extends Component
     {
         $userId = Auth::id();
 
-        if ($userId === null || $this->addingKraCategory === null) {
+        if ($userId === null || $this->addingKraCategory === null || ! in_array($this->addingKraCategory, $this->allowedKraCategories(), true)) {
             return;
         }
 
@@ -317,12 +342,19 @@ class AnnualTargetPage extends Component
         $year = $this->addingYear ?? now()->year;
 
         DB::transaction(function () use ($userId, $now, $year): void {
+            $nextIndicatorOrder = ((int) DB::table('ipc_targets_indicators')
+                ->where('user_id', $userId)
+                ->where('target_year', $year)
+                ->where('kra_category', $this->addingKraCategory)
+                ->max('display_order')) + 1;
+
             $indicatorId = (int) DB::table('ipc_targets_indicators')->insertGetId([
                 'target_group_id' => null,
                 'user_id' => $userId,
                 'target_sem' => null,
                 'target_year' => $year,
                 'kra_category' => $this->addingKraCategory,
+                'display_order' => $nextIndicatorOrder,
                 'activity' => $this->addActivity,
                 'target_status' => 1,
                 'created_by' => $userId,
@@ -331,6 +363,7 @@ class AnnualTargetPage extends Component
 
             DB::table('ipc_targets_indicators_itemlist')->insert([
                 'ind_id' => $indicatorId,
+                'display_order' => 1,
                 'new_semester' => $this->semesterToDatabaseValue($this->addSemester),
                 'description' => $this->addDescription,
                 'rg_efficiency_' => $this->addEfficiency,
@@ -455,6 +488,180 @@ class AnnualTargetPage extends Component
         Flux::toast(variant: 'success', text: __('Annual target deleted.'));
     }
 
+    #[On('annual-target-target-dropped')]
+    public function targetDropped(array $source, array $target): void
+    {
+        $move = $this->validatedMove($source, $target);
+
+        if ($move === null) {
+            return;
+        }
+
+        if ((int) $move['sourceKra'] !== (int) $move['targetKra']) {
+            $this->pendingMoveIndicatorId = (int) $move['sourceIndicatorId'];
+            $this->pendingMoveTargetIndicatorId = (int) $move['targetIndicatorId'] ?: null;
+            $this->pendingMoveTargetKra = (int) $move['targetKra'];
+            $this->showMoveConfirmModal = true;
+
+            return;
+        }
+
+        $this->applyMove($move);
+    }
+
+    public function cancelTargetMove(): void
+    {
+        $this->showMoveConfirmModal = false;
+        $this->pendingMoveIndicatorId = null;
+        $this->pendingMoveTargetIndicatorId = null;
+        $this->pendingMoveTargetKra = null;
+    }
+
+    public function confirmTargetMove(): void
+    {
+        if ($this->pendingMoveIndicatorId === null || $this->pendingMoveTargetKra === null) {
+            return;
+        }
+
+        $sourceIndicatorId = $this->pendingMoveIndicatorId;
+        $targetIndicatorId = $this->pendingMoveTargetIndicatorId;
+        $targetKra = $this->pendingMoveTargetKra;
+        $this->cancelTargetMove();
+
+        $source = [
+            'type' => 'main',
+            'indicatorId' => $sourceIndicatorId,
+            'itemId' => 0,
+        ];
+        $target = $targetIndicatorId === null
+            ? ['type' => 'category', 'indicatorId' => 0, 'itemId' => 0, 'kra' => $targetKra]
+            : ['type' => 'main', 'indicatorId' => $targetIndicatorId, 'itemId' => 0, 'kra' => $targetKra];
+        $move = $this->validatedMove($source, $target);
+
+        if ($move === null || (int) $move['sourceKra'] === (int) $move['targetKra']) {
+            Flux::toast(variant: 'danger', text: __('Unable to move the target. Please try again.'));
+
+            return;
+        }
+
+        $this->applyMove($move);
+    }
+
+    /** @param array<string, mixed> $source @param array<string, mixed> $target @return array<string, int|string>|null */
+    protected function validatedMove(array $source, array $target): ?array
+    {
+        $userId = Auth::id();
+        $sourceType = (string) ($source['type'] ?? '');
+        $targetType = (string) ($target['type'] ?? '');
+        $sourceIndicatorId = (int) ($source['indicatorId'] ?? 0);
+        $targetIndicatorId = (int) ($target['indicatorId'] ?? 0);
+        $sourceItemId = (int) ($source['itemId'] ?? 0);
+        $targetItemId = (int) ($target['itemId'] ?? 0);
+
+        if ($userId === null || ! in_array($sourceType, ['main', 'sub'], true) || ! in_array($targetType, ['main', 'sub', 'category'], true)) {
+            return null;
+        }
+
+        $sourceIndicator = DB::table('ipc_targets_indicators')->where('id', $sourceIndicatorId)->where('user_id', $userId)->first();
+        $targetIndicator = $targetIndicatorId > 0
+            ? DB::table('ipc_targets_indicators')->where('id', $targetIndicatorId)->where('user_id', $userId)->first()
+            : null;
+        $targetKra = $targetType === 'category' ? (int) ($target['kra'] ?? 0) : (int) ($targetIndicator->kra_category ?? 0);
+
+        if ($sourceIndicator === null || ! in_array($targetKra, $this->allowedKraCategories(), true) || ($targetType !== 'category' && $targetIndicator === null)) {
+            return null;
+        }
+
+        if ($sourceType === 'sub') {
+            $sourceItem = DB::table('ipc_targets_indicators_itemlist')->where('id', $sourceItemId)->where('ind_id', $sourceIndicatorId)->first();
+            $targetItem = $targetItemId > 0 ? DB::table('ipc_targets_indicators_itemlist')->where('id', $targetItemId)->where('ind_id', $targetIndicatorId)->first() : null;
+
+            if ($sourceItem === null || ($targetType !== 'category' && $targetItem === null)) {
+                return null;
+            }
+
+            // A sub-target needs a destination parent, so category headings only accept main targets.
+            if ($targetType === 'category') {
+                return null;
+            }
+        }
+
+        if ($sourceIndicatorId === $targetIndicatorId && ($sourceType === 'main' || $sourceItemId === $targetItemId)) {
+            return null;
+        }
+
+        return [
+            'sourceType' => $sourceType,
+            'sourceIndicatorId' => $sourceIndicatorId,
+            'sourceItemId' => $sourceItemId,
+            'sourceKra' => (int) $sourceIndicator->kra_category,
+            'targetType' => $targetType,
+            'targetIndicatorId' => $targetIndicatorId,
+            'targetItemId' => $targetItemId,
+            'targetKra' => $targetKra,
+        ];
+    }
+
+    /** @param array<string, int|string> $move */
+    protected function applyMove(array $move): void
+    {
+        DB::transaction(function () use ($move): void {
+            if ($move['sourceType'] === 'main') {
+                $source = DB::table('ipc_targets_indicators')->where('id', $move['sourceIndicatorId'])->lockForUpdate()->first();
+
+                if ($source === null) {
+                    return;
+                }
+
+                if ((int) $source->kra_category !== (int) $move['targetKra']) {
+                    $targetOrder = $move['targetIndicatorId'] > 0
+                        ? DB::table('ipc_targets_indicators')->where('id', $move['targetIndicatorId'])->value('display_order')
+                        : null;
+                    $newOrder = $targetOrder === null
+                        ? ((int) DB::table('ipc_targets_indicators')->where('user_id', $source->user_id)->where('target_year', $source->target_year)->where('kra_category', $move['targetKra'])->max('display_order')) + 1
+                        : (int) $targetOrder;
+
+                    if ($targetOrder !== null) {
+                        DB::table('ipc_targets_indicators')
+                            ->where('user_id', $source->user_id)
+                            ->where('target_year', $source->target_year)
+                            ->where('kra_category', $move['targetKra'])
+                            ->where('display_order', '>=', $newOrder)
+                            ->increment('display_order');
+                    }
+
+                    DB::table('ipc_targets_indicators')->where('id', $source->id)->update([
+                        'kra_category' => $move['targetKra'],
+                        'display_order' => $newOrder,
+                    ]);
+
+                    return;
+                }
+
+                $target = DB::table('ipc_targets_indicators')->where('id', $move['targetIndicatorId'])->lockForUpdate()->first();
+                if ($target === null) {
+                    return;
+                }
+
+                DB::table('ipc_targets_indicators')->where('id', $source->id)->update(['kra_category' => $target->kra_category, 'display_order' => $target->display_order]);
+                DB::table('ipc_targets_indicators')->where('id', $target->id)->update(['kra_category' => $source->kra_category, 'display_order' => $source->display_order]);
+                return;
+            }
+
+            $source = DB::table('ipc_targets_indicators_itemlist')->where('id', $move['sourceItemId'])->lockForUpdate()->first();
+            $target = DB::table('ipc_targets_indicators_itemlist')->where('id', $move['targetItemId'])->lockForUpdate()->first();
+            if ($source === null || $target === null) {
+                return;
+            }
+
+            DB::table('ipc_targets_indicators_itemlist')->where('id', $source->id)->update(['ind_id' => $target->ind_id, 'display_order' => $target->display_order]);
+            DB::table('ipc_targets_indicators_itemlist')->where('id', $target->id)->update(['ind_id' => $source->ind_id, 'display_order' => $source->display_order]);
+        });
+
+        $this->dispatch('annual-target-order-changed');
+        Flux::toast(variant: 'success', text: __('Target position updated.'));
+    }
+
     protected function sessionKey(string $name): string
     {
         return 'annual-target.'.$name;
@@ -528,6 +735,7 @@ class AnnualTargetPage extends Component
             ->where('iti.user_id', $userId)
             ->where('iti.target_status', '<', 4)
             ->where('itl.indi_status', '<', 4)
+            ->when(! $this->includeStrategicFunction, fn ($query) => $query->where('iti.kra_category', '!=', 1))
             ->select([
                 DB::raw('iti.id as tarid'),
                 'itl.ind_id',
@@ -538,10 +746,12 @@ class AnnualTargetPage extends Component
                 DB::raw('itl.new_semester as new_semester'),
                 'iti.target_year',
                 'iti.kra_category',
+                DB::raw('iti.display_order as indicator_display_order'),
                 'iti.activity',
                 'iti.target_status',
                 'itl.date_created',
                 'itl.id',
+                DB::raw('itl.display_order as item_display_order'),
                 'itl.description',
                 'itl.rg_efficiency_',
                 'itl.rg_quality_',
@@ -579,8 +789,11 @@ class AnnualTargetPage extends Component
                 });
             })
             ->orderBy('iti.kra_category', 'asc')
-            ->orderBy('itl.ind_id', 'asc')
+            ->orderByRaw('iti.display_order IS NULL')
+            ->orderBy('iti.display_order', 'asc')
             ->orderBy('iti.date_created', 'asc')
+            ->orderByRaw('itl.display_order IS NULL')
+            ->orderBy('itl.display_order', 'asc')
             ->orderBy('itl.date_created', 'asc')
             ->orderBy('itl.id', 'asc');
 
@@ -621,7 +834,15 @@ class AnnualTargetPage extends Component
             (object) ['value' => '1', 'label' => 'Strategic Function'],
             (object) ['value' => '2', 'label' => 'Core Function'],
             (object) ['value' => '3', 'label' => 'Support Function'],
-        ]);
+        ])->when(! $this->includeStrategicFunction, fn (Collection $categories): Collection => $categories
+            ->reject(fn (object $category): bool => $category->value === '1')
+            ->values());
+    }
+
+    /** @return list<int> */
+    protected function allowedKraCategories(): array
+    {
+        return $this->includeStrategicFunction ? [1, 2, 3] : [2, 3];
     }
 
     /** @return Collection<int, object> */
