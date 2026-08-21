@@ -20,20 +20,50 @@
                     <tbody>
                         <tr class="align-top">
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')"
-                                    :placeholder="__('Search positions...')" />
+                                <div class="relative">
+                                    <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')"
+                                        :placeholder="__('Search positions...')" class="[&_input]:pr-8" />
+                                    <div wire:loading wire:target="search"
+                                        class="absolute right-2.5 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                                        style="margin-bottom: 13px;">
+                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <flux:select wire:model.live="perPage" :label="__('Records Per Page')" class="w-28">
-                                    @foreach ($perPageOptions as $option)
-                                        <option value="{{ $option->value }}">
-                                            {{ $option->label }}
-                                        </option>
-                                    @endforeach
-                                </flux:select>
+                                <div class="relative">
+                                    <flux:select wire:model.live="perPage" :label="__('Records Per Page')"
+                                        class="w-28 [&_select]:pr-10">
+                                        @foreach ($perPageOptions as $option)
+                                            <option value="{{ $option->value }}">
+                                                {{ $option->label }}
+                                            </option>
+                                        @endforeach
+                                    </flux:select>
+                                    <div wire:loading wire:target="perPage"
+                                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                                        style="margin-bottom: 13px;">
+                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap align-bottom">
-                                <flux:button type="button" variant="ghost" icon="arrow-path" wire:click="resetFilters" class="mb-0.5">
+                                <flux:button type="button" variant="ghost" icon="arrow-path" wire:click="resetFilters"
+                                    class="mb-0.5">
                                     {{ __('Reset Filters') }}
                                 </flux:button>
                             </td>
@@ -45,28 +75,34 @@
 
         <div class="overflow-x-auto rounded-xl border border-border">
             <table class="w-full border-separate border-spacing-0 text-sm">
-                <thead class="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <thead
+                    class="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <tr>
-                        <th class="border-b border-r border-border px-3 py-3 text-center first:rounded-tl-xl" style="width: 60px;">
+                        <th class="border-b border-r border-border px-3 py-3 text-center first:rounded-tl-xl"
+                            style="width: 60px;">
                             {{ __('#') }}
                         </th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
                             {{ __('Position Name') }}
                         </th>
-                        <th class="border-b border-r border-border px-3 py-3 text-center whitespace-nowrap" style="width: 120px;">
+                        <th class="border-b border-r border-border px-3 py-3 text-center whitespace-nowrap"
+                            style="width: 120px;">
                             {{ __('Sort Order') }}
                         </th>
-                        <th class="border-b border-r border-border px-3 py-3 text-center whitespace-nowrap" style="width: 120px;">
+                        <th class="border-b border-r border-border px-3 py-3 text-center whitespace-nowrap"
+                            style="width: 120px;">
                             {{ __('Status') }}
                         </th>
-                        <th class="border-b border-border px-3 py-3 text-center whitespace-nowrap last:rounded-tr-xl" style="width: 120px;">
+                        <th class="border-b border-border px-3 py-3 text-center whitespace-nowrap last:rounded-tr-xl"
+                            style="width: 120px;">
                             {{ __('Action') }}
                         </th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($positions as $index => $pos)
-                        <tr wire:key="harmonized-pos-{{ $pos->id }}" class="border-t border-border/60 text-sm hover:bg-muted/20">
+                        <tr wire:key="harmonized-pos-{{ $pos->id }}"
+                            class="border-t border-border/60 text-sm hover:bg-muted/20">
                             <td class="border-b border-r border-border px-3 py-3 text-center text-muted-foreground">
                                 {{ $positions->firstItem() + $index }}
                             </td>
@@ -87,8 +123,9 @@
                                 <div class="flex items-center justify-center gap-1">
                                     <flux:button size="xs" variant="ghost" icon="pencil-square"
                                         wire:click="edit({{ $pos->id }})" aria-label="{{ __('Edit') }}" />
-                                    <flux:button size="xs" variant="ghost" icon="trash" class="text-red-600 hover:text-red-700"
-                                        wire:click="confirmDelete({{ $pos->id }})" aria-label="{{ __('Delete') }}" />
+                                    <flux:button size="xs" variant="ghost" icon="trash"
+                                        class="text-red-600 hover:text-red-700" wire:click="confirmDelete({{ $pos->id }})"
+                                        aria-label="{{ __('Delete') }}" />
                                 </div>
                             </td>
                         </tr>
@@ -120,7 +157,8 @@
             </div>
 
             <div class="space-y-4">
-                <flux:input wire:model="name" :label="__('Position Name')" :placeholder="__('e.g., Provincial Link')" required />
+                <flux:input wire:model="name" :label="__('Position Name')" :placeholder="__('e.g., Provincial Link')"
+                    required />
 
                 <flux:input type="number" wire:model="sort_order" :label="__('Sort Order')" min="0" required />
 

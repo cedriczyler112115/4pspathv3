@@ -7,28 +7,84 @@
     <div class="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div class="mb-4 flex flex-col gap-4 border-b border-border pb-4">
             <div class="grid gap-4 lg:grid-cols-4">
-                <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')"
-                    :placeholder="__('Full name, position, or designation')" />
+                <div class="relative">
+                    <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')"
+                        :placeholder="__('Full name, position, or designation')" class="[&_input]:pr-8" />
+                    <div wire:loading wire:target="search"
+                        class="absolute right-2.5 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                        style="margin-bottom: 13px;">
+                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
 
-                <flux:select wire:model.live="divisionFilter" :label="__('Division')">
-                    <option value="">{{ __('All divisions') }}</option>
-                    @foreach ($divisions as $division)
-                        <option value="{{ $division->id }}">{{ $division->division_name }}</option>
-                    @endforeach
-                </flux:select>
+                <div class="relative">
+                    <flux:select wire:model.live="divisionFilter" :label="__('Division')" class="[&_select]:pr-10">
+                        <option value="">{{ __('All divisions') }}</option>
+                        @foreach ($divisions as $division)
+                            <option value="{{ $division->id }}">{{ $division->division_name }}</option>
+                        @endforeach
+                    </flux:select>
+                    <div wire:loading wire:target="divisionFilter"
+                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                        style="margin-bottom: 13px;">
+                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
 
-                <flux:select wire:model.live="sectionFilter" :label="__('Section')">
-                    <option value="">{{ __('All sections') }}</option>
-                    @foreach ($sections as $section)
-                        <option value="{{ $section->id }}">{{ $section->section_name }}</option>
-                    @endforeach
-                </flux:select>
+                <div class="relative">
+                    <flux:select wire:model.live="sectionFilter" :label="__('Section')" class="[&_select]:pr-10">
+                        <option value="">{{ __('All sections') }}</option>
+                        @foreach ($sections as $section)
+                            <option value="{{ $section->id }}">{{ $section->section_name }}</option>
+                        @endforeach
+                    </flux:select>
+                    <div wire:loading wire:target="sectionFilter"
+                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                        style="margin-bottom: 13px;">
+                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
 
-                <flux:select wire:model.live="statusFilter" :label="__('Status')">
-                    <option value="">{{ __('All statuses') }}</option>
-                    <option value="1">{{ __('Active') }}</option>
-                    <option value="0">{{ __('Inactive') }}</option>
-                </flux:select>
+                <div class="relative">
+                    <flux:select wire:model.live="statusFilter" :label="__('Status')" class="[&_select]:pr-10">
+                        <option value="">{{ __('All statuses') }}</option>
+                        <option value="1">{{ __('Active') }}</option>
+                        <option value="0">{{ __('Inactive') }}</option>
+                    </flux:select>
+                    <div wire:loading wire:target="statusFilter"
+                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                        style="margin-bottom: 13px;">
+                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -89,7 +145,8 @@
                             </td>
                             <td class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
                                 @if (filled($user->user_level_name))
-                                    <span class="inline-flex items-center rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                                    <span
+                                        class="inline-flex items-center rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
                                         {{ $user->user_level_name }}
                                     </span>
                                 @else
@@ -97,11 +154,8 @@
                                 @endif
                             </td>
                             <td class="border-b border-border px-3 py-3 whitespace-nowrap">
-                                <button
-                                    type="button"
-                                    wire:click="toggleStatus({{ $user->id }})"
-                                    class="rounded-full px-2 py-1 text-xs font-medium transition cursor-pointer {{ (int) $user->is_status === 1 ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15' : 'bg-muted text-muted-foreground hover:bg-muted/80' }}"
-                                >
+                                <button type="button" wire:click="toggleStatus({{ $user->id }})"
+                                    class="rounded-full px-2 py-1 text-xs font-medium transition cursor-pointer {{ (int) $user->is_status === 1 ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15' : 'bg-muted text-muted-foreground hover:bg-muted/80' }}">
                                     {{ (int) $user->is_status === 1 ? __('Active') : __('Inactive') }}
                                 </button>
                             </td>
@@ -167,16 +221,16 @@
                     </flux:select>
                     <flux:select wire:model="editSupervisorId" :label="__('Supervisor')">
                         <option value="">{{ __('Select supervisor') }}</option>
-                            @foreach ($supervisors as $supervisor)
-                                @php
-                                    $supervisorName = trim(
-                                        ($supervisor->last_name ?? '') .
-                                        (filled($supervisor->last_name) ? ', ' : '') .
-                                        collect([$supervisor->first_name, $supervisor->middle_name, $supervisor->extension_name])->filter()->join(' ')
-                                    );
-                                @endphp
-                                <option value="{{ $supervisor->id }}">{{ strtoupper($supervisorName) }}</option>
-                            @endforeach
+                        @foreach ($supervisors as $supervisor)
+                            @php
+                                $supervisorName = trim(
+                                    ($supervisor->last_name ?? '') .
+                                    (filled($supervisor->last_name) ? ', ' : '') .
+                                    collect([$supervisor->first_name, $supervisor->middle_name, $supervisor->extension_name])->filter()->join(' ')
+                                );
+                            @endphp
+                            <option value="{{ $supervisor->id }}">{{ strtoupper($supervisorName) }}</option>
+                        @endforeach
                     </flux:select>
                     <flux:input wire:model="editContactNumber" :label="__('Contact Number')" />
                     <div class="space-y-2">
@@ -214,8 +268,10 @@
             </div>
 
             <div class="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-                <div>{{ __('Selected user:') }} <span class="font-semibold text-foreground">{{ $deleteUserName ?: '-' }}</span></div>
-                <div>{{ __('Selected user ID:') }} <span class="font-semibold text-foreground">{{ $deleteUserId ?? '-' }}</span></div>
+                <div>{{ __('Selected user:') }} <span
+                        class="font-semibold text-foreground">{{ $deleteUserName ?: '-' }}</span></div>
+                <div>{{ __('Selected user ID:') }} <span
+                        class="font-semibold text-foreground">{{ $deleteUserId ?? '-' }}</span></div>
             </div>
 
             <div class="flex justify-end gap-2">

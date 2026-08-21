@@ -48,6 +48,8 @@ class AnnualTargetPage extends Component
 
     public bool $includeStrategicFunction = true;
 
+    public bool $showOnlyDuplicates = false;
+
     public ?int $editingRowId = null;
 
     public ?int $editingIndicatorId = null;
@@ -55,6 +57,30 @@ class AnnualTargetPage extends Component
     public bool $showDeleteModal = false;
 
     public bool $showDeleteSubTargetModal = false;
+
+    public bool $showLockModal = false;
+
+    public bool $showUnlockModal = false;
+
+    public bool $showCopyModal = false;
+
+    public bool $showCopyAllConfirmModal = false;
+
+    public string $copyAllTargetType = 'staff';
+
+    public string $copyTab = 'staff';
+
+    public string $copyStaffUserId = '';
+
+    public string $copyStaffYear = '';
+
+    public string $copyStaffSearch = '';
+
+    public string $copyHarmonizedPositionId = '';
+
+    public string $copyHarmonizedYear = '';
+
+    public string $copyHarmonizedSearch = '';
 
     public bool $showAddModal = false;
 
@@ -110,8 +136,9 @@ class AnnualTargetPage extends Component
         $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), now()->year);
         $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
         $this->semesterFilter = (string) Session::get($this->sessionKey('semesterFilter'), '');
+        $this->showOnlyDuplicates = (bool) Session::get($this->sessionKey('showOnlyDuplicates'), false);
 
-        if (! $this->includeStrategicFunction && $this->categoryFilter === '1') {
+        if (!$this->includeStrategicFunction && $this->categoryFilter === '1') {
             $this->categoryFilter = '';
             Session::forget($this->sessionKey('categoryFilter'));
         }
@@ -141,7 +168,7 @@ class AnnualTargetPage extends Component
             return;
         }
 
-        $this->fullName = trim(($user->last_name ?? '').(filled($user->last_name) ? ', ' : '').collect([$user->first_name, $user->middle_name])->filter()->join(' '));
+        $this->fullName = trim(($user->last_name ?? '') . (filled($user->last_name) ? ', ' : '') . collect([$user->first_name, $user->middle_name])->filter()->join(' '));
         $this->position = (string) ($user->position ?? '');
         $this->designation = (string) ($user->designation ?? '');
         $this->divisionName = (string) ($user->division_name ?? '');
@@ -166,7 +193,7 @@ class AnnualTargetPage extends Component
 
     public function updatedPerPage(): void
     {
-        if (! in_array($this->perPage, [10, 20, 50], true)) {
+        if (!in_array($this->perPage, [10, 20, 50], true)) {
             $this->perPage = 10;
         }
 
@@ -188,7 +215,7 @@ class AnnualTargetPage extends Component
 
     public function updatedCategoryFilter(): void
     {
-        if ($this->categoryFilter !== '' && ! in_array((int) $this->categoryFilter, $this->allowedKraCategories(), true)) {
+        if ($this->categoryFilter !== '' && !in_array((int) $this->categoryFilter, $this->allowedKraCategories(), true)) {
             $this->categoryFilter = '';
         }
 
@@ -202,18 +229,26 @@ class AnnualTargetPage extends Component
         $this->resetPage();
     }
 
+    public function updatedShowOnlyDuplicates(): void
+    {
+        Session::put($this->sessionKey('showOnlyDuplicates'), $this->showOnlyDuplicates);
+        $this->resetPage();
+    }
+
     public function resetFilters(): void
     {
         $this->search = '';
         $this->yearFilter = (string) now()->year;
         $this->categoryFilter = '';
         $this->semesterFilter = '';
+        $this->showOnlyDuplicates = false;
 
         Session::forget([
             $this->sessionKey('search'),
             $this->sessionKey('yearFilter'),
             $this->sessionKey('categoryFilter'),
             $this->sessionKey('semesterFilter'),
+            $this->sessionKey('showOnlyDuplicates'),
         ]);
 
         $this->resetPage();
@@ -262,7 +297,7 @@ class AnnualTargetPage extends Component
                 'rg_mov_',
                 'rg_remarks_',
             ])
-            ->mapWithKeys(fn (object $item): array => [
+            ->mapWithKeys(fn(object $item): array => [
                 (int) $item->id => [
                     'semester' => $this->normalizeSemesterValue($item->new_semester ?? null),
                     'description' => $this->normalizeTextareaValue($item->description ?? ''),
@@ -290,7 +325,7 @@ class AnnualTargetPage extends Component
     {
         $userId = Auth::id();
 
-        if ($userId === null || ! in_array($kraCategory, $this->allowedKraCategories(), true)) {
+        if ($userId === null || !in_array($kraCategory, $this->allowedKraCategories(), true)) {
             return;
         }
 
@@ -327,7 +362,7 @@ class AnnualTargetPage extends Component
     {
         $userId = Auth::id();
 
-        if ($userId === null || $this->addingKraCategory === null || ! in_array($this->addingKraCategory, $this->allowedKraCategories(), true)) {
+        if ($userId === null || $this->addingKraCategory === null || !in_array($this->addingKraCategory, $this->allowedKraCategories(), true)) {
             return;
         }
 
@@ -353,9 +388,14 @@ class AnnualTargetPage extends Component
 
         $year = $this->addingYear ?? now()->year;
         app(CreateAnnualTarget::class)->execute($userId, $year, $this->addingKraCategory, [
-            'activity' => $this->addActivity, 'semester' => $this->addSemester, 'description' => $this->addDescription,
-            'efficiency' => $this->addEfficiency, 'quality' => $this->addQuality, 'timeliness' => $this->addTimeliness,
-            'movs' => $this->addMovs, 'remarks' => $this->addRemarks,
+            'activity' => $this->addActivity,
+            'semester' => $this->addSemester,
+            'description' => $this->addDescription,
+            'efficiency' => $this->addEfficiency,
+            'quality' => $this->addQuality,
+            'timeliness' => $this->addTimeliness,
+            'movs' => $this->addMovs,
+            'remarks' => $this->addRemarks,
         ]);
 
         $this->cancelAdd();
@@ -455,13 +495,13 @@ class AnnualTargetPage extends Component
     {
         $userId = Auth::id();
 
-        if ($this->deletingIndicatorId === null || ! is_int($userId)) {
+        if ($this->deletingIndicatorId === null || !is_int($userId)) {
             return;
         }
 
         $indicatorId = $this->deletingIndicatorId;
 
-        if (! app(DeleteAnnualTarget::class)->execute($indicatorId, $userId)) {
+        if (!app(DeleteAnnualTarget::class)->execute($indicatorId, $userId)) {
             $this->cancelDelete();
 
             return;
@@ -492,7 +532,7 @@ class AnnualTargetPage extends Component
     public function confirmDeleteSubTarget(): void
     {
         $userId = Auth::id();
-        if (! is_int($userId) || $this->deletingSubTargetItemId === null) {
+        if (!is_int($userId) || $this->deletingSubTargetItemId === null) {
             return;
         }
 
@@ -504,6 +544,521 @@ class AnnualTargetPage extends Component
         } else {
             $this->cancelDeleteSubTarget();
         }
+    }
+
+    public function requestLockAnnualTarget(): void
+    {
+        $this->showLockModal = true;
+    }
+
+    public function cancelLockAnnualTarget(): void
+    {
+        $this->showLockModal = false;
+    }
+
+    public function confirmLockAnnualTarget(): void
+    {
+        $userId = Auth::id();
+        if (!is_int($userId)) {
+            $this->cancelLockAnnualTarget();
+
+            return;
+        }
+
+        DB::transaction(function () use ($userId): void {
+            DB::table('ipc_targets_indicators')
+                ->where('user_id', $userId)
+                ->where('target_status', 1)
+                ->update(['target_status' => 3]);
+
+            DB::table('ipc_targets_indicators_itemlist as itl')
+                ->join('ipc_targets_indicators as iti', 'itl.ind_id', '=', 'iti.id')
+                ->where('iti.user_id', $userId)
+                ->where('itl.indi_status', 1)
+                ->update(['itl.indi_status' => 3]);
+        });
+
+        $this->cancelLockAnnualTarget();
+
+        Flux::toast(variant: 'success', text: __('Annual targets have been saved and locked.'));
+    }
+
+    public function isLocked(): bool
+    {
+        $userId = Auth::id();
+        if (!is_int($userId)) {
+            return false;
+        }
+
+        $activeCount = DB::table('ipc_targets_indicators')
+            ->where('user_id', $userId)
+            ->where('target_status', 1)
+            ->count();
+
+        $lockedCount = DB::table('ipc_targets_indicators')
+            ->where('user_id', $userId)
+            ->where('target_status', 3)
+            ->count();
+
+        return $lockedCount > 0 && $activeCount === 0;
+    }
+
+    public function requestUnlockAnnualTarget(): void
+    {
+        $this->showUnlockModal = true;
+    }
+
+    public function cancelUnlockAnnualTarget(): void
+    {
+        $this->showUnlockModal = false;
+    }
+
+    public function confirmUnlockAnnualTarget(): void
+    {
+        $userId = Auth::id();
+        if (!is_int($userId)) {
+            $this->cancelUnlockAnnualTarget();
+
+            return;
+        }
+
+        DB::transaction(function () use ($userId): void {
+            DB::table('ipc_targets_indicators')
+                ->where('user_id', $userId)
+                ->where('target_status', 3)
+                ->update(['target_status' => 1]);
+
+            DB::table('ipc_targets_indicators_itemlist as itl')
+                ->join('ipc_targets_indicators as iti', 'itl.ind_id', '=', 'iti.id')
+                ->where('iti.user_id', $userId)
+                ->where('itl.indi_status', 3)
+                ->update(['itl.indi_status' => 1]);
+        });
+
+        $this->cancelUnlockAnnualTarget();
+
+        Flux::toast(variant: 'success', text: __('Annual targets have been unlocked.'));
+    }
+
+    public function openCopyModal(): void
+    {
+        $this->showCopyModal = true;
+        if ($this->copyStaffYear === '') {
+            $this->copyStaffYear = (string) now()->year;
+        }
+        if ($this->copyHarmonizedYear === '') {
+            $this->copyHarmonizedYear = (string) now()->year;
+        }
+    }
+
+    public function closeCopyModal(): void
+    {
+        $this->showCopyModal = false;
+    }
+
+    public function copyStaffUsers(): Collection
+    {
+        return DB::table('ipc_targets_indicators as iti')
+            ->join('users as u', 'iti.user_id', '=', 'u.id')
+            ->where('iti.user_id', '!=', Auth::id())
+            ->select(['u.id', 'u.first_name', 'u.middle_name', 'u.last_name', 'u.position'])
+            ->distinct()
+            ->orderBy('u.last_name')
+            ->orderBy('u.first_name')
+            ->get()
+            ->map(function (object $u): object {
+                $u->full_name = mb_strtoupper(trim(($u->last_name ?? '') . (filled($u->last_name) ? ', ' : '') . collect([$u->first_name, $u->middle_name])->filter()->join(' ')), 'UTF-8');
+
+                return $u;
+            });
+    }
+
+    public function copyStaffYears(): Collection
+    {
+        return $this->years();
+    }
+
+    public function copyHarmonizedPositions(): Collection
+    {
+        if (DB::getSchemaBuilder()->hasTable('lib_harmonized_positions')) {
+            $positions = DB::table('lib_harmonized_positions')
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get();
+            if ($positions->isNotEmpty()) {
+                return $positions;
+            }
+        }
+
+        return DB::table('harmonized_ipc_targets_indicators')
+            ->whereNotNull('harmonized_position_id')
+            ->distinct()
+            ->pluck('harmonized_position_id')
+            ->map(fn($posId): object => (object) ['id' => $posId, 'name' => 'Position #' . $posId]);
+    }
+
+    public function copyHarmonizedYears(): Collection
+    {
+        return $this->years();
+    }
+
+    /** @return array<int, string> */
+    public function getExistingActivitiesProperty(): array
+    {
+        $userId = Auth::id();
+        if (!is_int($userId)) {
+            return [];
+        }
+
+        $targetYear = ctype_digit($this->yearFilter) ? (int) $this->yearFilter : now()->year;
+
+        return DB::table('ipc_targets_indicators')
+            ->where('user_id', $userId)
+            ->where('target_year', $targetYear)
+            ->pluck('activity')
+            ->map(fn($act) => trim(mb_strtolower((string) $act)))
+            ->filter()
+            ->all();
+    }
+
+    public string $copyStaffCategory = '';
+
+    public string $copyStaffSemester = '';
+
+    public string $copyHarmonizedCategory = '';
+
+    public string $copyHarmonizedSemester = '';
+
+    public string $copyStaffStatusFilter = '';
+
+    public string $copyHarmonizedStatusFilter = '';
+
+    public function copyStaffTargetGroups(): Collection
+    {
+        if ($this->copyStaffUserId === '') {
+            return collect();
+        }
+
+        $query = DB::table('ipc_targets_indicators as iti')
+            ->join('ipc_targets_indicators_itemlist as itl', 'itl.ind_id', '=', 'iti.id')
+            ->where('iti.user_id', (int) $this->copyStaffUserId);
+
+        if ($this->copyStaffYear !== '') {
+            $query->where('iti.target_year', $this->copyStaffYear);
+        }
+
+        if ($this->copyStaffCategory !== '') {
+            $query->where('iti.kra_category', (int) $this->copyStaffCategory);
+        }
+
+        if ($this->copyStaffSemester !== '') {
+            $query->where('itl.new_semester', (int) $this->copyStaffSemester);
+        }
+
+        if (trim($this->copyStaffSearch) !== '') {
+            $search = '%' . trim($this->copyStaffSearch) . '%';
+            $query->where(function ($q) use ($search): void {
+                $q->where('iti.activity', 'like', $search)
+                    ->orWhere('itl.description', 'like', $search);
+            });
+        }
+
+        $rows = $query->select([
+            'iti.id as ind_id',
+            'iti.kra_category',
+            'iti.activity',
+            'iti.target_year',
+            'itl.id as item_id',
+            'itl.new_semester',
+            'itl.description',
+            'itl.rg_efficiency_',
+            'itl.rg_quality_',
+            'itl.rg_timeliness_',
+            'itl.rg_ratingperiod_',
+            'itl.rg_mov_',
+            'itl.rg_remarks_',
+        ])
+            ->orderBy('iti.kra_category')
+            ->orderBy('iti.display_order')
+            ->orderBy('itl.display_order')
+            ->get();
+
+        return $rows->groupBy('ind_id');
+    }
+
+    public function copyHarmonizedTargetGroups(): Collection
+    {
+        if ($this->copyHarmonizedPositionId === '') {
+            return collect();
+        }
+
+        $query = DB::table('harmonized_ipc_targets_indicators as iti')
+            ->join('harmonized_ipc_targets_indicators_itemlist as itl', 'itl.ind_id', '=', 'iti.id')
+            ->where('iti.harmonized_position_id', (int) $this->copyHarmonizedPositionId);
+
+        if ($this->copyHarmonizedYear !== '') {
+            $query->where('iti.target_year', $this->copyHarmonizedYear);
+        }
+
+        if ($this->copyHarmonizedCategory !== '') {
+            $query->where('iti.kra_category', (int) $this->copyHarmonizedCategory);
+        }
+
+        if ($this->copyHarmonizedSemester !== '') {
+            $query->where('itl.new_semester', (int) $this->copyHarmonizedSemester);
+        }
+
+        if (trim($this->copyHarmonizedSearch) !== '') {
+            $search = '%' . trim($this->copyHarmonizedSearch) . '%';
+            $query->where(function ($q) use ($search): void {
+                $q->where('iti.activity', 'like', $search)
+                    ->orWhere('itl.description', 'like', $search);
+            });
+        }
+
+        $rows = $query->select([
+            'iti.id as ind_id',
+            'iti.kra_category',
+            'iti.activity',
+            'iti.target_year',
+            'itl.id as item_id',
+            'itl.new_semester',
+            'itl.description',
+            'itl.rg_efficiency_',
+            'itl.rg_quality_',
+            'itl.rg_timeliness_',
+            'itl.rg_ratingperiod_',
+            'itl.rg_mov_',
+            'itl.rg_remarks_',
+        ])
+            ->orderBy('iti.kra_category')
+            ->orderBy('iti.display_order')
+            ->orderBy('itl.display_order')
+            ->get();
+
+        return $rows->groupBy('ind_id');
+    }
+
+    public function copyAllStaffTargetGroups(): void
+    {
+        $groups = $this->copyStaffTargetGroups();
+        if ($groups->isEmpty()) {
+            return;
+        }
+
+        $existingActivities = $this->existingActivities;
+        $copiedCount = 0;
+
+        foreach ($groups as $indicatorId => $items) {
+            $first = $items->first();
+            if ($first === null) {
+                continue;
+            }
+
+            $activityClean = trim(mb_strtolower((string) ($first->activity ?? '')));
+            if ($activityClean !== '' && in_array($activityClean, $existingActivities, true)) {
+                continue;
+            }
+
+            $this->copyStaffTargetGroup((int) $indicatorId);
+            $existingActivities[] = $activityClean;
+            $copiedCount++;
+        }
+
+        if ($copiedCount > 0) {
+            Flux::toast(variant: 'success', text: __(':count target group(s) copied successfully.', ['count' => $copiedCount]));
+        } else {
+            Flux::toast(variant: 'warning', text: __('No new targets available to copy (all matching results already exist).'));
+        }
+    }
+
+    public function copyAllHarmonizedTargetGroups(): void
+    {
+        $groups = $this->copyHarmonizedTargetGroups();
+        if ($groups->isEmpty()) {
+            return;
+        }
+
+        $existingActivities = $this->existingActivities;
+        $copiedCount = 0;
+
+        foreach ($groups as $indicatorId => $items) {
+            $first = $items->first();
+            if ($first === null) {
+                continue;
+            }
+
+            $activityClean = trim(mb_strtolower((string) ($first->activity ?? '')));
+            if ($activityClean !== '' && in_array($activityClean, $existingActivities, true)) {
+                continue;
+            }
+
+            $this->copyHarmonizedTargetGroup((int) $indicatorId);
+            $existingActivities[] = $activityClean;
+            $copiedCount++;
+        }
+
+        if ($copiedCount > 0) {
+            Flux::toast(variant: 'success', text: __(':count harmonized target group(s) copied successfully.', ['count' => $copiedCount]));
+        } else {
+            Flux::toast(variant: 'warning', text: __('No new harmonized targets available to copy (all matching results already exist).'));
+        }
+    }
+
+    public function requestCopyAllStaff(): void
+    {
+        $this->copyAllTargetType = 'staff';
+        $this->showCopyAllConfirmModal = true;
+    }
+
+    public function requestCopyAllHarmonized(): void
+    {
+        $this->copyAllTargetType = 'harmonized';
+        $this->showCopyAllConfirmModal = true;
+    }
+
+    public function cancelCopyAllConfirm(): void
+    {
+        $this->showCopyAllConfirmModal = false;
+    }
+
+    public function confirmCopyAll(): void
+    {
+        $this->showCopyAllConfirmModal = false;
+
+        if ($this->copyAllTargetType === 'staff') {
+            $this->copyAllStaffTargetGroups();
+        } else {
+            $this->copyAllHarmonizedTargetGroups();
+        }
+    }
+
+    public function copyStaffTargetGroup(int $indicatorId): void
+    {
+        $userId = Auth::id();
+        if (!is_int($userId)) {
+            return;
+        }
+
+        $sourceIndicator = DB::table('ipc_targets_indicators')->where('id', $indicatorId)->first();
+        if ($sourceIndicator === null) {
+            return;
+        }
+
+        $sourceItems = DB::table('ipc_targets_indicators_itemlist')->where('ind_id', $indicatorId)->get();
+
+        DB::transaction(function () use ($sourceIndicator, $sourceItems, $userId): void {
+            $targetYear = ctype_digit($this->yearFilter) ? (string) $this->yearFilter : (string) now()->year;
+
+            $maxOrder = (int) DB::table('ipc_targets_indicators')
+                ->where('user_id', $userId)
+                ->where('kra_category', $sourceIndicator->kra_category)
+                ->max('display_order');
+
+            $newIndId = DB::table('ipc_targets_indicators')->insertGetId([
+                'user_id' => $userId,
+                'target_group_id' => $sourceIndicator->target_group_id,
+                'target_year' => $targetYear,
+                'target_sem' => $sourceIndicator->target_sem,
+                'kra_category' => $sourceIndicator->kra_category,
+                'display_order' => $maxOrder + 1,
+                'activity' => $sourceIndicator->activity,
+                'remarks' => $sourceIndicator->remarks,
+                'target_status' => 1,
+                'created_by' => $userId,
+                'date_created' => now(),
+            ]);
+
+            foreach ($sourceItems as $item) {
+                DB::table('ipc_targets_indicators_itemlist')->insert([
+                    'ind_id' => $newIndId,
+                    'display_order' => $item->display_order,
+                    'new_semester' => $item->new_semester,
+                    'description' => $item->description,
+                    'weight' => $item->weight,
+                    'quantity' => $item->quantity,
+                    'quality' => $item->quality,
+                    'timeliness' => $item->timeliness,
+                    'remarks' => $item->remarks,
+                    'indi_status' => 1,
+                    'created_by' => $userId,
+                    'modified_by' => $userId,
+                    'date_created' => now(),
+                    'rg_efficiency_' => $item->rg_efficiency_,
+                    'rg_quality_' => $item->rg_quality_,
+                    'rg_timeliness_' => $item->rg_timeliness_,
+                    'rg_ratingperiod_' => $item->rg_ratingperiod_,
+                    'rg_mov_' => $item->rg_mov_,
+                    'rg_remarks_' => $item->rg_remarks_,
+                ]);
+            }
+        });
+
+        Flux::toast(variant: 'success', text: __('Target copied successfully.'));
+    }
+
+    public function copyHarmonizedTargetGroup(int $indicatorId): void
+    {
+        $userId = Auth::id();
+        if (!is_int($userId)) {
+            return;
+        }
+
+        $sourceIndicator = DB::table('harmonized_ipc_targets_indicators')->where('id', $indicatorId)->first();
+        if ($sourceIndicator === null) {
+            return;
+        }
+
+        $sourceItems = DB::table('harmonized_ipc_targets_indicators_itemlist')->where('ind_id', $indicatorId)->get();
+
+        DB::transaction(function () use ($sourceIndicator, $sourceItems, $userId): void {
+            $targetYear = ctype_digit($this->yearFilter) ? (string) $this->yearFilter : (string) now()->year;
+
+            $maxOrder = (int) DB::table('ipc_targets_indicators')
+                ->where('user_id', $userId)
+                ->where('kra_category', $sourceIndicator->kra_category)
+                ->max('display_order');
+
+            $newIndId = DB::table('ipc_targets_indicators')->insertGetId([
+                'user_id' => $userId,
+                'target_group_id' => $sourceIndicator->target_group_id,
+                'target_year' => $targetYear,
+                'target_sem' => $sourceIndicator->target_sem,
+                'kra_category' => $sourceIndicator->kra_category,
+                'display_order' => $maxOrder + 1,
+                'activity' => $sourceIndicator->activity,
+                'remarks' => $sourceIndicator->remarks,
+                'target_status' => 1,
+                'created_by' => $userId,
+                'date_created' => now(),
+            ]);
+
+            foreach ($sourceItems as $item) {
+                DB::table('ipc_targets_indicators_itemlist')->insert([
+                    'ind_id' => $newIndId,
+                    'display_order' => $item->display_order,
+                    'new_semester' => $item->new_semester,
+                    'description' => $item->description,
+                    'weight' => $item->weight,
+                    'quantity' => $item->quantity,
+                    'quality' => $item->quality,
+                    'timeliness' => $item->timeliness,
+                    'remarks' => $item->remarks,
+                    'indi_status' => 1,
+                    'created_by' => $userId,
+                    'modified_by' => $userId,
+                    'date_created' => now(),
+                    'rg_efficiency_' => $item->rg_efficiency_,
+                    'rg_quality_' => $item->rg_quality_,
+                    'rg_timeliness_' => $item->rg_timeliness_,
+                    'rg_ratingperiod_' => $item->rg_ratingperiod_,
+                    'rg_mov_' => $item->rg_mov_,
+                    'rg_remarks_' => $item->rg_remarks_,
+                ]);
+            }
+        });
+
+        Flux::toast(variant: 'success', text: __('Harmonized target copied successfully.'));
     }
 
     #[On('annual-target-target-dropped')]
@@ -576,7 +1131,7 @@ class AnnualTargetPage extends Component
         $sourceItemId = (int) ($source['itemId'] ?? 0);
         $targetItemId = (int) ($target['itemId'] ?? 0);
 
-        if ($userId === null || ! in_array($sourceType, ['main', 'sub'], true) || ! in_array($targetType, ['main', 'sub', 'category'], true)) {
+        if ($userId === null || !in_array($sourceType, ['main', 'sub'], true) || !in_array($targetType, ['main', 'sub', 'category'], true)) {
             return null;
         }
 
@@ -586,7 +1141,7 @@ class AnnualTargetPage extends Component
             : null;
         $targetKra = $targetType === 'category' ? (int) ($target['kra'] ?? 0) : (int) ($targetIndicator->kra_category ?? 0);
 
-        if ($sourceIndicator === null || ! in_array($targetKra, $this->allowedKraCategories(), true) || ($targetType !== 'category' && $targetIndicator === null)) {
+        if ($sourceIndicator === null || !in_array($targetKra, $this->allowedKraCategories(), true) || ($targetType !== 'category' && $targetIndicator === null)) {
             return null;
         }
 
@@ -683,7 +1238,7 @@ class AnnualTargetPage extends Component
 
     protected function sessionKey(string $name): string
     {
-        return 'annual-target.'.$name;
+        return 'annual-target.' . $name;
     }
 
     protected function normalizeSemesterValue(mixed $value): string
@@ -701,7 +1256,7 @@ class AnnualTargetPage extends Component
             return null;
         }
 
-        if (! ctype_digit($semester)) {
+        if (!ctype_digit($semester)) {
             return null;
         }
 
@@ -717,14 +1272,14 @@ class AnnualTargetPage extends Component
         ];
 
         foreach (array_keys($this->editRows) as $itemId) {
-            $prefix = 'editRows.'.$itemId.'.';
-            $rules[$prefix.'semester'] = ['required', 'regex:/^\d+$/'];
-            $rules[$prefix.'description'] = ['required', 'string'];
-            $rules[$prefix.'efficiency'] = ['required', 'string'];
-            $rules[$prefix.'quality'] = ['required', 'string'];
-            $rules[$prefix.'timeliness'] = ['required', 'string'];
-            $rules[$prefix.'movs'] = ['required', 'string'];
-            $rules[$prefix.'remarks'] = ['nullable', 'string'];
+            $prefix = 'editRows.' . $itemId . '.';
+            $rules[$prefix . 'semester'] = ['required', 'regex:/^\d+$/'];
+            $rules[$prefix . 'description'] = ['required', 'string'];
+            $rules[$prefix . 'efficiency'] = ['required', 'string'];
+            $rules[$prefix . 'quality'] = ['required', 'string'];
+            $rules[$prefix . 'timeliness'] = ['required', 'string'];
+            $rules[$prefix . 'movs'] = ['required', 'string'];
+            $rules[$prefix . 'remarks'] = ['nullable', 'string'];
         }
 
         return $rules;
@@ -750,6 +1305,7 @@ class AnnualTargetPage extends Component
             $this->semesterFilter,
             trim($this->search),
             $this->perPage,
+            $this->showOnlyDuplicates,
         );
     }
 
@@ -761,7 +1317,7 @@ class AnnualTargetPage extends Component
         return collect(range(2021, $currentYear + 1))
             ->reverse()
             ->values()
-            ->map(fn (int $year): object => (object) ['target_year' => (string) $year]);
+            ->map(fn(int $year): object => (object) ['target_year' => (string) $year]);
     }
 
     /** @return Collection<int, object> */
@@ -771,9 +1327,9 @@ class AnnualTargetPage extends Component
             (object) ['value' => '1', 'label' => 'Strategic Function'],
             (object) ['value' => '2', 'label' => 'Core Function'],
             (object) ['value' => '3', 'label' => 'Support Function'],
-        ])->when(! $this->includeStrategicFunction, fn (Collection $categories): Collection => $categories
-            ->reject(fn (object $category): bool => $category->value === '1')
-            ->values());
+        ])->when(!$this->includeStrategicFunction, fn(Collection $categories): Collection => $categories
+                ->reject(fn(object $category): bool => $category->value === '1')
+                ->values());
     }
 
     /** @return list<int> */

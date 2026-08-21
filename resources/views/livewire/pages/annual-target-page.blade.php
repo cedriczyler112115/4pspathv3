@@ -25,13 +25,21 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 lg:justify-end">
-            <flux:button type="button" icon="check" class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400">
-                {{ __('Save Annual Target') }}
-            </flux:button>
-            <flux:button type="button" icon="document-duplicate" class="bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400">
+            @if ($this->isLocked())
+                <flux:button type="button" icon="lock-open" variant="primary" wire:click="requestUnlockAnnualTarget">
+                    {{ __('Unlock Target') }}
+                </flux:button>
+            @else
+                <flux:button type="button" icon="check" variant="primary" wire:click="requestLockAnnualTarget">
+                    {{ __('Save and Lock Annual Target') }}
+                </flux:button>
+            @endif
+            <flux:button type="button" icon="document-duplicate" wire:click="openCopyModal"
+                class="bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400">
                 {{ __('Copy Target') }}
             </flux:button>
-            <flux:button type="button" icon="printer" class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:hover:bg-slate-400">
+            <flux:button type="button" icon="printer"
+                class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:hover:bg-slate-400">
                 {{ __('Print') }}
             </flux:button>
         </div>
@@ -85,46 +93,142 @@
                     <tbody>
                         <tr class="align-top">
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')"
-                                    :placeholder="__('Search annual targets')" />
+                                <div class="relative">
+                                    <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')"
+                                        :placeholder="__('Search annual targets')" class="[&_input]:pr-8" />
+                                    <div wire:loading wire:target="search"
+                                        class="absolute right-2.5 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                                        style="margin-bottom: 13px;">
+                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <flux:select wire:model.live="yearFilter" :label="__('Year')">
-                                    <option value="">{{ __('All years') }}</option>
-                                    @foreach ($years as $year)
-                                        <option value="{{ $year->target_year }}">{{ $year->target_year }}</option>
-                                    @endforeach
-                                </flux:select>
+                                <div class="relative">
+                                    <flux:select wire:model.live="yearFilter" :label="__('Year')"
+                                        class="[&_select]:pr-10">
+                                        <option value="">{{ __('All years') }}</option>
+                                        @foreach ($years as $year)
+                                            <option value="{{ $year->target_year }}">{{ $year->target_year }}</option>
+                                        @endforeach
+                                    </flux:select>
+                                    <div wire:loading wire:target="yearFilter"
+                                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                                        style="margin-bottom: 13px;">
+                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <flux:select wire:model.live="categoryFilter" :label="__('Category')">
-                                    <option value="">{{ __('All categories') }}</option>
-                                    @foreach ($categories as $category)
-                                        <option value="{{ $category->value }}">{{ $category->label }}</option>
-                                    @endforeach
-                                </flux:select>
+                                <div class="relative">
+                                    <flux:select wire:model.live="categoryFilter" :label="__('Category')"
+                                        class="[&_select]:pr-10">
+                                        <option value="">{{ __('All categories') }}</option>
+                                        @foreach ($categories as $category)
+                                            <option value="{{ $category->value }}">{{ $category->label }}</option>
+                                        @endforeach
+                                    </flux:select>
+                                    <div wire:loading wire:target="categoryFilter"
+                                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                                        style="margin-bottom: 13px;">
+                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <flux:select wire:model.live="semesterFilter" :label="__('Semester')">
-                                    <option value="">{{ __('All semesters') }}</option>
-                                    @foreach ($semesters as $semester)
-                                        <option value="{{ $semester->value }}">{{ $semester->label }}</option>
-                                    @endforeach
-                                </flux:select>
+                                <div class="relative">
+                                    <flux:select wire:model.live="semesterFilter" :label="__('Semester')"
+                                        class="[&_select]:pr-10">
+                                        <option value="">{{ __('All semesters') }}</option>
+                                        @foreach ($semesters as $semester)
+                                            <option value="{{ $semester->value }}">{{ $semester->label }}</option>
+                                        @endforeach
+                                    </flux:select>
+                                    <div wire:loading wire:target="semesterFilter"
+                                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                                        style="margin-bottom: 13px;">
+                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-3 py-1 whitespace-nowrap align-bottom" valign="center">
+                                <div class="flex h-[38px] items-center px-1" style="margin-bottom:10px !important">
+                                    <label class="inline-flex items-center gap-2.5 cursor-pointer select-none">
+                                        <input type="checkbox" wire:model.live="showOnlyDuplicates"
+                                            class="rounded border-input text-primary shadow-sm focus:ring-primary size-5" />
+                                        <span
+                                            class="text-sm font-medium text-foreground">{{ __('Show Duplicate Target') }}</span>
+                                    </label>
+                                    <div wire:loading wire:target="showOnlyDuplicates"
+                                        class="ml-2 flex items-center pointer-events-none">
+                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <flux:select wire:model.live="perPage" :label="__('Records Per Page')" class="w-28">
-                                    @foreach ($perPageOptions as $option)
-                                        <option value="{{ $option->value }}">
-                                            {{ $option->label }}
-                                        </option>
-                                    @endforeach
-                                </flux:select>
+                                <div class="relative">
+                                    <flux:select wire:model.live="perPage" :label="__('Records Per Page')"
+                                        class="w-28 [&_select]:pr-10">
+                                        @foreach ($perPageOptions as $option)
+                                            <option value="{{ $option->value }}">
+                                                {{ $option->label }}
+                                            </option>
+                                        @endforeach
+                                    </flux:select>
+                                    <div wire:loading wire:target="perPage"
+                                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
+                                        style="margin-bottom: 13px;">
+                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                </div>
                             </td>
                             <td class="px-1 py-1 whitespace-nowrap align-bottom">
                                 <div class="flex h-full items-end -ml-1">
-                                    <flux:button variant="primary" type="button" wire:click="resetFilters" class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:text-white dark:hover:bg-slate-400">
-                                    {{ __('Reset') }}
+                                    <flux:button variant="primary" type="button" wire:click="resetFilters"
+                                        class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:text-white dark:hover:bg-slate-400">
+                                        {{ __('Reset') }}
                                     </flux:button>
                                 </div>
                             </td>
@@ -188,205 +292,38 @@
                         </th>
                     </tr>
                 </thead>
-                    @foreach ($visibleCategories as $category)
-                        @php
-                            $categoryRows = collect($annualTargets->items())->where('kra_category', $category->value);
-                            $groupedByIndicator = $categoryRows->groupBy('ind_id');
-                        @endphp
-                <tbody wire:key="annual-target-category-heading-{{ $category->value }}"
-                    x-data
+                @foreach ($visibleCategories as $category)
+                @php
+                    $categoryRows = collect($annualTargets->items())->where('kra_category', $category->value);
+                    $groupedByIndicator = $categoryRows->groupBy('ind_id');
+                @endphp
+                <tbody wire:key="annual-target-category-heading-{{ $category->value }}" x-data
                     x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
                     x-on:drop.prevent="const raw = $event.dataTransfer.getData('application/json'); if (raw) { $dispatch('annual-target-target-dropped', { source: JSON.parse(raw), target: { type: 'category', kra: {{ (int) $category->value }}, indicatorId: 0, itemId: 0 } }); }">
-                        <tr wire:key="annual-target-category-{{ $category->value }}" class="bg-muted/30">
-                            <td colspan="9" class="border-b border-border px-3 py-2">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                        {{ $category->label }}
-                                    </div>
-                                    <flux:button
-                                        type="button"
-                                        size="xs"
-                                        variant="primary"
-                                        icon="plus"
-                                        class="h-7 px-3"
-                                        data-kra-add-btn="{{ (int) $category->value }}"
-                                        wire:click="openAddModal({{ (int) $category->value }})"
-                                        aria-label="{{ __('Add Target') }}"
-                                    >
-                                        {{ __('Add Target') }}
-                                    </flux:button>
-                                </div>
-                            </td>
-                        </tr>
+                    <tr wire:key="annual-target-category-{{ $category->value }}" class="bg-muted/30">
+                        <td colspan="9" class="border-b border-border px-3 py-2">
+                            <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                {{ $category->label }}
+                            </div>
+                        </td>
+                    </tr>
 
                 </tbody>
 
-                        @forelse ($groupedByIndicator as $indId => $rows)
-                            @php($groupRows = $rows->values())
-                            <livewire:annual-target.indicator-rows
-                                :indicator-id="(int) $indId"
-                                :rows="$groupRows->map(fn ($row) => (array) $row)->all()"
-                                :key="'annual-target-indicator-'.$indId.'-'.$groupRows->pluck('id')->join('-')"
-                            />
-                        @empty
-                            <tbody wire:key="annual-target-empty-{{ $category->value }}">
-                                <tr>
-                                    <td colspan="9" class="border-b border-border px-3 py-10 text-center text-muted-foreground">
-                                        {{ __('No record found in this category.') }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        @endforelse
-                <tbody wire:key="annual-target-category-tail-{{ $category->value }}">
-                        {{-- Legacy parent rendering retained temporarily for reference during component migration.
-                        @forelse ($groupedByIndicator as $indId => $rows)
-                            @php($groupRows = $rows->values())
-                            @php($firstRow = $groupRows->first())
-                            @php($rowSpan = $groupRows->count())
-                            @foreach ($groupRows as $groupIndex => $row)
-                                <tr wire:key="annual-target-{{ $indId }}-{{ $row->id }}-{{ $editingIndicatorId === (int) $indId ? 'edit' : 'view' }}"
-                                    class="border-t border-border/60 text-sm hover:bg-muted/20">
-                                    @if ($groupIndex === 0)
-                                        <td rowspan="{{ $rowSpan }}"
-                                            class="border-b border-r border-border px-3 py-3 align-top text-center text-muted-foreground whitespace-normal break-words"
-                                            style="vertical-align: top !important; border-right: 1px solid var(--border); {{ $editingIndicatorId === (int) $firstRow->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                            <div class="flex items-center justify-center gap-1">
-                                                @if ($editingIndicatorId === (int) $firstRow->ind_id)
-                                                    <div class="flex w-full flex-col items-center gap-2">
-                                                        <div class="flex flex-col items-center gap-1">
-                                                            <flux:button size="xs" variant="ghost" type="button" wire:click="saveEdit" icon="check" style="width: 2.75rem; background-color: #22c55e; color: #fff;" aria-label="{{ __('Save') }}" />
-                                                            <flux:button size="xs" variant="ghost" type="button" wire:click="cancelEdit" icon="x-mark" style="width: 2.75rem; background-color: #f59e0b; color: #fff;" aria-label="{{ __('Cancel') }}" />
-                                                        </div>
-                                                        <div class="h-px w-full bg-border"></div>
-                                                    </div>
-                                                @elseif ((int) ($firstRow->target_status ?? 0) === 3)
-                                                    <flux:icon icon="lock-closed" class="size-3.5 text-muted-foreground" />
-                                                @elseif ((int) ($firstRow->target_status ?? 0) === 1)
-                                                    <div class="flex flex-col items-start gap-1">
-                                                        <flux:button size="xs" variant="primary" icon="pencil-square" class="h-7 justify-center px-2 text-xs" style="width: 2.75rem;" wire:click="editRow({{ $firstRow->id }})" aria-label="{{ __('Edit') }}" />
-                                                        <flux:button size="xs" variant="danger" icon="trash" class="h-7 justify-center px-2 text-xs" style="width: 2.75rem;" wire:click="deleteRow({{ $firstRow->id }})" aria-label="{{ __('Delete') }}" />
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </td>
-
-                                        <td rowspan="{{ $rowSpan }}"
-                                            class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words"
-                                            style="vertical-align: top !important; border-right: 1px solid var(--border); {{ $editingIndicatorId === (int) $firstRow->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                            @if ($editingIndicatorId === (int) $firstRow->ind_id)
-                                                <div class="space-y-2">
-                                                    <input type="hidden" wire:model="editCategory">
-                                                    <div>
-                                                        <textarea data-autosize="true" x-data
-                                                            x-init="const fit = () => { $el.style.height = 'auto'; $el.style.overflow = 'hidden'; $el.style.height = `${$el.scrollHeight}px`; }; fit(); $nextTick(fit); $el.addEventListener('input', fit);"
-                                                            wire:model="editActivity" rows="1"
-                                                            class="w-full rounded-md border bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background @error('editActivity') border-red-500 focus-visible:ring-red-500 @else border-input @enderror"
-                                                            style="resize:none;"></textarea>
-                                                    </div>
-                                                </div>
-                                            @else
-                                                {!! nl2br(e($formatTableValue($firstRow->activity ?? null))) !!}
-                                            @endif
-                                        </td>
-                                    @endif
-
-                                    <td class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words"
-                                        style="vertical-align: top !important; border-right: 1px solid var(--border); {{ $editingIndicatorId === (int) $row->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                        @if ($editingIndicatorId === (int) $row->ind_id)
-                                            <flux:select wire:key="edit-semester-{{ $row->id }}"
-                                                wire:model="editRows.{{ $row->id }}.semester">
-                                                @foreach ($semesters as $semester)
-                                                    <option value="{{ $semester->value }}">{{ $semester->label }}</option>
-                                                @endforeach
-                                            </flux:select>
-                                        @else
-                                            {!! nl2br(e($formatTableValue(\App\Support\Semester::label($row->new_semester ?? null)))) !!}
-                                        @endif
-                                    </td>
-                                    <td class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words"
-                                        style="vertical-align: top !important; border-right: 1px solid var(--border); {{ $editingIndicatorId === (int) $row->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                        @if ($editingIndicatorId === (int) $row->ind_id)
-                                            <textarea data-autosize="true" x-data
-                                                x-init="const fit = () => { $el.style.height = 'auto'; $el.style.overflow = 'hidden'; $el.style.height = `${$el.scrollHeight}px`; }; fit(); $nextTick(fit); $el.addEventListener('input', fit);"
-                                                wire:model="editRows.{{ $row->id }}.description" rows="1"
-                                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-background"
-                                                style="resize:none;"></textarea>
-                                        @else
-                                            {!! nl2br(e($formatTableValue($row->description ?? null))) !!}
-                                        @endif
-                                    </td>
-                                    <td class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words"
-                                        style="vertical-align: top !important; border-right: 1px solid var(--border); {{ $editingIndicatorId === (int) $row->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                        @if ($editingIndicatorId === (int) $row->ind_id)
-                                            <textarea data-autosize="true" x-data
-                                                x-init="const fit = () => { $el.style.height = 'auto'; $el.style.overflow = 'hidden'; $el.style.height = `${$el.scrollHeight}px`; }; fit(); $nextTick(fit); $el.addEventListener('input', fit);"
-                                                wire:model="editRows.{{ $row->id }}.efficiency" rows="1"
-                                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                                                style="resize:none;"></textarea>
-                                        @else
-                                            {!! nl2br(e($formatScoreValue($row->rg_efficiency_ ?? null))) !!}
-                                        @endif
-                                    </td>
-                                    <td class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words"
-                                        style="vertical-align: top !important; border-right: 1px solid var(--border); {{ $editingIndicatorId === (int) $row->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                        @if ($editingIndicatorId === (int) $row->ind_id)
-                                            <textarea data-autosize="true" x-data
-                                                x-init="const fit = () => { $el.style.height = 'auto'; $el.style.overflow = 'hidden'; $el.style.height = `${$el.scrollHeight}px`; }; fit(); $nextTick(fit); $el.addEventListener('input', fit);"
-                                                wire:model="editRows.{{ $row->id }}.quality" rows="1"
-                                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-background"
-                                                style="resize:none;"></textarea>
-                                        @else
-                                            {!! nl2br(e($formatScoreValue($row->rg_quality_ ?? null))) !!}
-                                        @endif
-                                    </td>
-                                    <td class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words"
-                                        style="vertical-align: top !important; border-right: 1px solid var(--border); {{ $editingIndicatorId === (int) $row->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                        @if ($editingIndicatorId === (int) $row->ind_id)
-                                            <textarea data-autosize="true" x-data
-                                                x-init="const fit = () => { $el.style.height = 'auto'; $el.style.overflow = 'hidden'; $el.style.height = `${$el.scrollHeight}px`; }; fit(); $nextTick(fit); $el.addEventListener('input', fit);"
-                                                wire:model="editRows.{{ $row->id }}.timeliness" rows="1"
-                                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-background"
-                                                style="resize:none;"></textarea>
-                                        @else
-                                            {!! nl2br(e($formatScoreValue($row->rg_timeliness_ ?? null))) !!}
-                                        @endif
-                                    </td>
-                                    <td class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words"
-                                        style="vertical-align: top !important; border-right: 1px solid hsl(var(--border)); {{ $editingIndicatorId === (int) $row->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                        @if ($editingIndicatorId === (int) $row->ind_id)
-                                            <textarea data-autosize="true" x-data
-                                                x-init="const fit = () => { $el.style.height = 'auto'; $el.style.overflow = 'hidden'; $el.style.height = `${$el.scrollHeight}px`; }; fit(); $nextTick(fit); $el.addEventListener('input', fit);"
-                                                wire:model="editRows.{{ $row->id }}.movs" rows="1"
-                                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-background"
-                                                style="resize:none;"></textarea>
-                                        @else
-                                            {!! nl2br(e($formatTableValue($row->rg_mov_ ?? null))) !!}
-                                        @endif
-                                    </td>
-                                    <td class="border-b border-l border-border px-3 py-3 align-top whitespace-normal break-words"
-                                        style="vertical-align: top !important; border-left: 1px solid var(--border); {{ $editingIndicatorId === (int) $row->ind_id ? 'background-color: #faf3de;' : '' }}">
-                                        @if ($editingIndicatorId === (int) $row->ind_id)
-                                            <textarea data-autosize="true" x-data
-                                                x-init="const fit = () => { $el.style.height = 'auto'; $el.style.overflow = 'hidden'; $el.style.height = `${$el.scrollHeight}px`; }; fit(); $nextTick(fit); $el.addEventListener('input', fit);"
-                                                wire:model="editRows.{{ $row->id }}.remarks" rows="1"
-                                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-background"
-                                                style="resize:none;"></textarea>
-                                        @else
-                                            {!! nl2br(e($formatTableValue($row->rg_remarks_ ?? null))) !!}
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @empty
-                            <tr>
-                                <td colspan="9" class="border-b border-border px-3 py-10 text-center text-muted-foreground">
-                                    {{ __('No record found in this category.') }}
-                                </td>
-                            </tr>
-                        @endforelse
-                        --}}
+                @forelse ($groupedByIndicator as $indId => $rows)
+                @php($groupRows = $rows->values())
+                @php($firstRowStatus = (int) ($groupRows->first()->target_status ?? 1))
+                <livewire:annual-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :key="'annual-target-indicator-' . $indId . '-' . $firstRowStatus . '-' . $groupRows->pluck('id')->join('-')" />
+                @empty
+                <tbody wire:key="annual-target-empty-{{ $category->value }}">
+                    <tr>
+                        <td colspan="9" class="border-b border-border px-3 py-10 text-center text-muted-foreground">
+                            {{ __('No record found in this category.') }}
+                        </td>
+                    </tr>
                 </tbody>
-                    @endforeach
+                @endforelse
+                @endforeach
             </table>
         </div>
 
@@ -437,6 +374,73 @@
         </div>
     </flux:modal>
 
+    <flux:modal wire:model="showLockModal" dismissible>
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Save and Lock Annual Target') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Are you sure you want to save and lock your annual target entries? Once locked, these targets will no longer be editable.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <flux:button variant="ghost" type="button" wire:click="cancelLockAnnualTarget">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
+                    wire:click="confirmLockAnnualTarget">
+                    {{ __('Confirm and Lock') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal wire:model="showUnlockModal" dismissible>
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Unlock Annual Target') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Are you sure you want to unlock your annual target entries? Once unlocked, these targets can be edited and modified.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <flux:button variant="ghost" type="button" wire:click="cancelUnlockAnnualTarget">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" wire:click="confirmUnlockAnnualTarget">
+                    {{ __('Confirm and Unlock') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal wire:model="showCopyModal" dismissible style="width: 80%; max-width: 80%; height: 90%; max-height: 90%;"
+        class="overflow-hidden">
+        @include('livewire.annual-target.copy-target-modal')
+    </flux:modal>
+
+    <flux:modal wire:model="showCopyAllConfirmModal" dismissible>
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Copy all filtered targets?') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Are you sure you want to copy all filtered target results to your annual target list?') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <flux:button variant="ghost" type="button" wire:click="cancelCopyAllConfirm">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
+                    wire:click="confirmCopyAll">
+                    {{ __('Confirm and Copy') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
     <flux:modal wire:model="showMoveConfirmModal" dismissible>
         <div class="space-y-5">
             <div class="space-y-1">
@@ -458,10 +462,8 @@
         </div>
     </flux:modal>
 
-    <flux:modal
-        wire:model="showAddModal"
-        style="width: min(72rem, calc(100vw - 2rem)); max-width: min(72rem, calc(100vw - 2rem));"
-    >
+    <flux:modal wire:model="showAddModal"
+        style="width: min(72rem, calc(100vw - 2rem)); max-width: min(72rem, calc(100vw - 2rem));">
         <div class="space-y-5">
             <div class="space-y-1">
                 <flux:heading size="lg">{{ __('Add target') }}</flux:heading>
@@ -511,12 +513,16 @@
             <div class="grid items-start gap-4 md:grid-cols-2">
                 <div class="grid gap-1">
                     <flux:label>{{ __('Key Result Area') }}</flux:label>
-                    <textarea data-autosize="true" wire:model="addActivity" rows="1" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm" style="resize:none;"></textarea>
+                    <textarea data-autosize="true" wire:model="addActivity" rows="1"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                        style="resize:none;"></textarea>
                 </div>
 
                 <div class="grid gap-1">
                     <flux:label>{{ __('Success Indicator') }}</flux:label>
-                    <textarea data-autosize="true" wire:model="addDescription" rows="1" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm" style="resize:none;"></textarea>
+                    <textarea data-autosize="true" wire:model="addDescription" rows="1"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                        style="resize:none;"></textarea>
                 </div>
             </div>
 
@@ -531,27 +537,37 @@
             <div class="grid items-start gap-4 md:grid-cols-2">
                 <div class="grid gap-1">
                     <flux:label>{{ __('Efficiency') }}</flux:label>
-                    <textarea data-autosize="true" wire:model="addEfficiency" rows="1" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm" style="resize:none;"></textarea>
+                    <textarea data-autosize="true" wire:model="addEfficiency" rows="1"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                        style="resize:none;"></textarea>
                 </div>
 
                 <div class="grid gap-1">
                     <flux:label>{{ __('Quality') }}</flux:label>
-                    <textarea data-autosize="true" wire:model="addQuality" rows="1" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm" style="resize:none;"></textarea>
+                    <textarea data-autosize="true" wire:model="addQuality" rows="1"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                        style="resize:none;"></textarea>
                 </div>
 
                 <div class="grid gap-1">
                     <flux:label>{{ __('Timeliness') }}</flux:label>
-                    <textarea data-autosize="true" wire:model="addTimeliness" rows="1" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm" style="resize:none;"></textarea>
+                    <textarea data-autosize="true" wire:model="addTimeliness" rows="1"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                        style="resize:none;"></textarea>
                 </div>
 
                 <div class="grid gap-1">
                     <flux:label>{{ __('MOVs') }}</flux:label>
-                    <textarea data-autosize="true" wire:model="addMovs" rows="1" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm" style="resize:none;"></textarea>
+                    <textarea data-autosize="true" wire:model="addMovs" rows="1"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                        style="resize:none;"></textarea>
                 </div>
 
                 <div class="grid gap-1 md:col-span-2" style="grid-column: 1 / -1;">
                     <flux:label>{{ __('Remarks') }}</flux:label>
-                    <textarea data-autosize="true" wire:model="addRemarks" rows="1" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm" style="resize:none;"></textarea>
+                    <textarea data-autosize="true" wire:model="addRemarks" rows="1"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                        style="resize:none;"></textarea>
                 </div>
             </div>
 
@@ -559,7 +575,8 @@
                 <flux:button variant="ghost" type="button" wire:click="cancelAdd">
                     {{ __('Cancel') }}
                 </flux:button>
-                <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700" wire:click="saveAdd">
+                <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
+                    wire:click="saveAdd">
                     {{ __('Save') }}
                 </flux:button>
             </div>

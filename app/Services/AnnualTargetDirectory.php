@@ -17,6 +17,7 @@ final class AnnualTargetDirectory
         string $semester,
         string $search,
         int $perPage,
+        bool $showOnlyDuplicates = false,
     ): LengthAwarePaginator {
         if ($userId === null) {
             return new LengthAwarePaginator([], 0, $perPage, 1, [
@@ -31,6 +32,26 @@ final class AnnualTargetDirectory
             ->where('iti.target_status', '<', 4)
             ->where('itl.indi_status', '<', 4)
             ->when(! $includeStrategicFunction, fn ($query) => $query->where('iti.kra_category', '!=', 1))
+            ->when($showOnlyDuplicates, function ($query) use ($userId, $year): void {
+                $dupSubquery = DB::table('ipc_targets_indicators')
+                    ->where('user_id', $userId)
+                    ->where('target_status', '<', 4);
+                if ($year !== '') {
+                    $dupSubquery->where('target_year', $year);
+                }
+                $dupActivities = $dupSubquery->select(DB::raw('LOWER(TRIM(activity)) as clean_activity'))
+                    ->groupBy(DB::raw('LOWER(TRIM(activity))'))
+                    ->havingRaw('COUNT(*) > 1')
+                    ->pluck('clean_activity')
+                    ->filter()
+                    ->all();
+
+                if (empty($dupActivities)) {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->whereIn(DB::raw('LOWER(TRIM(iti.activity))'), $dupActivities);
+                }
+            })
             ->select([
                 DB::raw('iti.id as tarid'),
                 'itl.ind_id',

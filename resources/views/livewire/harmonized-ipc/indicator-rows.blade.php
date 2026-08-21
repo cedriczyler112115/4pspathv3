@@ -34,6 +34,7 @@
         get isPositionSelected() {
             return Boolean(this.$wire.positionFilter && String(this.$wire.positionFilter).trim() !== '');
         },
+        targetStatus: {{ (int) ($firstRow['target_status'] ?? 0) }},
         isDraggingMenu: false,
         dragStartX: 0,
         dragStartY: 0,
@@ -71,6 +72,11 @@
         },
         openContextMenu(event, kra, indicatorId, itemId, subTargetCount) {
             event.preventDefault();
+
+            if (this.targetStatus === 3) {
+                return;
+            }
+
             window.dispatchEvent(new CustomEvent('close-all-target-context-menus'));
 
             const clickedTd = event.target ? event.target.closest('td') : null;
@@ -227,7 +233,9 @@
                                 <flux:button size="xs" variant="ghost" type="button" wire:click="cancel" wire:loading.attr="disabled" icon="x-mark" style="width: 2.75rem; background-color: #f59e0b; color: #fff;" aria-label="{{ __('Cancel') }}" />
                             </div>
                         @elseif ((int) ($firstRow['target_status'] ?? 0) === 3)
-                            <flux:icon icon="lock-closed" class="size-3.5 text-muted-foreground" />
+                            <div class="flex items-center justify-center p-1" title="{{ __('Locked target') }}">
+                                <flux:icon icon="lock-closed" class="size-5 text-slate-500 dark:text-slate-400" />
+                            </div>
                         @elseif ((int) ($firstRow['target_status'] ?? 0) === 1)
                             <div class="flex items-center justify-center">
                                 <div draggable="true"
@@ -378,15 +386,7 @@
             class="fixed min-w-[12rem] rounded-xl border border-slate-200 bg-white text-slate-900 p-1.5 text-xs font-medium opacity-100 animate-in fade-in-50 zoom-in-95">
             
             <button type="button"
-                x-on:click="
-                    closeContextMenu();
-                    const btn = document.querySelector(`[data-kra-add-btn='${contextKra}']`);
-                    if (btn) {
-                        btn.click();
-                    } else {
-                        $dispatch('open-add-target-modal', { kraCategory: contextKra, kra: contextKra });
-                    }
-                "
+                x-on:click="closeContextMenu(); $dispatch('open-add-target-modal', { kraCategory: contextKra, kra: contextKra })"
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
                 <flux:icon icon="plus" class="size-4 text-slate-700 dark:text-slate-300" />
                 <span>{{ __('Add new target') }}</span>
