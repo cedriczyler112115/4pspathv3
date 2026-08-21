@@ -2,13 +2,14 @@
 
 namespace App\Livewire\Pages;
 
+use App\Services\UserDirectory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
+use stdClass;
 
 #[Title('Search Users')]
 class SearchPage extends Component
@@ -49,55 +50,27 @@ class SearchPage extends Component
         $this->resetPage();
     }
 
-    /** @return LengthAwarePaginator<int, object> */
+    /** @return LengthAwarePaginator<int, stdClass> */
     public function users(): LengthAwarePaginator
     {
-        return DB::table('users')
-            ->leftJoin('lib_division', 'users.division_id', '=', 'lib_division.id')
-            ->leftJoin('lib_section', 'users.section_id', '=', 'lib_section.id')
-            ->select([
-                'users.id',
-                'users.last_name',
-                'users.first_name',
-                'users.middle_name',
-                'users.extension_name',
-                'users.email',
-                'users.contact_number',
-                'users.position',
-                DB::raw('COALESCE(lib_division.division_name, users.division) as division_name'),
-                DB::raw('COALESCE(lib_section.section_name, users.section) as section_name'),
-            ])
-            ->when($this->appliedSearch !== '', function ($query): void {
-                $search = '%'.$this->appliedSearch.'%';
-
-                $query->where(function ($nameQuery) use ($search): void {
-                    $nameQuery
-                        ->whereRaw("CONCAT_WS(' ', users.last_name, users.first_name, users.middle_name, users.extension_name) LIKE ?", [$search])
-                        ->orWhereRaw("CONCAT_WS(' ', users.first_name, users.middle_name, users.last_name, users.extension_name) LIKE ?", [$search]);
-                });
-            })
-            ->when($this->appliedDivisionFilter !== '', fn ($query) => $query->where('users.division_id', $this->appliedDivisionFilter))
-            ->when($this->appliedSectionFilter !== '', fn ($query) => $query->where('users.section_id', $this->appliedSectionFilter))
-            ->orderBy('users.last_name')
-            ->orderBy('users.first_name')
-            ->paginate($this->perPage);
+        return app(UserDirectory::class)->search(
+            $this->appliedSearch,
+            $this->appliedDivisionFilter,
+            $this->appliedSectionFilter,
+            $this->perPage,
+        );
     }
 
-    /** @return Collection<int, object> */
+    /** @return Collection<int, stdClass> */
     public function divisions(): Collection
     {
-        return DB::table('lib_division')
-            ->orderBy('division_name')
-            ->get(['id', 'division_name']);
+        return app(UserDirectory::class)->divisions();
     }
 
-    /** @return Collection<int, object> */
+    /** @return Collection<int, stdClass> */
     public function sections(): Collection
     {
-        return DB::table('lib_section')
-            ->when($this->divisionFilter !== '', fn ($query) => $query->where('division_id', $this->divisionFilter))
-            ->orderBy('section_name')
-            ->get(['id', 'section_name']);
+        return app(UserDirectory::class)->sections($this->divisionFilter);
     }
 
     public function render(): View

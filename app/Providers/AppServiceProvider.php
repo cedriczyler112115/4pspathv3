@@ -3,10 +3,13 @@
 namespace App\Providers;
 
 use App\Models\ApplicationSetting;
+use App\Models\SidebarMenuItem;
+use App\Observers\SidebarMenuItemObserver;
 use App\View\Composers\SidebarMenuComposer;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -29,6 +32,8 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureApplicationSettings();
         $this->configureViewComposers();
+        Gate::define('access-administration', fn ($user): bool => $user->isAdministrator());
+        SidebarMenuItem::observe(SidebarMenuItemObserver::class);
     }
 
     protected function configureApplicationSettings(): void

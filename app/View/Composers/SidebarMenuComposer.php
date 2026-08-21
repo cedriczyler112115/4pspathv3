@@ -2,23 +2,20 @@
 
 namespace App\View\Composers;
 
-use App\Models\SidebarMenuItem;
+use App\Services\SidebarMenuTree;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 class SidebarMenuComposer
 {
-    public function compose(View $view): void
+    public function compose(View $view, SidebarMenuTree $sidebarMenuTree): void
     {
         $nodes = [];
 
-        if (Schema::hasTable('sidebar_menu_items')) {
-            try {
-                $nodes = SidebarMenuItem::tree();
-            } catch (QueryException) {
-                $nodes = [];
-            }
+        try {
+            $nodes = $sidebarMenuTree->active(auth()->user());
+        } catch (QueryException) {
+            $nodes = [];
         }
 
         $view->with('sidebarMenuNodes', $nodes);

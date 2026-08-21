@@ -8,15 +8,15 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Nullable for existing accounts; application logic should require these after Google login succeeds.
-            $table->string('google_id', 255)->nullable()->after('email');
-            $table->string('google_email', 255)->nullable()->after('google_id');
-            $table->text('google_access_token')->nullable()->after('google_email');
-            $table->text('google_refresh_token')->nullable()->after('google_access_token');
-            $table->timestamp('google_token_expires_at')->nullable()->after('google_refresh_token');
-            $table->string('google_avatar_url', 500)->nullable()->after('google_token_expires_at');
-
-            $table->index('google_id', 'users_google_id_index');
+            if (! Schema::hasColumn('users', 'google_id')) {
+                $table->string('google_id', 255)->nullable()->after('email');
+                $table->string('google_email', 255)->nullable()->after('google_id');
+                $table->text('google_access_token')->nullable()->after('google_email');
+                $table->text('google_refresh_token')->nullable()->after('google_access_token');
+                $table->timestamp('google_token_expires_at')->nullable()->after('google_refresh_token');
+                $table->string('google_avatar_url', 500)->nullable()->after('google_token_expires_at');
+                $table->index('google_id', 'users_google_id_index');
+            }
         });
     }
 

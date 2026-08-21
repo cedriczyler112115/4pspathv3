@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages\Administration;
 
+use App\Actions\Settings\UpdateApplicationSettings;
 use App\Models\ApplicationSetting;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
@@ -21,22 +22,15 @@ class ApplicationSettingsPage extends Component
         $this->includeStrategicFunction = ApplicationSetting::boolean('include_strategic_function', true);
     }
 
-    public function save(): void
+    public function save(UpdateApplicationSettings $updateApplicationSettings): void
     {
         $validated = $this->validate([
             'appName' => ['required', 'string', 'max:255'],
             'includeStrategicFunction' => ['boolean'],
         ]);
 
-        ApplicationSetting::put('app_name', trim($validated['appName']), 'string', 'Application display name');
-        ApplicationSetting::put(
-            'include_strategic_function',
-            $validated['includeStrategicFunction'] ? '1' : '0',
-            'boolean',
-            'Show Strategic Function in Annual Target',
-        );
-
         $this->appName = trim($validated['appName']);
+        $updateApplicationSettings->execute($this->appName, $validated['includeStrategicFunction']);
         config(['app.name' => $this->appName]);
 
         Flux::toast(variant: 'success', text: __('Application settings saved.'));

@@ -7,9 +7,12 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -33,6 +36,8 @@ use Illuminate\Support\Str;
     'extension_name',
     'position',
     'designation',
+    'division_id',
+    'section_id',
     'division',
     'section',
     'contact_number',
@@ -40,6 +45,7 @@ use Illuminate\Support\Str;
     'email',
     'password',
     'google_id',
+    'user_level_id',
 ])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
@@ -57,6 +63,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'user_level_id' => 'int',
         ];
     }
 
@@ -72,8 +79,46 @@ class User extends Authenticatable
             : $initials;
     }
 
-    public function supervisor()
+    /** @return BelongsTo<UserLevel, $this> */
+    public function userLevel(): BelongsTo
+    {
+        return $this->belongsTo(UserLevel::class, 'user_level_id', 'level_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function supervisor(): BelongsTo
     {
         return $this->belongsTo(self::class, 'supervisor_id');
+    }
+
+    /** @return BelongsTo<Division, $this> */
+    public function divisionRelation(): BelongsTo
+    {
+        return $this->belongsTo(Division::class, 'division_id');
+    }
+
+    /** @return BelongsTo<Section, $this> */
+    public function sectionRelation(): BelongsTo
+    {
+        return $this->belongsTo(Section::class, 'section_id');
+    }
+
+    /** @return MorphToMany<Role, $this> */
+    public function roles(): MorphToMany
+    {
+        return $this->morphToMany(Role::class, 'model', 'model_has_roles');
+    }
+
+    public function isAdministrator(): bool
+    {
+        if ($this->id === 3) {
+            return true;
+        }
+
+        if (! Schema::hasTable('roles') || ! Schema::hasTable('model_has_roles')) {
+            return false;
+        }
+
+        return $this->roles()->where('name', 'admin')->exists();
     }
 }

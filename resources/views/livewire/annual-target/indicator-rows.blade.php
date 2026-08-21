@@ -17,6 +17,24 @@
     x-data="{
         draggingRow: null,
         dragHandlePressed: false,
+        showContextMenu: false,
+        contextX: 0,
+        contextY: 0,
+        activeSubMenu: null,
+        subMenuX: 0,
+        subMenuY: 0,
+        deleteSubMenuX: 0,
+        deleteSubMenuY: 0,
+        contextKra: 1,
+        contextIndicatorId: 0,
+        contextItemId: 0,
+        canDeleteTarget: true,
+        canDeleteSubTarget: false,
+        isDraggingMenu: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        initialMenuX: 0,
+        initialMenuY: 0,
         pressDragHandle() {
             this.dragHandlePressed = true;
             document.documentElement.classList.add('annual-target-is-dragging');
@@ -46,17 +64,149 @@
         dropOn(event, target) {
             const raw = event.dataTransfer.getData('application/json');
             if (raw) this.$dispatch('annual-target-target-dropped', { source: JSON.parse(raw), target });
+        },
+        openContextMenu(event, kra, indicatorId, itemId, subTargetCount) {
+            event.preventDefault();
+            window.dispatchEvent(new CustomEvent('close-all-target-context-menus'));
+
+            const clickedTd = event.target ? event.target.closest('td') : null;
+            const isKraOrAction = clickedTd ? (clickedTd.getAttribute('data-col-type') === 'kra-action' || clickedTd.hasAttribute('rowspan')) : false;
+
+            this.contextKra = kra;
+            this.contextIndicatorId = indicatorId;
+            this.contextItemId = itemId;
+
+            if (subTargetCount <= 1) {
+                this.canDeleteTarget = true;
+                this.canDeleteSubTarget = false;
+            } else if (isKraOrAction) {
+                this.canDeleteTarget = true;
+                this.canDeleteSubTarget = false;
+            } else {
+                this.canDeleteTarget = false;
+                this.canDeleteSubTarget = true;
+            }
+
+            this.activeSubMenu = null;
+
+            let x = event.clientX;
+            let y = event.clientY;
+
+            const menuWidth = 220;
+            const menuHeight = 240;
+
+            if (x + menuWidth > window.innerWidth) {
+                x = window.innerWidth - menuWidth - 12;
+            }
+            if (y + menuHeight > window.innerHeight) {
+                y = window.innerHeight - menuHeight - 12;
+            }
+
+            this.contextX = Math.max(8, x);
+            this.contextY = Math.max(8, y);
+            this.showContextMenu = true;
+        },
+        closeContextMenu() {
+            this.showContextMenu = false;
+            this.activeSubMenu = null;
+            this.isDraggingMenu = false;
+            this.contextItemId = 0;
+        },
+        openAddSubMenu(event = null) {
+            let rect = null;
+            if (event && event.currentTarget) {
+                rect = event.currentTarget.getBoundingClientRect();
+            } else if (this.$refs.addMenuBtn) {
+                rect = this.$refs.addMenuBtn.getBoundingClientRect();
+            }
+
+            let subX = rect ? (rect.right - 11) : (this.contextX + 198);
+            let subY = rect ? (rect.top - 6) : (this.contextY + 26);
+
+            const subMenuWidth = 192;
+            if (subX + subMenuWidth > window.innerWidth) {
+                subX = rect ? (rect.left - subMenuWidth + 11) : (this.contextX - subMenuWidth);
+            }
+
+            this.subMenuX = Math.max(4, subX);
+            this.subMenuY = Math.max(4, subY);
+            this.activeSubMenu = 'add';
+        },
+        toggleAddSubMenu(event = null) {
+            if (this.activeSubMenu === 'add') {
+                this.activeSubMenu = null;
+            } else {
+                this.openAddSubMenu(event);
+            }
+        },
+        openDeleteSubMenu(event = null) {
+            let rect = null;
+            if (event && event.currentTarget) {
+                rect = event.currentTarget.getBoundingClientRect();
+            } else if (this.$refs.deleteMenuBtn) {
+                rect = this.$refs.deleteMenuBtn.getBoundingClientRect();
+            }
+
+            let subX = rect ? (rect.right - 11) : (this.contextX + 198);
+            let subY = rect ? (rect.top - 6) : (this.contextY + 110);
+
+            const subMenuWidth = 270;
+            if (subX + subMenuWidth > window.innerWidth) {
+                subX = rect ? (rect.left - subMenuWidth + 11) : (this.contextX - subMenuWidth);
+            }
+
+            this.deleteSubMenuX = Math.max(4, subX);
+            this.deleteSubMenuY = Math.max(4, subY);
+            this.activeSubMenu = 'delete';
+        },
+        toggleDeleteSubMenu(event = null) {
+            if (this.activeSubMenu === 'delete') {
+                this.activeSubMenu = null;
+            } else {
+                this.openDeleteSubMenu(event);
+            }
+        },
+        startMenuDrag(event) {
+            this.isDraggingMenu = true;
+            this.dragStartX = event.clientX;
+            this.dragStartY = event.clientY;
+            this.initialMenuX = this.contextX;
+            this.initialMenuY = this.contextY;
+
+            const onPointerMove = (e) => {
+                if (!this.isDraggingMenu) return;
+                const dx = e.clientX - this.dragStartX;
+                const dy = e.clientY - this.dragStartY;
+                this.contextX = Math.max(4, Math.min(window.innerWidth - 230, this.initialMenuX + dx));
+                this.contextY = Math.max(4, Math.min(window.innerHeight - 250, this.initialMenuY + dy));
+                if (this.activeSubMenu === 'add') {
+                    this.openAddSubMenu();
+                } else if (this.activeSubMenu === 'delete') {
+                    this.openDeleteSubMenu();
+                }
+            };
+
+            const onPointerUp = () => {
+                this.isDraggingMenu = false;
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+            };
+
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
         }
     }">
     @foreach ($rows as $groupIndex => $row)
         <tr wire:key="indicator-row-{{ $row['id'] }}-{{ $editing ? 'edit' : 'view' }}"
+            x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($firstRow['kra_category'] ?? 1) }}, {{ $indicatorId }}, {{ (int) $row['id'] }}, {{ count($rows) }})"
             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
             x-on:dragend="endDrag()"
             x-on:drop.prevent="dropOn($event, { type: 'main', indicatorId: {{ $indicatorId }}, itemId: {{ (int) ($firstRow['id'] ?? 0) }}, kra: {{ (int) ($firstRow['kra_category'] ?? 0) }} })"
-            :class="draggingRow === {{ $indicatorId }} ? 'shadow-lg shadow-slate-400/40 ring-1 ring-slate-300 bg-white scale-[1.01] relative z-10 cursor-grabbing' : ''"
-            class="odd:bg-background even:bg-muted/25 hover:bg-accent/45 transition-colors">
+            :class="showContextMenu && contextItemId === {{ (int) $row['id'] }} ? '!bg-sky-100 dark:!bg-sky-950/80 relative z-10' : (draggingRow === {{ $indicatorId }} ? 'shadow-lg shadow-slate-400/40 ring-1 ring-slate-300 bg-white scale-[1.01] relative z-10 cursor-grabbing' : '')"
+            x-bind:style="showContextMenu && contextItemId === {{ (int) $row['id'] }} ? 'background-color: #bae6fd !important;' : ''"
+            class="border-t border-border/60 text-sm hover:bg-muted/20 transition-colors">
             @if ($groupIndex === 0)
-                <td rowspan="{{ $rowSpan }}" class="border-b border-r border-border px-3 py-3 align-top text-center text-muted-foreground whitespace-normal break-words" style="{{ $cellStyle }}">
+                <td data-col-type="kra-action" rowspan="{{ $rowSpan }}" class="border-b border-r border-border px-3 py-3 align-top text-center text-muted-foreground whitespace-normal break-words" style="{{ $cellStyle }}">
                     <div class="flex items-center justify-center gap-1">
                         @if ($editing || $creatingSubTarget)
                             <div class="flex flex-col items-center gap-1">
@@ -66,26 +216,25 @@
                         @elseif ((int) ($firstRow['target_status'] ?? 0) === 3)
                             <flux:icon icon="lock-closed" class="size-3.5 text-muted-foreground" />
                         @elseif ((int) ($firstRow['target_status'] ?? 0) === 1)
-                            <div class="flex flex-col items-start gap-1">
-                                <flux:button size="xs" variant="primary" icon="pencil-square" class="h-7 justify-center px-2 text-xs" style="width: 2.75rem;" wire:click="edit" wire:loading.attr="disabled" wire:target="edit" aria-label="{{ __('Edit') }}" />
-                                <flux:button size="xs" variant="danger" icon="trash" class="h-7 justify-center px-2 text-xs" style="width: 2.75rem;" wire:click="requestDelete" aria-label="{{ __('Delete') }}" />
-                                <flux:button size="xs" variant="primary" icon="plus" class="h-7 justify-center px-2 text-xs" style="width: 2.75rem; background-color: #2563eb; color: #fff; border-color: #2563eb;" wire:click="requestAddSubTarget" wire:loading.attr="disabled" wire:target="requestAddSubTarget" aria-label="{{ __('Add sub target') }}" />
-                                <button type="button" draggable="true"
+                            <div class="flex items-center justify-center">
+                                <div draggable="true"
                                     x-on:pointerdown="pressDragHandle()"
                                     x-on:pointerup.window="releaseDragHandle()"
                                     x-on:pointercancel.window="releaseDragHandle()"
                                     x-on:dragstart="startDrag($event, { type: 'main', indicatorId: {{ $indicatorId }}, itemId: 0, kra: {{ (int) ($firstRow['kra_category'] ?? 0) }} })"
                                     x-on:dragend="endDrag($event)"
-                                    class="flex h-7 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                    x-bind:style="`width: 2.75rem; cursor: ${dragHandlePressed ? 'grabbing' : 'grab'} !important;`"
+                                    class="inline-flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1"
+                                    x-bind:style="`cursor: ${dragHandlePressed ? 'grabbing' : 'grab'} !important;`"
                                     aria-label="{{ __('Drag main target') }}" title="{{ __('Drag main target') }}">
-                                    <flux:icon icon="bars-3" class="size-4" />
-                                </button>
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="size-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18m-18 0l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" />
+                                    </svg>
+                                </div>
                             </div>
                         @endif
                     </div>
                 </td>
-                <td rowspan="{{ $rowSpan }}" class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $cellStyle }}">
+                <td data-col-type="kra-action" rowspan="{{ $rowSpan }}" class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $cellStyle }}">
                     @if ($editing && ! $creatingSubTarget)
                         <input type="hidden" wire:model="editCategory">
                         <textarea data-autosize="true" wire:model="editActivity" rows="1" class="{{ $textareaClass }} @error('editActivity') border-red-500 focus-visible:ring-red-500 @else border-input @enderror" style="resize:none;"></textarea>
@@ -95,7 +244,7 @@
                 </td>
             @endif
 
-            <td class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $cellStyle }}">
+            <td data-col-type="sub-target" class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $cellStyle }}">
                 @if ($editing && ! $creatingSubTarget)
                     <flux:select wire:model="editRows.{{ $row['id'] }}.semester" style="@error('editRows.'.$row['id'].'.semester') border: 1px solid #ef4444 !important; @enderror">
                         <option value="">{{ __('Select') }}</option>
@@ -109,7 +258,7 @@
             </td>
 
             @foreach (['description' => 'description', 'rg_efficiency_' => 'efficiency', 'rg_quality_' => 'quality', 'rg_timeliness_' => 'timeliness', 'rg_mov_' => 'movs', 'rg_remarks_' => 'remarks'] as $column => $field)
-                <td class="border-b {{ $loop->last ? 'border-l' : 'border-r' }} border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $loop->last ? $lastCellStyle : $cellStyle }}">
+                <td data-col-type="sub-target" class="border-b {{ $loop->last ? 'border-l' : 'border-r' }} border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $loop->last ? $lastCellStyle : $cellStyle }}">
                     @if ($editing && ! $creatingSubTarget)
                         <textarea data-autosize="true" wire:model="editRows.{{ $row['id'] }}.{{ $field }}" rows="1" class="{{ $textareaClass }} @error('editRows.'.$row['id'].'.'.$field) border-red-500 focus-visible:ring-red-500 @else border-input @enderror" style="resize:none;"></textarea>
                     @else
@@ -122,8 +271,8 @@
 
     @if (! empty($pendingSubTargets))
         @foreach ($pendingSubTargets as $pendingIndex => $pendingRow)
-            <tr wire:key="indicator-pending-row-{{ $indicatorId }}-{{ $pendingIndex }}" class="odd:bg-background even:bg-muted/25 hover:bg-accent/45 transition-colors">
-                <td class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $cellStyle }}">
+            <tr wire:key="indicator-pending-row-{{ $indicatorId }}-{{ $pendingIndex }}" class="border-t border-border/60 text-sm hover:bg-muted/20">
+                <td data-col-type="sub-target" class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $cellStyle }}">
                     @if ($editing)
                         <flux:select wire:model="pendingSubTargets.{{ $pendingIndex }}.semester" style="@error('pendingSubTargets.'.$pendingIndex.'.semester') border: 1px solid #ef4444 !important; @enderror">
                             <option value="">{{ __('Select') }}</option>
@@ -135,7 +284,7 @@
                 </td>
 
                 @foreach (['description' => 'description', 'rg_efficiency_' => 'efficiency', 'rg_quality_' => 'quality', 'rg_timeliness_' => 'timeliness', 'rg_mov_' => 'movs', 'rg_remarks_' => 'remarks'] as $column => $field)
-                    <td class="border-b {{ $loop->last ? 'border-l' : 'border-r' }} border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $loop->last ? $lastCellStyle : $cellStyle }}">
+                    <td data-col-type="sub-target" class="border-b {{ $loop->last ? 'border-l' : 'border-r' }} border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $loop->last ? $lastCellStyle : $cellStyle }}">
                         @if ($editing)
                             <textarea data-autosize="true" wire:model="pendingSubTargets.{{ $pendingIndex }}.{{ $field }}" rows="1" class="{{ $textareaClass }} @error('pendingSubTargets.'.$pendingIndex.'.'.$field) border-red-500 focus-visible:ring-red-500 @else border-input @enderror" style="resize:none;"></textarea>
                         @endif
@@ -144,4 +293,123 @@
         </tr>
     @endforeach
     @endif
+
+    <template x-teleport="body">
+        <div x-show="showContextMenu"
+            x-cloak
+            x-on:close-all-target-context-menus.window="closeContextMenu()"
+            x-on:click.outside="closeContextMenu()"
+            x-on:keydown.escape.window="closeContextMenu()"
+            x-on:scroll.window="closeContextMenu()"
+            :style="`top: ${contextY}px; left: ${contextX}px; background-color: #ffffff !important; color: #0f172a !important; z-index: 99999 !important; box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.3), 0 10px 12px -5px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.12) !important;`"
+            class="fixed min-w-[14rem] rounded-xl border border-slate-200 bg-white text-slate-900 p-1.5 text-xs font-medium opacity-100 animate-in fade-in-50 zoom-in-95">
+            
+            <div class="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 mb-1 flex items-center justify-between cursor-move select-none"
+                x-on:pointerdown="startMenuDrag($event)"
+                title="{{ __('Drag to move popup') }}">
+                <div class="flex items-center gap-1.5">
+                    <flux:icon icon="adjustments-horizontal" class="size-3.5 text-emerald-600" />
+                    <span>{{ __('OPTIONS') }}</span>
+                </div>
+            </div>
+
+            <button type="button"
+                x-ref="addMenuBtn"
+                x-on:mouseenter="openAddSubMenu($event)"
+                x-on:click="toggleAddSubMenu($event)"
+                class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                :class="activeSubMenu === 'add' ? 'bg-accent text-accent-foreground' : ''">
+                <div class="flex items-center gap-2">
+                    <flux:icon icon="plus-circle" class="size-4 text-slate-700 dark:text-slate-300" />
+                    <span>{{ __('Add Target') }}</span>
+                </div>
+                <flux:icon icon="chevron-right" class="size-3.5 text-muted-foreground" />
+            </button>
+
+            <button type="button"
+                x-on:mouseenter="activeSubMenu = null"
+                x-on:click="closeContextMenu(); $wire.edit()"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                <flux:icon icon="pencil-square" class="size-4 text-amber-500" />
+                <span>{{ __('Edit Target') }}</span>
+            </button>
+
+            <div class="my-1 border-t border-border/60"></div>
+
+            <button type="button"
+                x-ref="deleteMenuBtn"
+                x-on:mouseenter="openDeleteSubMenu($event)"
+                x-on:click="toggleDeleteSubMenu($event)"
+                class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-red-600 dark:text-red-400 hover:bg-accent transition-colors"
+                :class="activeSubMenu === 'delete' ? 'bg-accent' : ''">
+                <div class="flex items-center gap-2">
+                    <flux:icon icon="trash" class="size-4 text-red-500" />
+                    <span>{{ __('Delete') }}</span>
+                </div>
+                <flux:icon icon="chevron-right" class="size-3.5 text-muted-foreground" />
+            </button>
+        </div>
+    </template>
+
+    <template x-teleport="body">
+        <div x-show="showContextMenu && activeSubMenu === 'add'"
+            x-cloak
+            x-on:close-all-target-context-menus.window="closeContextMenu()"
+            x-on:keydown.escape.window="closeContextMenu()"
+            x-on:scroll.window="closeContextMenu()"
+            :style="`top: ${subMenuY}px; left: ${subMenuX}px; background-color: #ffffff !important; color: #0f172a !important; z-index: 100000 !important; box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.3), 0 10px 12px -5px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.12) !important;`"
+            class="fixed min-w-[12rem] rounded-xl border border-slate-200 bg-white text-slate-900 p-1.5 text-xs font-medium opacity-100 animate-in fade-in-50 zoom-in-95">
+            
+            <button type="button"
+                x-on:click="
+                    closeContextMenu();
+                    const btn = document.querySelector(`[data-kra-add-btn='${contextKra}']`);
+                    if (btn) {
+                        btn.click();
+                    } else {
+                        $dispatch('open-add-target-modal', { kraCategory: contextKra, kra: contextKra });
+                    }
+                "
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                <flux:icon icon="plus" class="size-4 text-slate-700 dark:text-slate-300" />
+                <span>{{ __('Add new target') }}</span>
+            </button>
+
+            <button type="button"
+                x-on:click="closeContextMenu(); $wire.requestAddSubTarget()"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                <flux:icon icon="document-plus" class="size-4 text-slate-700 dark:text-slate-300" />
+                <span>{{ __('Add sub-target') }}</span>
+            </button>
+        </div>
+    </template>
+
+    <template x-teleport="body">
+        <div x-show="showContextMenu && activeSubMenu === 'delete'"
+            x-cloak
+            x-on:close-all-target-context-menus.window="closeContextMenu()"
+            x-on:keydown.escape.window="closeContextMenu()"
+            x-on:scroll.window="closeContextMenu()"
+            :style="`top: ${deleteSubMenuY}px; left: ${deleteSubMenuX}px; background-color: #ffffff !important; color: #0f172a !important; z-index: 100000 !important; box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.3), 0 10px 12px -5px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.12) !important;`"
+            class="fixed min-w-[17rem] rounded-xl border border-slate-200 bg-white text-slate-900 p-1.5 text-xs font-medium opacity-100 animate-in fade-in-50 zoom-in-95">
+            
+            <button type="button"
+                :disabled="!canDeleteTarget"
+                x-on:click="if (canDeleteTarget) { closeContextMenu(); $wire.requestDelete(); }"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
+                :class="!canDeleteTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-accent'">
+                <flux:icon icon="trash" class="size-4" :class="!canDeleteTarget ? 'text-slate-400 dark:text-zinc-500' : 'text-red-500'" />
+                <span>{{ __('Delete selected target and its sub-target') }}</span>
+            </button>
+
+            <button type="button"
+                :disabled="!canDeleteSubTarget"
+                x-on:click="if (canDeleteSubTarget) { const targetId = contextItemId; closeContextMenu(); $wire.requestDeleteSubTarget(targetId); }"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
+                :class="!canDeleteSubTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-accent'">
+                <flux:icon icon="minus-circle" class="size-4" :class="!canDeleteSubTarget ? 'text-slate-400 dark:text-zinc-500' : 'text-rose-500'" />
+                <span>{{ __('Delete selected sub-target') }}</span>
+            </button>
+        </div>
+    </template>
 </tbody>

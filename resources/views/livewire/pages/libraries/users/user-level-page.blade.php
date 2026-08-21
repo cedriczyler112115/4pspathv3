@@ -29,6 +29,7 @@
                     <tr>
                         <th class="border-b border-r border-border px-2 py-3 whitespace-nowrap text-center first:rounded-tl-xl">#</th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Level Name') }}</th>
+                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Sidebar Menu Access') }}</th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Status') }}</th>
                         <th class="border-b border-border px-3 py-3 text-right whitespace-nowrap last:rounded-tr-xl">{{ __('Action') }}</th>
                     </tr>
@@ -39,7 +40,7 @@
                             $isEditing = $showInlineEdit && (int) $editingId === (int) $userLevel->level_id;
                         @endphp
 
-                        <tr class="odd:bg-background even:bg-muted/25 hover:bg-accent/45 transition-colors">
+                        <tr class="border-t border-border/60 text-sm hover:bg-muted/20">
                             <td class="border-b border-r border-border px-2 py-3 text-center text-muted-foreground whitespace-nowrap">
                                 {{ ($userLevels->firstItem() ?? 1) + $loop->index }}
                             </td>
@@ -54,6 +55,18 @@
                                     </div>
                                 @else
                                     <div class="font-medium text-foreground">{{ $userLevel->level_name }}</div>
+                                @endif
+                            </td>
+                            <td class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
+                                @php($summary = $this->accessSummary($userLevel->level_id))
+                                @if ($summary['is_all'])
+                                    <span class="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                        {{ __('Full Access (All Items)') }}
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                                        {{ __(':count of :total Items', ['count' => $summary['count'], 'total' => $summary['total']]) }}
+                                    </span>
                                 @endif
                             </td>
                             <td class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
@@ -77,6 +90,9 @@
                                     </div>
                                 @else
                                     <div class="flex items-center justify-end gap-2">
+                                        <flux:button size="sm" variant="ghost" icon="key" wire:click="openMenuAccessModal({{ $userLevel->level_id }})">
+                                            {{ __('Menu Access') }}
+                                        </flux:button>
                                         <flux:button size="sm" variant="ghost" icon="pencil-square" wire:click="$set('pendingId', {{ $userLevel->level_id }}); openEditor()">
                                             {{ __('Edit') }}
                                         </flux:button>
@@ -88,11 +104,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="4" class="border-b border-border px-3 py-8 text-center text-muted-foreground">
-                                {{ __('No user levels found.') }}
-                            </td>
-                        </tr>
+                        <x-table-empty-state :colspan="5" :message="__('No user levels found.')" />
                     @endforelse
                 </tbody>
             </table>
@@ -102,6 +114,67 @@
             {{ $userLevels->links('vendor.pagination.users-pagination') }}
         </div>
     </div>
+
+    <flux:modal wire:model="showMenuAccessModal" dismissible class="max-w-2xl">
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Configure Sidebar Menu Access') }}</flux:heading>
+                <flux:subheading>{{ __('Select which sidebar menu items are accessible for :level.', ['level' => $accessUserLevelName]) }}</flux:subheading>
+            </div>
+
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <flux:input wire:model.live.debounce.250ms="menuSearch" :placeholder="__('Search menu items...')" class="w-full sm:w-64" />
+
+                <div class="flex items-center gap-2">
+                    <flux:button size="sm" variant="ghost" wire:click="selectAllMenuAccess">
+                        {{ __('Select All') }}
+                    </flux:button>
+                    <flux:button size="sm" variant="ghost" wire:click="deselectAllMenuAccess">
+                        {{ __('Deselect All') }}
+                    </flux:button>
+                </div>
+            </div>
+
+            <div class="max-h-96 overflow-y-auto rounded-xl border border-border bg-background p-3 space-y-1.5">
+                @forelse ($this->menuAccessRows as $row)
+                    @php($item = $row['item'])
+                    @php($depth = $row['depth'])
+                    <label class="flex items-center gap-3 rounded-lg border border-border/50 p-2.5 hover:bg-muted/30 cursor-pointer transition-colors" style="margin-left: {{ $depth * 1.25 }}rem">
+                        <input
+                            type="checkbox"
+                            wire:model="selectedMenuItemIds"
+                            value="{{ $item->id }}"
+                            class="size-4 rounded border-border text-primary focus:ring-primary"
+                        />
+                        @if (filled($item->icon) && \App\Support\SidebarIcons::isValid($item->icon))
+                            <div class="flex size-7 shrink-0 items-center justify-center rounded-md border border-border bg-muted/40">
+                                <flux:icon :icon="$item->icon" class="size-3.5 text-foreground" />
+                            </div>
+                        @endif
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-medium text-foreground">{{ $item->label }}</div>
+                            @if (filled($item->href) || filled($item->key))
+                                <div class="text-xs text-muted-foreground truncate">{{ $item->key ?: $item->href }}</div>
+                            @endif
+                        </div>
+                    </label>
+                @empty
+                    <div class="p-6 text-center text-sm text-muted-foreground">
+                        {{ __('No menu items match your search.') }}
+                    </div>
+                @endforelse
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <flux:button variant="ghost" type="button" wire:click="cancel">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" wire:click="saveMenuAccess">
+                    {{ __('Save Access Permissions') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 
     <flux:modal wire:model="showDeleteModal" dismissible class="max-w-lg">
         <div class="space-y-5">

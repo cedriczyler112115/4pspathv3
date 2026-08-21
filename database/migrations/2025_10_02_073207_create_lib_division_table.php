@@ -13,6 +13,10 @@ class CreateLibDivisionTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasTable('lib_division')) {
+            return;
+        }
+
         Schema::create('lib_division', function (Blueprint $table) {
             $table->id(); // INT AUTO_INCREMENT PRIMARY KEY
             $table->string('division_name', 150); // VARCHAR(150) NOT NULL

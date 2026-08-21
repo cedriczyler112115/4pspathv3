@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('ipc_rg_update')) {
+            return;
+        }
+
         Schema::create('ipc_rg_update', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('id_sem');

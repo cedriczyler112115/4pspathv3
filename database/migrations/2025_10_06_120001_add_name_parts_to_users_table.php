@@ -9,10 +9,18 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('last_name', 150)->nullable()->after('name');
-            $table->string('first_name', 150)->nullable()->after('last_name');
-            $table->string('middle_name', 150)->nullable()->after('first_name');
-            $table->string('extension_name', 50)->nullable()->after('middle_name');
+            if (! Schema::hasColumn('users', 'last_name')) {
+                $table->string('last_name', 150)->nullable()->after('name');
+            }
+            if (! Schema::hasColumn('users', 'first_name')) {
+                $table->string('first_name', 150)->nullable()->after('last_name');
+            }
+            if (! Schema::hasColumn('users', 'middle_name')) {
+                $table->string('middle_name', 150)->nullable()->after('first_name');
+            }
+            if (! Schema::hasColumn('users', 'extension_name')) {
+                $table->string('extension_name', 50)->nullable()->after('middle_name');
+            }
         });
 
         // Attempt best-effort backfill from existing 'name' field

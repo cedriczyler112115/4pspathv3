@@ -9,12 +9,8 @@
             <div class="overflow-x-auto border-b border-border bg-muted/25">
                 <div class="flex min-w-[52rem] items-end gap-4 p-4">
                     <div class="min-w-0 flex-[1.4]">
-                        <flux:input
-                            wire:model="search"
-                            icon:trailing="magnifying-glass"
-                            :label="__('Full Name')"
-                            :placeholder="__('Search full name')"
-                        />
+                        <flux:input wire:model="search" icon:trailing="magnifying-glass" :label="__('Full Name')"
+                            :placeholder="__('Search full name')" />
                     </div>
 
                     <div class="min-w-0 flex-1">
@@ -46,8 +42,8 @@
                         </flux:field>
                     </div>
 
-                    <flux:button type="button" variant="primary" icon="magnifying-glass"
-                        wire:click="applyFilters" wire:loading.attr="disabled" wire:target="applyFilters">
+                    <flux:button type="button" variant="primary" icon="magnifying-glass" wire:click="applyFilters"
+                        wire:loading.attr="disabled" wire:target="applyFilters">
                         <span wire:loading.remove wire:target="applyFilters">{{ __('Search') }}</span>
                         <span wire:loading wire:target="applyFilters">{{ __('Searching...') }}</span>
                     </flux:button>
@@ -56,47 +52,52 @@
 
             <div class="w-full overflow-x-auto">
                 <table class="w-full border-separate border-spacing-0 text-sm">
-                <thead class="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    <tr>
-                        <th class="border-b border-r border-border px-3 py-3 text-center first:rounded-tl-xl">#</th>
-                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Full Name') }}</th>
-                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Division') }}</th>
-                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Section') }}</th>
-                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Position') }}</th>
-                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Contact Number') }}</th>
-                        <th class="border-b border-border px-3 py-3 whitespace-nowrap last:rounded-tr-xl">{{ __('Email') }}</th>
-                    </tr>
-                </thead>
-                <tbody wire:loading.class="opacity-50" wire:target="applyFilters,page">
-                    @forelse ($users as $user)
-                        @php
-                            $fullName = trim(
-                                ($user->last_name ?? '') .
-                                (filled($user->last_name) ? ', ' : '') .
-                                collect([$user->first_name, $user->middle_name, $user->extension_name])->filter()->join(' ')
-                            );
-                        @endphp
-                        <tr wire:key="search-user-{{ $user->id }}" class="odd:bg-background even:bg-muted/25 transition-colors hover:bg-accent/45">
-                            <td class="border-b border-r border-border px-3 py-3 text-center text-muted-foreground">
-                                {{ ($users->firstItem() ?? 1) + $loop->index }}
-                            </td>
-                            <td class="border-b border-r border-border px-3 py-3 font-medium whitespace-nowrap">
-                                {{ strtoupper($fullName) }}
-                            </td>
-                            <td class="border-b border-r border-border px-3 py-3">{{ $user->division_name ?: '-' }}</td>
-                            <td class="border-b border-r border-border px-3 py-3">{{ $user->section_name ?: '-' }}</td>
-                            <td class="border-b border-r border-border px-3 py-3">{{ $user->position ?: '-' }}</td>
-                            <td class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ $user->contact_number ?: '-' }}</td>
-                            <td class="border-b border-border px-3 py-3">{{ $user->email ?: '-' }}</td>
-                        </tr>
-                    @empty
+                    <thead
+                        class="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         <tr>
-                            <td colspan="7" class="border-b border-border px-3 py-10 text-center text-muted-foreground">
-                                {{ __('No users found for the selected filters.') }}
-                            </td>
+                            <th class="border-b border-r border-border px-3 py-3 text-center first:rounded-tl-xl">#</th>
+                            <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
+                                {{ __('Full Name') }}</th>
+                            <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Division') }}
+                            </th>
+                            <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Section') }}
+                            </th>
+                            <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Position') }}
+                            </th>
+                            <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
+                                {{ __('Contact Number') }}</th>
+                            <th class="border-b border-border px-3 py-3 whitespace-nowrap last:rounded-tr-xl">
+                                {{ __('Email') }}</th>
                         </tr>
-                    @endforelse
-                </tbody>
+                    </thead>
+                    <tbody wire:loading.class="opacity-50" wire:target="applyFilters,page">
+                        @forelse ($users as $user)
+                            @php
+                                $fullName = trim(
+                                    ($user->last_name ?? '') .
+                                    (filled($user->last_name) ? ', ' : '') .
+                                    collect([$user->first_name, $user->middle_name, $user->extension_name])->filter()->join(' ')
+                                );
+                            @endphp
+                            <tr wire:key="search-user-{{ $user->id }}"
+                                class="border-t border-border/60 text-sm hover:bg-muted/20">
+                                <td class="border-b border-r border-border px-3 py-3 text-center text-muted-foreground">
+                                    {{ ($users->firstItem() ?? 1) + $loop->index }}
+                                </td>
+                                <td class="border-b border-r border-border px-3 py-3 font-medium whitespace-nowrap">
+                                    {{ strtoupper($fullName) }}
+                                </td>
+                                <td class="border-b border-r border-border px-3 py-3">{{ $user->division_name ?: '-' }}</td>
+                                <td class="border-b border-r border-border px-3 py-3">{{ $user->section_name ?: '-' }}</td>
+                                <td class="border-b border-r border-border px-3 py-3">{{ $user->position ?: '-' }}</td>
+                                <td class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
+                                    {{ $user->contact_number ?: '-' }}</td>
+                                <td class="border-b border-border px-3 py-3">{{ $user->email ?: '-' }}</td>
+                            </tr>
+                        @empty
+                            <x-table-empty-state :colspan="7" :message="__('No users found for the selected filters.')" />
+                        @endforelse
+                    </tbody>
                 </table>
             </div>
         </div>

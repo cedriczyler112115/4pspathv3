@@ -45,7 +45,7 @@ data-theme="{{ $htmlTheme }}" @endif>
         $menuNodes = $sidebarMenuNodes ?? [];
 
         if (empty($menuNodes) && \Illuminate\Support\Facades\Schema::hasTable('sidebar_menu_items')) {
-            $menuNodes = \App\Models\SidebarMenuItem::tree();
+            $menuNodes = app(\App\Services\SidebarMenuTree::class)->active(auth()->user());
         }
     @endphp
 
@@ -53,11 +53,11 @@ data-theme="{{ $htmlTheme }}" @endif>
         @persist('app-sidebar')
         <aside data-debug-sidebar="desktop"
             class="hidden sm:flex sticky top-0 h-dvh min-h-screen w-64 shrink-0 self-stretch flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground">
-            <div class="flex h-10 shrink-0 items-center gap-2 border-b-2 border-red-500 px-2.5">
+            <div class="flex h-10 shrink-0 items-center gap-2 border-b px-2.5">
                 <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
             </div>
 
-            <nav class="flex-1 overflow-y-auto px-2 pb-2.5">
+            <nav class="flex-1 overflow-y-auto px-2 pb-2.5" style="margin-top: 10px;">
                 <div class="space-y-2.5">
                     <div class="space-y-0.5">
                         @if (!empty($menuNodes))
@@ -81,7 +81,7 @@ data-theme="{{ $htmlTheme }}" @endif>
 
         <div class="flex min-w-0 flex-1 flex-col">
             <header
-                class="hidden h-10 items-center justify-between gap-2 border-b border-border bg-background px-2.5 sm:flex">
+                class="sticky top-0 z-50 hidden h-10 items-center justify-between gap-2 border-b border-border bg-background bg-white dark:bg-zinc-900 px-2.5 sm:flex">
                 <div class="min-w-0 overflow-hidden">
                     <x-breadcrumbs />
                 </div>
@@ -149,7 +149,7 @@ data-theme="{{ $htmlTheme }}" @endif>
             </header>
 
             <header
-                class="flex h-10 items-center justify-between gap-2 border-b border-border bg-background px-2 sm:hidden">
+                class="sticky top-0 z-50 flex h-10 items-center justify-between gap-2 border-b border-border bg-background bg-white dark:bg-zinc-900 px-2 sm:hidden">
                 <button type="button"
                     class="inline-flex items-center justify-center rounded-md border border-border bg-background px-2 py-1 text-xs font-medium shadow-sm hover:bg-muted"
                     x-on:click="sidebarOpen = true" aria-label="{{ __('Open sidebar') }}">
@@ -228,13 +228,12 @@ data-theme="{{ $htmlTheme }}" @endif>
             </main>
         </div>
 
-        <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-50 flex sm:hidden" aria-hidden="true">
+        <div x-show="sidebarOpen" x-cloak class="fixed inset-0 z-[60] flex sm:hidden" aria-hidden="true">
             <div class="fixed inset-0 bg-black/50" x-on:click="sidebarOpen = false"></div>
 
             <aside data-debug-sidebar="mobile"
                 class="relative flex h-full w-48 max-w-[85vw] flex-col bg-sidebar text-sidebar-foreground">
-                <div
-                    class="flex h-10 shrink-0 items-center justify-between gap-2 border-b-2 border-red-500 px-2.5">
+                <div class="flex h-10 shrink-0 items-center justify-between gap-2 border-b-2 border-red-500 px-2.5">
                     <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
 
                     <button type="button"

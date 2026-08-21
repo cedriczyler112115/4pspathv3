@@ -44,11 +44,27 @@ class SidebarMenuPage extends Component
 
     public bool $is_active = true;
 
+    /** @var list<int> */
+    public array $user_levels = [];
+
     public string $tableSearch = '';
 
     public string $statusFilter = 'all';
 
     public string $hierarchyFilter = 'all';
+
+    public string $userLevelFilter = 'all';
+
+    /** @return \Illuminate\Support\Collection<int, \App\Models\UserLevel> */
+    #[Computed]
+    public function availableUserLevels(): \Illuminate\Support\Collection
+    {
+        if (! Schema::hasTable('user_level')) {
+            return collect();
+        }
+
+        return \App\Models\UserLevel::query()->where('is_status', 1)->orderBy('level_name')->get();
+    }
 
     /** @return list<array{item: SidebarMenuItem, depth: int, children_count: int}> */
     #[Computed]
@@ -128,6 +144,14 @@ class SidebarMenuPage extends Component
                 return false;
             }
 
+            if ($this->userLevelFilter !== 'all') {
+                $filterLevelId = (int) $this->userLevelFilter;
+                $itemLevels = array_filter(array_map('intval', (array) ($item->user_levels ?? [])));
+                if (! empty($itemLevels) && ! in_array($filterLevelId, $itemLevels, true)) {
+                    return false;
+                }
+            }
+
             if ($search === '') {
                 return true;
             }
@@ -181,6 +205,7 @@ class SidebarMenuPage extends Component
         $this->badge_cls = $item->badge_cls;
         $this->sort_order = $item->sort_order;
         $this->is_active = $item->is_active;
+        $this->user_levels = array_filter(array_map('intval', (array) ($item->user_levels ?? [])));
 
         $this->showFormModal = true;
     }
@@ -231,6 +256,8 @@ class SidebarMenuPage extends Component
             ],
             'sort_order' => ['required', 'integer'],
             'is_active' => ['boolean'],
+            'user_levels' => ['nullable', 'array'],
+            'user_levels.*' => ['integer', Rule::exists('user_level', 'level_id')],
         ]);
 
         $validated['key'] = filled($validated['key'] ?? null) ? $validated['key'] : null;
@@ -238,11 +265,12 @@ class SidebarMenuPage extends Component
         $validated['icon'] = filled($validated['icon'] ?? null) ? $validated['icon'] : null;
         $validated['badge_text'] = filled($validated['badge_text'] ?? null) ? $validated['badge_text'] : null;
         $validated['badge_cls'] = filled($validated['badge_cls'] ?? null) ? $validated['badge_cls'] : null;
+        $validated['user_levels'] = ! empty($this->user_levels) ? array_values(array_filter(array_map('intval', $this->user_levels))) : null;
 
-        if ($itemId !== null && (int) ($validated['parent_id'] ?? 0) > 0) {
+        if ($itemId !== null) {
             $item = SidebarMenuItem::query()->findOrFail($itemId);
 
-            if ($item->descendants()->contains((int) $validated['parent_id']) || (int) $validated['parent_id'] === $item->id) {
+            if ((int) ($validated['parent_id'] ?? 0) > 0 && ($item->descendants()->contains((int) $validated['parent_id']) || (int) $validated['parent_id'] === $item->id)) {
                 $this->addError('parent_id', __('Please choose a parent outside the current item branch.'));
 
                 return;
@@ -250,7 +278,7 @@ class SidebarMenuPage extends Component
         }
 
         if ($itemId) {
-            SidebarMenuItem::query()->whereKey($itemId)->update($validated);
+            $item->fill($validated)->save();
             Flux::toast(variant: 'success', text: __('Sidebar menu item updated.'));
         } else {
             SidebarMenuItem::query()->create($validated);
@@ -266,6 +294,7 @@ class SidebarMenuPage extends Component
         $this->tableSearch = '';
         $this->statusFilter = 'all';
         $this->hierarchyFilter = 'all';
+        $this->userLevelFilter = 'all';
     }
 
     public function confirmDelete(int $id): void
@@ -282,7 +311,7 @@ class SidebarMenuPage extends Component
             return;
         }
 
-        SidebarMenuItem::query()->whereKey($id)->delete();
+        SidebarMenuItem::query()->findOrFail($id)->delete();
 
         $this->showDeleteModal = false;
         $this->deletingId = null;
@@ -311,10 +340,12 @@ class SidebarMenuPage extends Component
             'badge_cls',
             'sort_order',
             'is_active',
+            'user_levels',
         );
 
         $this->sort_order = 0;
         $this->is_active = true;
+        $this->user_levels = [];
     }
 
     /**

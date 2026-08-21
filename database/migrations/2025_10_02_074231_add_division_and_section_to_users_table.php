@@ -14,17 +14,20 @@ class AddDivisionAndSectionToUsersTable extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            // Add foreign keys to divisions and sections with proper indexing and referential integrity
-            $table->foreignId('division_id')
-                ->nullable()
-                ->constrained('lib_division')
-                ->cascadeOnUpdate()
-                ->nullOnDelete();
-            $table->foreignId('section_id')
-                ->nullable()
-                ->constrained('lib_section')
-                ->cascadeOnUpdate()
-                ->nullOnDelete();
+            if (! Schema::hasColumn('users', 'division_id')) {
+                $table->foreignId('division_id')
+                    ->nullable()
+                    ->constrained('lib_division')
+                    ->cascadeOnUpdate()
+                    ->nullOnDelete();
+            }
+            if (! Schema::hasColumn('users', 'section_id')) {
+                $table->foreignId('section_id')
+                    ->nullable()
+                    ->constrained('lib_section')
+                    ->cascadeOnUpdate()
+                    ->nullOnDelete();
+            }
         });
     }
 

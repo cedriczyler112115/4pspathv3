@@ -2,8 +2,11 @@
 
 namespace App\Livewire\Pages;
 
+use App\Actions\AnnualTargets\DeleteAnnualTarget;
+use App\Actions\AnnualTargets\CreateAnnualTarget;
+use App\Actions\AnnualTargets\UpdateAnnualTarget;
 use App\Models\ApplicationSetting;
-use App\Support\KraCategory;
+use App\Services\AnnualTargetDirectory;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -11,11 +14,12 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
-use Livewire\Attributes\On;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
+use stdClass;
 
 #[Title('Annual Target')]
 class AnnualTargetPage extends Component
@@ -50,6 +54,8 @@ class AnnualTargetPage extends Component
 
     public bool $showDeleteModal = false;
 
+    public bool $showDeleteSubTargetModal = false;
+
     public bool $showAddModal = false;
 
     public bool $showMoveConfirmModal = false;
@@ -66,6 +72,8 @@ class AnnualTargetPage extends Component
     public ?int $deletingRowId = null;
 
     public ?int $deletingIndicatorId = null;
+
+    public ?int $deletingSubTargetItemId = null;
 
     public ?int $addingKraCategory = null;
 
@@ -158,6 +166,10 @@ class AnnualTargetPage extends Component
 
     public function updatedPerPage(): void
     {
+        if (! in_array($this->perPage, [10, 20, 50], true)) {
+            $this->perPage = 10;
+        }
+
         Session::put($this->sessionKey('perPage'), $this->perPage);
         $this->resetPage();
     }
@@ -273,6 +285,7 @@ class AnnualTargetPage extends Component
         $this->editRows = [];
     }
 
+    #[On('open-add-target-modal')]
     public function openAddModal(int $kraCategory): void
     {
         $userId = Auth::id();
@@ -338,45 +351,12 @@ class AnnualTargetPage extends Component
             'addRemarks' => ['nullable', 'string'],
         ])->validate();
 
-        $now = now();
         $year = $this->addingYear ?? now()->year;
-
-        DB::transaction(function () use ($userId, $now, $year): void {
-            $nextIndicatorOrder = ((int) DB::table('ipc_targets_indicators')
-                ->where('user_id', $userId)
-                ->where('target_year', $year)
-                ->where('kra_category', $this->addingKraCategory)
-                ->max('display_order')) + 1;
-
-            $indicatorId = (int) DB::table('ipc_targets_indicators')->insertGetId([
-                'target_group_id' => null,
-                'user_id' => $userId,
-                'target_sem' => null,
-                'target_year' => $year,
-                'kra_category' => $this->addingKraCategory,
-                'display_order' => $nextIndicatorOrder,
-                'activity' => $this->addActivity,
-                'target_status' => 1,
-                'created_by' => $userId,
-                'date_created' => $now,
-            ]);
-
-            DB::table('ipc_targets_indicators_itemlist')->insert([
-                'ind_id' => $indicatorId,
-                'display_order' => 1,
-                'new_semester' => $this->semesterToDatabaseValue($this->addSemester),
-                'description' => $this->addDescription,
-                'rg_efficiency_' => $this->addEfficiency,
-                'rg_quality_' => $this->addQuality,
-                'rg_timeliness_' => $this->addTimeliness,
-                'rg_mov_' => $this->addMovs,
-                'rg_remarks_' => $this->addRemarks,
-                'created_by' => $userId,
-                'modified_by' => $userId,
-                'indi_status' => 1,
-                'date_created' => $now,
-            ]);
-        });
+        app(CreateAnnualTarget::class)->execute($userId, $year, $this->addingKraCategory, [
+            'activity' => $this->addActivity, 'semester' => $this->addSemester, 'description' => $this->addDescription,
+            'efficiency' => $this->addEfficiency, 'quality' => $this->addQuality, 'timeliness' => $this->addTimeliness,
+            'movs' => $this->addMovs, 'remarks' => $this->addRemarks,
+        ]);
 
         $this->cancelAdd();
         Flux::toast(variant: 'success', text: __('Annual target added.'));
@@ -473,19 +453,57 @@ class AnnualTargetPage extends Component
 
     public function confirmDelete(): void
     {
-        if ($this->deletingIndicatorId === null) {
+        $userId = Auth::id();
+
+        if ($this->deletingIndicatorId === null || ! is_int($userId)) {
             return;
         }
 
-        DB::table('ipc_targets_indicators_itemlist')->where('ind_id', $this->deletingIndicatorId)->delete();
+        $indicatorId = $this->deletingIndicatorId;
 
-        if ($this->editingIndicatorId === $this->deletingIndicatorId) {
+        if (! app(DeleteAnnualTarget::class)->execute($indicatorId, $userId)) {
+            $this->cancelDelete();
+
+            return;
+        }
+
+        if ($this->editingIndicatorId === $indicatorId) {
             $this->cancelEdit();
         }
 
         $this->cancelDelete();
 
-        Flux::toast(variant: 'success', text: __('Annual target deleted.'));
+        Flux::toast(variant: 'success', text: __('Annual target and its sub-targets deleted.'));
+    }
+
+    #[On('annual-target-subtarget-delete-requested')]
+    public function deleteSubTarget(int $itemId): void
+    {
+        $this->deletingSubTargetItemId = $itemId;
+        $this->showDeleteSubTargetModal = true;
+    }
+
+    public function cancelDeleteSubTarget(): void
+    {
+        $this->showDeleteSubTargetModal = false;
+        $this->deletingSubTargetItemId = null;
+    }
+
+    public function confirmDeleteSubTarget(): void
+    {
+        $userId = Auth::id();
+        if (! is_int($userId) || $this->deletingSubTargetItemId === null) {
+            return;
+        }
+
+        $itemId = $this->deletingSubTargetItemId;
+
+        if (app(DeleteAnnualTarget::class)->executeItem($itemId, $userId)) {
+            $this->cancelDeleteSubTarget();
+            Flux::toast(variant: 'success', text: __('Sub-target deleted.'));
+        } else {
+            $this->cancelDeleteSubTarget();
+        }
     }
 
     #[On('annual-target-target-dropped')]
@@ -645,6 +663,7 @@ class AnnualTargetPage extends Component
 
                 DB::table('ipc_targets_indicators')->where('id', $source->id)->update(['kra_category' => $target->kra_category, 'display_order' => $target->display_order]);
                 DB::table('ipc_targets_indicators')->where('id', $target->id)->update(['kra_category' => $source->kra_category, 'display_order' => $source->display_order]);
+
                 return;
             }
 
@@ -718,102 +737,20 @@ class AnnualTargetPage extends Component
         return preg_replace('/<br\s*\/?>/i', "\n", $text) ?? '';
     }
 
-    /** @return LengthAwarePaginator<int, object> */
+    /** @return LengthAwarePaginator<int, stdClass> */
     public function annualTargets(): LengthAwarePaginator
     {
         $userId = Auth::id();
 
-        if ($userId === null) {
-            return new LengthAwarePaginator([], 0, $this->perPage, 1, [
-                'path' => request()->url(),
-                'pageName' => 'page',
-            ]);
-        }
-
-        $query = DB::table('ipc_targets_indicators as iti')
-            ->leftJoin('ipc_targets_indicators_itemlist as itl', 'itl.ind_id', '=', 'iti.id')
-            ->where('iti.user_id', $userId)
-            ->where('iti.target_status', '<', 4)
-            ->where('itl.indi_status', '<', 4)
-            ->when(! $this->includeStrategicFunction, fn ($query) => $query->where('iti.kra_category', '!=', 1))
-            ->select([
-                DB::raw('iti.id as tarid'),
-                'itl.ind_id',
-                'iti.target_group_id',
-                'iti.user_id',
-                DB::raw('iti.target_sem as target_sem_num'),
-                DB::raw('(CASE WHEN iti.target_sem = 1 THEN "1st Semester" WHEN iti.target_sem = 2 THEN "2nd Semester" WHEN iti.target_sem = 3 THEN "Both Semester" END) as target_sem'),
-                DB::raw('itl.new_semester as new_semester'),
-                'iti.target_year',
-                'iti.kra_category',
-                DB::raw('iti.display_order as indicator_display_order'),
-                'iti.activity',
-                'iti.target_status',
-                'itl.date_created',
-                'itl.id',
-                DB::raw('itl.display_order as item_display_order'),
-                'itl.description',
-                'itl.rg_efficiency_',
-                'itl.rg_quality_',
-                'itl.rg_timeliness_',
-                'itl.rg_mov_',
-                'itl.rg_remarks_',
-                'itl.indi_status',
-            ])
-            ->when($this->yearFilter !== '', function ($query): void {
-                $query->where('iti.target_year', $this->yearFilter);
-            })
-            ->when($this->categoryFilter !== '', function ($query): void {
-                $query->where('iti.kra_category', $this->categoryFilter);
-            })
-            ->when($this->semesterFilter !== '', function ($query): void {
-                $query->where(function ($semesterQuery): void {
-                    if ($this->semesterFilter === '1') {
-                        $semesterQuery->whereIn('iti.target_sem', [1, 3]);
-                    } elseif ($this->semesterFilter === '2') {
-                        $semesterQuery->whereIn('iti.target_sem', [2, 3]);
-                    } elseif ($this->semesterFilter === '3') {
-                        $semesterQuery->whereIn('iti.target_sem', [1, 2, 3]);
-                    } else {
-                        $semesterQuery->where('iti.target_sem', $this->semesterFilter);
-                    }
-                });
-            })
-            ->when(trim($this->search) !== '', function ($query): void {
-                $search = trim($this->search);
-
-                $query->where(function ($subQuery) use ($search): void {
-                    $subQuery->where('iti.activity', 'like', '%'.$search.'%')
-                        ->orWhere('itl.description', 'like', '%'.$search.'%')
-                        ->orWhere('itl.remarks', 'like', '%'.$search.'%');
-                });
-            })
-            ->orderBy('iti.kra_category', 'asc')
-            ->orderByRaw('iti.display_order IS NULL')
-            ->orderBy('iti.display_order', 'asc')
-            ->orderBy('iti.date_created', 'asc')
-            ->orderByRaw('itl.display_order IS NULL')
-            ->orderBy('itl.display_order', 'asc')
-            ->orderBy('itl.date_created', 'asc')
-            ->orderBy('itl.id', 'asc');
-
-        if ($this->perPage === -1) {
-            $items = $query->get();
-            $page = max(1, (int) $this->getPage());
-
-            return new LengthAwarePaginator(
-                $items,
-                $items->count(),
-                max(1, $items->count()),
-                $page,
-                [
-                    'path' => request()->url(),
-                    'pageName' => 'page',
-                ]
-            );
-        }
-
-        return $query->paginate($this->perPage);
+        return app(AnnualTargetDirectory::class)->paginate(
+            is_int($userId) ? $userId : null,
+            $this->includeStrategicFunction,
+            $this->yearFilter,
+            $this->categoryFilter,
+            $this->semesterFilter,
+            trim($this->search),
+            $this->perPage,
+        );
     }
 
     /** @return Collection<int, object> */
@@ -862,7 +799,6 @@ class AnnualTargetPage extends Component
             (object) ['value' => 10, 'label' => '10'],
             (object) ['value' => 20, 'label' => '20'],
             (object) ['value' => 50, 'label' => '50'],
-            (object) ['value' => -1, 'label' => 'All'],
         ]);
     }
 }

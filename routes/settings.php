@@ -20,7 +20,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('security.edit');
     Route::redirect('settings/security', 'myaccount/security');
 
-    Route::get('administration/sidebar-menu', SidebarMenuPage::class)
-        ->name('sidebar-menu.index');
-    Route::redirect('settings/sidebar-menu', 'administration/sidebar-menu');
+    Route::middleware('can:access-administration')->group(function (): void {
+        Route::get('administration/sidebar-menu', SidebarMenuPage::class)
+            ->name('sidebar-menu.index');
+        Route::redirect('settings/sidebar-menu', 'administration/sidebar-menu');
+    });
 });

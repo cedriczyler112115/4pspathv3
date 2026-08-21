@@ -13,6 +13,10 @@ class CreateIpcRequestChangesTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasTable('ipc_request_changes')) {
+            return;
+        }
+
         Schema::create('ipc_request_changes', function (Blueprint $table) {
             $table->id();
             $table->integer('tarid');

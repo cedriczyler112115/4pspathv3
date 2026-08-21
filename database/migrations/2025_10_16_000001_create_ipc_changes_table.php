@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('ipc_changes')) {
+            return;
+        }
+
         Schema::create('ipc_changes', function (Blueprint $table) {
             // Table options to mirror MySQL definition
             $table->engine = 'InnoDB';

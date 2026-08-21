@@ -13,12 +13,16 @@ class CreateUserStatusLogsTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasTable('user_status_logs')) {
+            return;
+        }
+
         Schema::create('user_status_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnUpdate()->cascadeOnDelete();
+            $table->unsignedBigInteger('user_id')->index();
             $table->enum('status', ['active', 'inactive']);
             $table->timestamp('changed_at');
-            $table->foreignId('changed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->unsignedBigInteger('changed_by')->nullable()->index();
             $table->string('reason')->nullable();
             $table->timestamps();
         });

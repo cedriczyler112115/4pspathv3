@@ -12,8 +12,9 @@ class AddSupervisorIdToUsersTable extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            // Add supervisor_id as an integer and not nullable. Use a safe default for existing rows.
-            $table->integer('supervisor_id')->default(0);
+            if (! Schema::hasColumn('users', 'supervisor_id')) {
+                $table->integer('supervisor_id')->default(0);
+            }
         });
     }
 

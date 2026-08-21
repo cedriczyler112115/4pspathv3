@@ -11,9 +11,10 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('lib_division', function (Blueprint $table) {
-            $table->string('division_signatory', 150)->nullable()->after('division_head');
-            // Add an index to optimize lookups/searches on division_signatory if used frequently
-            $table->index('division_signatory');
+            if (! Schema::hasColumn('lib_division', 'division_signatory')) {
+                $table->string('division_signatory', 150)->nullable()->after('division_head');
+                $table->index('division_signatory');
+            }
         });
     }
 

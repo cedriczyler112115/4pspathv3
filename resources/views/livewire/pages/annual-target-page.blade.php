@@ -209,6 +209,7 @@
                                         variant="primary"
                                         icon="plus"
                                         class="h-7 px-3"
+                                        data-kra-add-btn="{{ (int) $category->value }}"
                                         wire:click="openAddModal({{ (int) $category->value }})"
                                         aria-label="{{ __('Add Target') }}"
                                     >
@@ -244,7 +245,7 @@
                             @php($rowSpan = $groupRows->count())
                             @foreach ($groupRows as $groupIndex => $row)
                                 <tr wire:key="annual-target-{{ $indId }}-{{ $row->id }}-{{ $editingIndicatorId === (int) $indId ? 'edit' : 'view' }}"
-                                    class="odd:bg-background even:bg-muted/25 hover:bg-accent/45 transition-colors">
+                                    class="border-t border-border/60 text-sm hover:bg-muted/20">
                                     @if ($groupIndex === 0)
                                         <td rowspan="{{ $rowSpan }}"
                                             class="border-b border-r border-border px-3 py-3 align-top text-center text-muted-foreground whitespace-normal break-words"
@@ -397,9 +398,9 @@
     <flux:modal wire:model="showDeleteModal" dismissible>
         <div class="space-y-5">
             <div class="space-y-1">
-                <flux:heading size="lg">{{ __('Delete annual target') }}</flux:heading>
+                <flux:heading size="lg">{{ __('Delete selected target and its sub-target') }}</flux:heading>
                 <flux:subheading>
-                    {{ __('This will permanently delete the selected annual target group and all of its related rows.') }}
+                    {{ __('Are you sure you want to delete this target and all of its sub-targets? This action cannot be undone.') }}
                 </flux:subheading>
             </div>
 
@@ -409,6 +410,27 @@
                 </flux:button>
                 <flux:button variant="primary" type="button" class="bg-red-600 text-white hover:bg-red-700"
                     wire:click="confirmDelete">
+                    {{ __('Delete') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <flux:modal wire:model="showDeleteSubTargetModal" dismissible>
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Delete selected sub-target') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Are you sure you want to delete this sub-target? This action cannot be undone.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <flux:button variant="ghost" type="button" wire:click="cancelDeleteSubTarget">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" class="bg-red-600 text-white hover:bg-red-700"
+                    wire:click="confirmDeleteSubTarget">
                     {{ __('Delete') }}
                 </flux:button>
             </div>

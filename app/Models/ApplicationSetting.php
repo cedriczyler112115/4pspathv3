@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class ApplicationSetting extends Model
@@ -22,7 +23,7 @@ class ApplicationSetting extends Model
             return $default;
         }
 
-        return static::query()->where('key', $key)->value('value') ?? $default;
+        return Cache::rememberForever('application-setting.'.$key, fn (): mixed => static::query()->where('key', $key)->value('value') ?? $default);
     }
 
     public static function boolean(string $key, bool $default = false): bool
@@ -36,5 +37,7 @@ class ApplicationSetting extends Model
             ['key' => $key],
             ['value' => (string) $value, 'type' => $type, 'description' => $description],
         );
+
+        Cache::forget('application-setting.'.$key);
     }
 }

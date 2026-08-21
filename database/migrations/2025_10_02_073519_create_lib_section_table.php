@@ -13,6 +13,10 @@ class CreateLibSectionTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasTable('lib_section')) {
+            return;
+        }
+
         Schema::create('lib_section', function (Blueprint $table) {
             $table->id(); // INT AUTO_INCREMENT PRIMARY KEY
             $table->string('section_name', 150); // VARCHAR(150) NOT NULL

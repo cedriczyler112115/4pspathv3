@@ -14,10 +14,18 @@ class AddAdditionalFieldsToUsersTable extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->integer('contact_number')->nullable();
-            $table->string('position')->nullable();
-            $table->string('designation')->nullable();
-            $table->tinyInteger('is_status')->default(1);
+            if (! Schema::hasColumn('users', 'contact_number')) {
+                $table->integer('contact_number')->nullable();
+            }
+            if (! Schema::hasColumn('users', 'position')) {
+                $table->string('position')->nullable();
+            }
+            if (! Schema::hasColumn('users', 'designation')) {
+                $table->string('designation')->nullable();
+            }
+            if (! Schema::hasColumn('users', 'is_status')) {
+                $table->tinyInteger('is_status')->default(1);
+            }
         });
     }
 

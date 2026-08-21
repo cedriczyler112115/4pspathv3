@@ -51,6 +51,8 @@
                         </th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Division') }}
                         </th>
+                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('User Level') }}
+                        </th>
                         <th class="border-b border-border px-3 py-3 whitespace-nowrap last:rounded-tr-xl">
                             {{ __('Status') }}
                         </th>
@@ -60,7 +62,7 @@
                 </thead>
                 <tbody>
                     @forelse ($users as $user)
-                        <tr class="odd:bg-background even:bg-muted/25 hover:bg-accent/45 transition-colors">
+                        <tr class="border-t border-border/60 text-sm hover:bg-muted/20">
                             <td
                                 class="border-b border-r border-border px-2 py-3 text-center text-muted-foreground whitespace-nowrap">
                                 {{ ($users->firstItem() ?? 1) + $loop->index }}
@@ -84,6 +86,15 @@
                             </td>
                             <td class="border-b border-r border-border px-3 py-3 truncate">
                                 {{ \Illuminate\Support\Str::limit($user->division_name ?? $user->division ?? '', 12, '...') ?: ' - ' }}
+                            </td>
+                            <td class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
+                                @if (filled($user->user_level_name))
+                                    <span class="inline-flex items-center rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                                        {{ $user->user_level_name }}
+                                    </span>
+                                @else
+                                    <span class="text-xs text-muted-foreground">—</span>
+                                @endif
                             </td>
                             <td class="border-b border-border px-3 py-3 whitespace-nowrap">
                                 <button
@@ -109,11 +120,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="8" class="border-b border-border px-3 py-8 text-center text-muted-foreground">
-                                {{ __('No users found.') }}
-                            </td>
-                        </tr>
+                        <x-table-empty-state :colspan="9" :message="__('No users found.')" />
                     @endforelse
                 </tbody>
             </table>
@@ -134,25 +141,31 @@
 
             <form wire:submit.prevent="save" class="space-y-4">
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <flux:input wire:model.live="editLastName" :label="__('Lastname')" />
-                    <flux:input wire:model.live="editFirstName" :label="__('Firstname')" />
-                    <flux:input wire:model.live="editMiddleName" :label="__('Middlename')" />
-                    <flux:input wire:model.live="editExtensionName" :label="__('Extension Name')" />
-                    <flux:input wire:model.live="editPosition" :label="__('Position')" />
-                    <flux:input wire:model.live="editDesignation" :label="__('Designation')" />
+                    <flux:input wire:model="editLastName" :label="__('Lastname')" />
+                    <flux:input wire:model="editFirstName" :label="__('Firstname')" />
+                    <flux:input wire:model="editMiddleName" :label="__('Middlename')" />
+                    <flux:input wire:model="editExtensionName" :label="__('Extension Name')" />
+                    <flux:input wire:model="editPosition" :label="__('Position')" />
+                    <flux:input wire:model="editDesignation" :label="__('Designation')" />
                     <flux:select wire:model.live="editDivision" :label="__('Division')">
                         <option value="">{{ __('Select division') }}</option>
                         @foreach ($divisions as $division)
                             <option value="{{ $division->id }}">{{ $division->division_name }}</option>
                         @endforeach
                     </flux:select>
-                    <flux:select wire:model.live="editSection" :label="__('Section')">
+                    <flux:select wire:model="editSection" :label="__('Section')">
                         <option value="">{{ __('Select section') }}</option>
                         @foreach ($editSections as $section)
                             <option value="{{ $section->id }}">{{ $section->section_name }}</option>
                         @endforeach
                     </flux:select>
-                    <flux:select wire:model.live="editSupervisorId" :label="__('Supervisor')">
+                    <flux:select wire:model="editUserLevelId" :label="__('User Level')">
+                        <option value="">{{ __('Select user level') }}</option>
+                        @foreach ($userLevels as $lvl)
+                            <option value="{{ $lvl->level_id }}">{{ $lvl->level_name }}</option>
+                        @endforeach
+                    </flux:select>
+                    <flux:select wire:model="editSupervisorId" :label="__('Supervisor')">
                         <option value="">{{ __('Select supervisor') }}</option>
                             @foreach ($supervisors as $supervisor)
                                 @php
@@ -165,13 +178,13 @@
                                 <option value="{{ $supervisor->id }}">{{ strtoupper($supervisorName) }}</option>
                             @endforeach
                     </flux:select>
-                    <flux:input wire:model.live="editContactNumber" :label="__('Contact Number')" />
+                    <flux:input wire:model="editContactNumber" :label="__('Contact Number')" />
                     <div class="space-y-2">
                         <flux:label>{{ __('Is Supervisor') }}</flux:label>
                         <label
                             class="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3">
                             <input type="checkbox" class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                                wire:model.live="editIsSupervisor">
+                                wire:model="editIsSupervisor">
                             <span class="text-sm text-foreground">
                                 {{ __('Make as Supervisor') }}
                             </span>

@@ -69,7 +69,7 @@
                                 {{ trans_choice('{0} No results|{1} :count result|[2,*] :count results', count($this->filteredRows), ['count' => count($this->filteredRows)]) }}
                             </span>
 
-                            @if (filled($tableSearch) || $statusFilter !== 'all' || $hierarchyFilter !== 'all')
+                            @if (filled($tableSearch) || $statusFilter !== 'all' || $hierarchyFilter !== 'all' || $userLevelFilter !== 'all')
                                 <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="clearTableFilters">
                                     {{ __('Clear filters') }}
                                 </flux:button>
@@ -77,7 +77,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-4 grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(180px,1fr)_minmax(180px,1fr)]">
+                    <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <flux:input wire:model.live.debounce.300ms="tableSearch" :label="__('Search')" placeholder="dashboard, profile.edit, /settings, home..." />
 
                         <flux:select wire:model.live="statusFilter" :label="__('Status')">
@@ -90,6 +90,13 @@
                             <flux:select.option value="all">{{ __('All levels') }}</flux:select.option>
                             <flux:select.option value="root">{{ __('Top level only') }}</flux:select.option>
                             <flux:select.option value="nested">{{ __('Nested only') }}</flux:select.option>
+                        </flux:select>
+
+                        <flux:select wire:model.live="userLevelFilter" :label="__('User Access')">
+                            <flux:select.option value="all">{{ __('All user levels') }}</flux:select.option>
+                            @foreach ($this->availableUserLevels as $lvl)
+                                <flux:select.option value="{{ $lvl->level_id }}">{{ $lvl->level_name }}</flux:select.option>
+                            @endforeach
                         </flux:select>
                     </div>
                 </div>
@@ -104,6 +111,7 @@
                                 <th class="px-4 py-3 text-left font-medium">{{ __('Icon') }}</th>
                                 <th class="px-4 py-3 text-left font-medium">{{ __('Badge') }}</th>
                                 <th class="px-4 py-3 text-left font-medium">{{ __('Order') }}</th>
+                                <th class="px-4 py-3 text-left font-medium">{{ __('User Access') }}</th>
                                 <th class="px-4 py-3 text-left font-medium">{{ __('Active') }}</th>
                                 <th class="px-4 py-3 text-right font-medium">{{ __('Actions') }}</th>
                             </tr>
@@ -163,6 +171,22 @@
                                             {{ $item->sort_order }}
                                         </span>
                                     </td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        @php($itemLevels = array_filter(array_map('intval', (array) ($item->user_levels ?? []))))
+                                        @if (empty($itemLevels))
+                                            <span class="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
+                                                {{ __('All Levels') }}
+                                            </span>
+                                        @else
+                                            <div class="flex flex-wrap gap-1">
+                                                @foreach ($this->availableUserLevels->whereIn('level_id', $itemLevels) as $lvl)
+                                                    <span class="inline-flex items-center rounded-full bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                                                        {{ $lvl->level_name }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3">
                                         <span class="rounded-full px-2 py-0.5 text-xs font-medium {{ $item->is_active ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-200' : 'bg-zinc-500/15 text-zinc-600 dark:text-zinc-300' }}">
                                             {{ $item->is_active ? __('Active') : __('Inactive') }}
@@ -184,7 +208,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-4 py-10 text-center text-sm text-muted-foreground">
+                                    <td colspan="9" class="px-4 py-10 text-center text-sm text-muted-foreground">
                                         <div class="space-y-2">
                                             <div class="font-medium text-foreground">{{ __('No sidebar menu items found.') }}</div>
                                             <div>{{ __('Try adjusting your search or filters to find a matching menu item.') }}</div>
@@ -202,7 +226,7 @@
             <div class="space-y-6">
                 <div class="space-y-1">
                     <flux:heading size="lg">{{ $editingId ? __('Edit sidebar item') : __('Create sidebar item') }}</flux:heading>
-                    <flux:subheading>{{ __('Configure label, route key, link, nesting, icon, badge, order, and visibility.') }}</flux:subheading>
+                    <flux:subheading>{{ __('Configure label, route key, link, nesting, icon, badge, order, user access, and visibility.') }}</flux:subheading>
                 </div>
 
                 <form class="space-y-5" wire:submit.prevent="save">
@@ -285,6 +309,24 @@
                                 <flux:select.option value="{{ $color }}">{{ ucfirst($color) }}</flux:select.option>
                             @endforeach
                         </flux:select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <flux:label>{{ __('User Access (User Levels)') }}</flux:label>
+                        <p class="text-xs text-muted-foreground">{{ __('Select which user levels have access to see this sidebar item. Leave unselected to allow all user levels.') }}</p>
+                        <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 rounded-xl border border-border bg-muted/20 p-3">
+                            @foreach ($this->availableUserLevels as $lvl)
+                                <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-foreground hover:text-primary transition-colors">
+                                    <input
+                                        type="checkbox"
+                                        wire:model="user_levels"
+                                        value="{{ $lvl->level_id }}"
+                                        class="size-4 rounded border-border text-primary focus:ring-primary"
+                                    />
+                                    <span>{{ $lvl->level_name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
                     </div>
 
                     <flux:checkbox wire:model="is_active" :label="__('Active (visible in sidebar)')" />

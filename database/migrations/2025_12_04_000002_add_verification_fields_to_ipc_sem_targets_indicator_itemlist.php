@@ -11,11 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (! Schema::hasTable('ipc_sem_targets_indicator_itemlist')) {
+            return;
+        }
+
         Schema::table('ipc_sem_targets_indicator_itemlist', function (Blueprint $table) {
-            // Add verification fields after has_attachments
-            $table->boolean('verified')->nullable()->after('has_attachments');
-            $table->unsignedBigInteger('verified_by')->nullable()->after('verified');
-            $table->timestamp('date_verified')->nullable()->after('verified_by');
+            if (! Schema::hasColumn('ipc_sem_targets_indicator_itemlist', 'verified')) {
+                $table->boolean('verified')->nullable();
+            }
+            if (! Schema::hasColumn('ipc_sem_targets_indicator_itemlist', 'verified_by')) {
+                $table->unsignedBigInteger('verified_by')->nullable();
+            }
+            if (! Schema::hasColumn('ipc_sem_targets_indicator_itemlist', 'date_verified')) {
+                $table->timestamp('date_verified')->nullable();
+            }
         });
     }
 

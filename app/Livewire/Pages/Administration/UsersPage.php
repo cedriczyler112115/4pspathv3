@@ -2,16 +2,18 @@
 
 namespace App\Livewire\Pages\Administration;
 
+use App\Actions\Users\ManageUser;
+use App\Services\UserDirectory;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
-use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Livewire\WithPagination;
+use stdClass;
 
 #[Title('Users')]
 class UsersPage extends Component
@@ -19,25 +21,47 @@ class UsersPage extends Component
     use WithPagination;
 
     public int $perPage = 10;
+
     public string $search = '';
+
     public string $divisionFilter = '';
+
     public string $sectionFilter = '';
+
     public string $statusFilter = '';
+
     public ?int $deleteUserId = null;
+
     public string $deleteUserName = '';
+
     public ?int $editUserId = null;
+
     public bool $showDeleteModal = false;
+
     public bool $showEditModal = false;
+
     public string $editLastName = '';
+
     public string $editFirstName = '';
+
     public string $editMiddleName = '';
+
     public string $editExtensionName = '';
+
     public string $editPosition = '';
+
     public string $editDesignation = '';
+
     public string $editDivision = '';
+
     public string $editSection = '';
+
     public string $editSupervisorId = '';
+
+    public string $editUserLevelId = '';
+
     public string $editContactNumber = '';
+
     public bool $editIsSupervisor = false;
 
     protected string $paginationTheme = 'tailwind';
@@ -90,7 +114,7 @@ class UsersPage extends Component
 
     public function edit(int $userId): void
     {
-        $user = DB::table('users')->where('id', $userId)->first();
+        $user = app(ManageUser::class)->find($userId);
 
         if (! $user) {
             return;
@@ -106,6 +130,7 @@ class UsersPage extends Component
         $this->editDivision = (string) ($user->division_id ?? '');
         $this->editSection = (string) ($user->section_id ?? '');
         $this->editSupervisorId = (string) ($user->supervisor_id ?? '');
+        $this->editUserLevelId = (string) ($user->user_level_id ?? '');
         $this->editContactNumber = (string) ($user->contact_number ?? '');
         $this->editIsSupervisor = (int) ($user->is_supervisor ?? 0) === 1;
         $this->showEditModal = true;
@@ -132,26 +157,12 @@ class UsersPage extends Component
             'editDivision' => ['required', 'string', Rule::exists('lib_division', 'id')],
             'editSection' => ['required', 'string', Rule::exists('lib_section', 'id')],
             'editSupervisorId' => ['required', 'string', Rule::exists('users', 'id')->where(fn ($query) => $query->where('id', '!=', $this->editUserId))],
+            'editUserLevelId' => ['nullable', 'string', Rule::exists('user_level', 'level_id')],
             'editContactNumber' => ['required', 'string', 'max:255'],
             'editIsSupervisor' => ['required', 'boolean'],
         ]);
 
-        DB::table('users')
-            ->where('id', $this->editUserId)
-            ->update([
-                'last_name' => $data['editLastName'] ?: null,
-                'first_name' => $data['editFirstName'] ?: null,
-                'middle_name' => $data['editMiddleName'] ?: null,
-                'extension_name' => $data['editExtensionName'] ?: null,
-                'position' => $data['editPosition'] ?: null,
-                'designation' => $data['editDesignation'] ?: null,
-                'division_id' => $data['editDivision'] !== '' ? $data['editDivision'] : null,
-                'section_id' => $data['editSection'] !== '' ? $data['editSection'] : null,
-                'supervisor_id' => $data['editSupervisorId'] !== '' ? $data['editSupervisorId'] : null,
-                'contact_number' => $data['editContactNumber'] ?: null,
-                'is_supervisor' => (int) $data['editIsSupervisor'],
-                'updated_at' => now(),
-            ]);
+        app(ManageUser::class)->update($this->editUserId, $data);
 
         $this->showEditModal = false;
         $this->editUserId = null;
@@ -172,20 +183,21 @@ class UsersPage extends Component
         $this->editDivision = '';
         $this->editSection = '';
         $this->editSupervisorId = '';
+        $this->editUserLevelId = '';
         $this->editContactNumber = '';
         $this->editIsSupervisor = false;
     }
 
     public function confirmDelete(int $userId): void
     {
-        $user = DB::table('users')->where('id', $userId)->first(['last_name', 'first_name', 'middle_name']);
+        $user = app(ManageUser::class)->find($userId);
 
         if (! $user) {
             return;
         }
 
         $this->deleteUserId = $userId;
-        $this->deleteUserName = trim(($user->last_name ?? '') . (filled($user->last_name) ? ', ' : '') . collect([$user->first_name, $user->middle_name])->filter()->join(' '));
+        $this->deleteUserName = trim(($user->last_name ?? '').(filled($user->last_name) ? ', ' : '').collect([$user->first_name, $user->middle_name])->filter()->join(' '));
         $this->showDeleteModal = true;
     }
 
@@ -195,7 +207,7 @@ class UsersPage extends Component
             return;
         }
 
-        DB::table('users')->where('id', $this->deleteUserId)->delete();
+        app(ManageUser::class)->delete($this->deleteUserId);
 
         $this->deleteUserId = null;
         $this->deleteUserName = '';
@@ -205,22 +217,11 @@ class UsersPage extends Component
 
     public function toggleStatus(int $userId): void
     {
-        $user = DB::table('users')->where('id', $userId)->first(['is_status']);
+        $newStatus = app(ManageUser::class)->toggleStatus($userId);
 
-        if (! $user) {
+        if ($newStatus === null) {
             return;
         }
-
-        $newStatus = ((int) $user->is_status === 1) ? 0 : 1;
-
-        DB::table('users')
-            ->where('id', $userId)
-            ->update([
-                'is_status' => $newStatus,
-                'date_modified' => now(),
-                'activated_at' => $newStatus === 1 ? now() : null,
-                'deactivated_at' => $newStatus === 0 ? now() : null,
-            ]);
 
         Flux::toast(
             variant: 'success',
@@ -230,91 +231,46 @@ class UsersPage extends Component
         );
     }
 
-    /** @return LengthAwarePaginator<int, object> */
+    /** @return LengthAwarePaginator<int, stdClass> */
     public function users(): LengthAwarePaginator
     {
-        $query = DB::table('users')
-            ->leftJoin('lib_division', 'users.division_id', '=', 'lib_division.id')
-            ->leftJoin('lib_section', 'users.section_id', '=', 'lib_section.id')
-            ->select([
-                'users.id',
-                'users.last_name',
-                'users.first_name',
-                'users.middle_name',
-                'users.extension_name',
-                'users.email',
-                'users.contact_number',
-                'users.position',
-                'users.designation',
-                'users.division',
-                'users.section',
-                'users.is_status',
-                DB::raw('COALESCE(lib_division.division_name, users.division) as division_name'),
-                DB::raw('COALESCE(lib_section.section_name, users.section) as section_name'),
-            ])
-            ->when(trim($this->search) !== '', function ($query): void {
-                $search = trim($this->search);
-
-                $query->where(function ($subQuery) use ($search): void {
-                    $subQuery->whereRaw(
-                        "CONCAT_WS(' ', users.last_name, users.first_name, users.middle_name, users.extension_name) like ?",
-                        ['%'.$search.'%']
-                    )
-                        ->orWhere('users.position', 'like', '%'.$search.'%')
-                        ->orWhere('users.designation', 'like', '%'.$search.'%');
-                });
-            })
-            ->when($this->divisionFilter !== '', function ($query): void {
-                $query->where('users.division_id', $this->divisionFilter);
-            })
-            ->when($this->sectionFilter !== '', function ($query): void {
-                $query->where('users.section_id', $this->sectionFilter);
-            })
-            ->when($this->statusFilter !== '', function ($query): void {
-                $query->where('users.is_status', $this->statusFilter);
-            })
-            ->orderBy('users.id');
-
-        return $query->paginate($this->perPage);
+        return app(UserDirectory::class)->administration(
+            trim($this->search),
+            $this->divisionFilter,
+            $this->sectionFilter,
+            $this->statusFilter,
+            $this->perPage,
+        );
     }
 
-    /** @return Collection<int, object> */
+    /** @return Collection<int, stdClass> */
     public function divisions(): Collection
     {
-        return DB::table('lib_division')
-            ->orderBy('division_name')
-            ->get(['id', 'division_name']);
+        return app(UserDirectory::class)->divisions();
     }
 
-    /** @return Collection<int, object> */
+    /** @return Collection<int, stdClass> */
     public function sections(): Collection
     {
-        return DB::table('lib_section')
-            ->when($this->divisionFilter !== '', function ($query): void {
-                $query->where('division_id', $this->divisionFilter);
-            })
-            ->orderBy('section_name')
-            ->get(['id', 'section_name', 'division_id']);
+        return app(UserDirectory::class)->sections($this->divisionFilter, includeDivisionId: true);
     }
 
-    /** @return Collection<int, object> */
+    /** @return Collection<int, stdClass> */
     public function editSections(): Collection
     {
-        return DB::table('lib_section')
-            ->when($this->editDivision !== '', function ($query): void {
-                $query->where('division_id', $this->editDivision);
-            })
-            ->orderBy('section_name')
-            ->get(['id', 'section_name', 'division_id']);
+        return app(UserDirectory::class)->sections($this->editDivision, includeDivisionId: true);
     }
 
-    /** @return Collection<int, object> */
+    /** @return Collection<int, stdClass> */
     public function supervisors(): Collection
     {
-        return DB::table('users')
-            ->orderBy('last_name')
-            ->orderBy('first_name')
-            ->get(['id', 'last_name', 'first_name', 'middle_name', 'extension_name']);
+        return app(UserDirectory::class)->supervisors();
+    }
+
+    /** @return Collection<int, stdClass> */
+    public function userLevels(): Collection
+    {
+        return app(UserDirectory::class)->userLevels();
     }
 
     public function render(): View
@@ -323,8 +279,9 @@ class UsersPage extends Component
             'users' => $this->users(),
             'divisions' => $this->divisions(),
             'sections' => $this->sections(),
-            'editSections' => $this->editSections(),
-            'supervisors' => $this->supervisors(),
+            'editSections' => $this->showEditModal ? $this->editSections() : collect(),
+            'supervisors' => $this->showEditModal ? $this->supervisors() : collect(),
+            'userLevels' => $this->showEditModal ? $this->userLevels() : collect(),
         ]);
     }
 

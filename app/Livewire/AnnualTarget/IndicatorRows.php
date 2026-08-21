@@ -236,6 +236,13 @@ class IndicatorRows extends Component
         }
     }
 
+    public function requestDeleteSubTarget(int $itemId): void
+    {
+        if ($itemId > 0) {
+            $this->dispatch('annual-target-subtarget-delete-requested', itemId: $itemId);
+        }
+    }
+
     public function render(): View
     {
         return view('livewire.annual-target.indicator-rows', [

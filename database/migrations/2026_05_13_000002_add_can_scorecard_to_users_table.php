@@ -8,7 +8,9 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->tinyInteger('can_scorecard')->default(0);
+            if (! Schema::hasColumn('users', 'can_scorecard')) {
+                $table->tinyInteger('can_scorecard')->default(0);
+            }
         });
     }
 

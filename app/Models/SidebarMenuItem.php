@@ -33,6 +33,7 @@ use Illuminate\Support\Facades\Schema;
     'badge_cls',
     'sort_order',
     'is_active',
+    'user_levels',
 ])]
 class SidebarMenuItem extends Model
 {
@@ -48,6 +49,7 @@ class SidebarMenuItem extends Model
         'is_active' => 'bool',
         'sort_order' => 'int',
         'parent_id' => 'int',
+        'user_levels' => 'array',
     ];
 
     /** @return BelongsTo<self, $this> */
@@ -108,7 +110,7 @@ class SidebarMenuItem extends Model
     /**
      * @return list<SidebarMenuNode>
      */
-    public static function tree(bool $onlyActive = true): array
+    public static function tree(bool $onlyActive = true, ?User $user = null): array
     {
         if (! Schema::hasTable('sidebar_menu_items')) {
             return [];
@@ -121,6 +123,35 @@ class SidebarMenuItem extends Model
         }
 
         $items = $query->ordered()->get();
+
+        if ($onlyActive && $user) {
+            $userLevelId = (int) ($user->user_level_id ?? 0);
+            $isSuperAdmin = ($user->id === 3 && $userLevelId === 0);
+
+            if (! $isSuperAdmin) {
+                $allowedItemIds = $items->filter(function (self $item) use ($userLevelId): bool {
+                    $allowedLevels = array_filter(array_map('intval', (array) ($item->user_levels ?? [])));
+                    if (empty($allowedLevels)) {
+                        return true;
+                    }
+
+                    return $userLevelId > 0 && in_array($userLevelId, $allowedLevels, true);
+                })->pluck('id')->all();
+
+                $itemMap = $items->keyBy('id');
+                $finalIds = [];
+
+                foreach ($allowedItemIds as $id) {
+                    $curr = $itemMap->get($id);
+                    while ($curr) {
+                        $finalIds[$curr->id] = true;
+                        $curr = $curr->parent_id ? $itemMap->get($curr->parent_id) : null;
+                    }
+                }
+
+                $items = $items->filter(fn (self $item) => isset($finalIds[$item->id]));
+            }
+        }
 
         $byParent = $items->groupBy('parent_id');
 
