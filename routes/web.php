@@ -22,15 +22,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
     Route::get('ipcrf/annualtarget', AnnualTargetPage::class)->name('annualtarget.index');
     Route::redirect('annualtarget', 'ipcrf/annualtarget');
+    Route::get('ipcrf/myratings', \App\Livewire\Pages\MyRatingsPage::class)->name('myratings.index');
+    Route::get('ipcrf/myratings/semestral-target', \App\Livewire\Pages\SemestralTargetPage::class)->name('myratings.semestral-target');
+    Route::redirect('myratings', 'ipcrf/myratings');
     Route::get('rpmo-management/harmonized-ipc', \App\Livewire\Pages\RpmoManagement\HarmonizedIpcPage::class)->name('harmonized-ipc.index');
     Route::redirect('harmonized-ipc', 'rpmo-management/harmonized-ipc');
     Route::get('libraries/harmonized-staff', \App\Livewire\Pages\Libraries\HarmonizedStaffPage::class)->name('libraries.harmonized-staff.index');
     Route::redirect('harmonized-staff', 'libraries/harmonized-staff');
 });
 
-Route::match(['get', 'post'], '/logout', Logout::class)
-    ->middleware('auth')
-    ->name('logout');
+Route::get('/logout', Logout::class)
+    ->middleware('auth');
 
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])
     ->middleware('guest')

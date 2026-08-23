@@ -244,8 +244,14 @@
                 </td>
                 <td data-col-type="kra-action" rowspan="{{ $rowSpan }}" class="border-b border-r border-border px-3 py-3 align-top whitespace-normal break-words" style="{{ $cellStyle }}">
                     @if ($editing && ! $creatingSubTarget)
-                        <input type="hidden" wire:model="editCategory">
                         <textarea data-autosize="true" wire:model="editActivity" rows="1" class="{{ $textareaClass }} @error('editActivity') border-red-500 focus-visible:ring-red-500 @else border-input @enderror" style="resize:none;"></textarea>
+                        <div class="mt-2">
+                            <flux:select wire:model="editCategory" size="sm">
+                                @foreach ($categories as $category)
+                                    <option value="{{ $category->value }}">{{ $category->label }}</option>
+                                @endforeach
+                            </flux:select>
+                        </div>
                     @else
                         {!! nl2br(e($formatValue($firstRow['activity'] ?? null))) !!}
                     @endif

@@ -43,95 +43,35 @@
     </div>
 
     <!-- Tab 1: Staff Target Content -->
-    <div x-show="$wire.copyTab === 'staff'" class="flex flex-1 flex-col gap-4 overflow-hidden min-h-0">
+    <div x-show="$wire.copyTab === 'staff'" class="flex flex-1 flex-col gap-4 min-h-0">
         <!-- Filters -->
-        <div class="shrink-0">
+        <div class="shrink-0 relative z-30">
             <table class="w-full border-0 border-collapse">
                 <tbody>
                     <tr class="align-top">
                         <td class="px-2 py-1 whitespace-nowrap" style="width:350px">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyStaffUserId" :label="__('Staff Name')" class="[&_select]:pr-10">
-                                    <option value="">{{ __('Select Staff Name') }}</option>
-                                    @foreach ($this->copyStaffUsers() as $user)
-                                        <option value="{{ $user->id }}">{{ mb_strtoupper($user->full_name, 'UTF-8') }}</option>
-                                    @endforeach
-                                </flux:select>
-                                <div wire:loading wire:target="copyStaffUserId" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyStaffUserId" :label="__('Staff Name')" :placeholder="__('Select Staff Name')" :options="$this->copyStaffUsers()->map(fn($u) => ['value' => (string)$u->id, 'label' => $u->full_name, 'sublabel' => $u->position ?? ''])->values()" minWidth="320px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap w-36" style="width:150px">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyStaffYear" :label="__('Year')" class="w-32 [&_select]:pr-10">
-                                    @foreach ($this->copyStaffYears() as $yearObj)
-                                        <option value="{{ $yearObj->target_year }}">{{ $yearObj->target_year }}</option>
-                                    @endforeach
-                                </flux:select>
-                                <div wire:loading wire:target="copyStaffYear" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyStaffYear" :label="__('Year')" :placeholder="__('Select Year')" :options="$this->copyStaffYears()" minWidth="120px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyStaffCategory" :label="__('Category')" class="[&_select]:pr-10">
-                                    <option value="">{{ __('All categories') }}</option>
-                                    @foreach ($this->categories() as $category)
-                                        <option value="{{ $category->value }}">{{ $category->label }}</option>
-                                    @endforeach
-                                </flux:select>
-                                <div wire:loading wire:target="copyStaffCategory" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyStaffCategory" :label="__('Category')" :placeholder="__('All categories')" :options="$this->categories()" minWidth="160px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyStaffSemester" :label="__('Semester')" class="[&_select]:pr-10">
-                                    <option value="">{{ __('All semesters') }}</option>
-                                    @foreach ($this->semesters() as $semester)
-                                        <option value="{{ $semester->value }}">{{ $semester->label }}</option>
-                                    @endforeach
-                                </flux:select>
-                                <div wire:loading wire:target="copyStaffSemester" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyStaffSemester" :label="__('Semester')" :placeholder="__('All semesters')" :options="$this->semesters()" minWidth="160px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyStaffStatusFilter" :label="__('Existing Target')" class="[&_select]:pr-10">
-                                    <option value="">{{ __('All Status') }}</option>
-                                    <option value="new">{{ __('New Only') }}</option>
-                                    <option value="existing">{{ __('Already Existing Only') }}</option>
-                                </flux:select>
-                                <div wire:loading wire:target="copyStaffStatusFilter" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyStaffStatusFilter" :label="__('Existing Target')" :placeholder="__('All Status')" :options="[
+                                ['value' => 'new', 'label' => __('New Only')],
+                                ['value' => 'existing', 'label' => __('Already Existing Only')]
+                            ]" minWidth="160px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap">
                             <div class="relative">
                                 <flux:input wire:model.live.debounce.300ms="copyStaffSearch" :label="__('Search')"
                                     :placeholder="__('Search activity/description...')" class="[&_input]:pr-8" />
-                                <div wire:loading wire:target="copyStaffSearch" class="absolute right-2.5 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
+                                <div wire:loading wire:target="copyStaffSearch" class="absolute right-2.5 bottom-[9px] flex items-center justify-center pointer-events-none z-10 bg-card dark:bg-card">
                                     <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -153,7 +93,7 @@
         </div>
 
         <!-- Target Listing Table -->
-        <div class="flex-1 overflow-y-auto rounded-xl border border-border bg-card">
+        <div class="flex-1 min-h-[250px] rounded-xl border border-border bg-card overflow-y-auto" style="max-height: 55vh; overflow-y: auto;">
             @php
                 $staffTargetGroups = $this->copyStaffTargetGroups();
                 $existingActivities = $this->existingActivities;
@@ -268,95 +208,35 @@
     </div>
 
     <!-- Tab 2: Harmonized Target Content -->
-    <div x-show="$wire.copyTab === 'harmonized'" class="flex flex-1 flex-col gap-4 overflow-hidden min-h-0" x-cloak>
+    <div x-show="$wire.copyTab === 'harmonized'" class="flex flex-1 flex-col gap-4 min-h-0" x-cloak>
         <!-- Filters -->
-        <div class="shrink-0">
+        <div class="shrink-0 relative z-30">
             <table class="w-full border-0 border-collapse">
                 <tbody>
                     <tr class="align-top">
                         <td class="px-2 py-1 whitespace-nowrap">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyHarmonizedPositionId" :label="__('Harmonized Position')" class="[&_select]:pr-10">
-                                    <option value="">{{ __('Select Position') }}</option>
-                                    @foreach ($this->copyHarmonizedPositions() as $pos)
-                                        <option value="{{ $pos->id }}">{{ $pos->name }}</option>
-                                    @endforeach
-                                </flux:select>
-                                <div wire:loading wire:target="copyHarmonizedPositionId" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyHarmonizedPositionId" :label="__('Harmonized Position')" :placeholder="__('Select Position')" :options="$this->copyHarmonizedPositions()" minWidth="200px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap w-36">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyHarmonizedYear" :label="__('Year')" class="w-32 [&_select]:pr-10">
-                                    @foreach ($this->copyHarmonizedYears() as $yearObj)
-                                        <option value="{{ $yearObj->target_year }}">{{ $yearObj->target_year }}</option>
-                                    @endforeach
-                                </flux:select>
-                                <div wire:loading wire:target="copyHarmonizedYear" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyHarmonizedYear" :label="__('Year')" :placeholder="__('Select Year')" :options="$this->copyHarmonizedYears()" minWidth="120px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyHarmonizedCategory" :label="__('Category')" class="[&_select]:pr-10">
-                                    <option value="">{{ __('All categories') }}</option>
-                                    @foreach ($this->categories() as $category)
-                                        <option value="{{ $category->value }}">{{ $category->label }}</option>
-                                    @endforeach
-                                </flux:select>
-                                <div wire:loading wire:target="copyHarmonizedCategory" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyHarmonizedCategory" :label="__('Category')" :placeholder="__('All categories')" :options="$this->categories()" minWidth="160px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyHarmonizedSemester" :label="__('Semester')" class="[&_select]:pr-10">
-                                    <option value="">{{ __('All semesters') }}</option>
-                                    @foreach ($this->semesters() as $semester)
-                                        <option value="{{ $semester->value }}">{{ $semester->label }}</option>
-                                    @endforeach
-                                </flux:select>
-                                <div wire:loading wire:target="copyHarmonizedSemester" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyHarmonizedSemester" :label="__('Semester')" :placeholder="__('All semesters')" :options="$this->semesters()" minWidth="160px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap">
-                            <div class="relative">
-                                <flux:select wire:model.live="copyHarmonizedStatusFilter" :label="__('Status')" class="[&_select]:pr-10">
-                                    <option value="">{{ __('All Status') }}</option>
-                                    <option value="new">{{ __('New Only') }}</option>
-                                    <option value="existing">{{ __('Already Existing Only') }}</option>
-                                </flux:select>
-                                <div wire:loading wire:target="copyHarmonizedStatusFilter" class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
-                                    <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </div>
-                            </div>
+                            <x-select2 wire:model.live="copyHarmonizedStatusFilter" :label="__('Status')" :placeholder="__('All Status')" :options="[
+                                ['value' => 'new', 'label' => __('New Only')],
+                                ['value' => 'existing', 'label' => __('Already Existing Only')]
+                            ]" minWidth="160px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap">
                             <div class="relative">
                                 <flux:input wire:model.live.debounce.300ms="copyHarmonizedSearch" :label="__('Search')"
                                     :placeholder="__('Search activity/description...')" class="[&_input]:pr-8" />
-                                <div wire:loading wire:target="copyHarmonizedSearch" class="absolute right-2.5 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]" style="margin-bottom: 13px;">
+                                <div wire:loading wire:target="copyHarmonizedSearch" class="absolute right-2.5 bottom-[9px] flex items-center justify-center pointer-events-none z-10 bg-card dark:bg-card">
                                     <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -378,7 +258,7 @@
         </div>
 
         <!-- Target Listing Table -->
-        <div class="flex-1 overflow-y-auto rounded-xl border border-border bg-card">
+        <div class="flex-1 min-h-[250px] rounded-xl border border-border bg-card overflow-y-auto" style="max-height: 55vh; overflow-y: auto;">
             @php
                 $harmonizedTargetGroups = $this->copyHarmonizedTargetGroups();
                 $existingActivities = $this->existingActivities;

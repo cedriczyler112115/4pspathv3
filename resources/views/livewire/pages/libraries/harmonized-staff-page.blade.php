@@ -14,8 +14,8 @@
     </div>
 
     <div class="rounded-2xl border border-border bg-card p-4 shadow-sm">
-        <div class="mb-4 border-b border-border pb-4">
-            <div class="overflow-x-auto">
+        <div class="mb-4 border-b border-border pb-4 relative z-30">
+            <div class="relative z-30">
                 <table class="w-full border-0 border-collapse">
                     <tbody>
                         <tr class="align-top">
@@ -23,9 +23,8 @@
                                 <div class="relative">
                                     <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')"
                                         :placeholder="__('Search positions...')" class="[&_input]:pr-8" />
-                                    <div wire:loading wire:target="search"
-                                        class="absolute right-2.5 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
-                                        style="margin-bottom: 13px;">
+                                     <div wire:loading wire:target="search"
+                                        class="absolute right-2.5 bottom-[9px] flex items-center justify-center pointer-events-none z-10 bg-card dark:bg-card">
                                         <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
                                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
@@ -38,28 +37,7 @@
                                 </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <div class="relative">
-                                    <flux:select wire:model.live="perPage" :label="__('Records Per Page')"
-                                        class="w-28 [&_select]:pr-10">
-                                        @foreach ($perPageOptions as $option)
-                                            <option value="{{ $option->value }}">
-                                                {{ $option->label }}
-                                            </option>
-                                        @endforeach
-                                    </flux:select>
-                                    <div wire:loading wire:target="perPage"
-                                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
-                                        style="margin-bottom: 13px;">
-                                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
-                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                                stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                            </path>
-                                        </svg>
-                                    </div>
-                                </div>
+                                <x-select2 wire:model.live="perPage" :label="__('Records Per Page')" :placeholder="__('Select')" :options="$perPageOptions" minWidth="120px" :searchable="false" />
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap align-bottom">
                                 <flux:button type="button" variant="ghost" icon="arrow-path" wire:click="resetFilters"

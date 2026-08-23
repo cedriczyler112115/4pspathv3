@@ -12,8 +12,7 @@
                     <flux:input wire:model.live.debounce.300ms="search" :label="__('Search')"
                         :placeholder="__('Level name')" class="[&_input]:pr-8" />
                     <div wire:loading wire:target="search"
-                        class="absolute right-2.5 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
-                        style="margin-bottom: 13px;">
+                        class="absolute right-2.5 bottom-[9px] flex items-center justify-center pointer-events-none z-10 bg-card dark:bg-card">
                         <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
                             xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
@@ -25,24 +24,8 @@
                     </div>
                 </div>
 
-                <div class="relative">
-                    <flux:select wire:model.live="perPage" :label="__('Per page')" class="[&_select]:pr-10">
-                        @foreach ($this->perPageOptions() as $option)
-                            <flux:select.option value="{{ $option->value }}">{{ $option->label }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                    <div wire:loading wire:target="perPage"
-                        class="absolute right-8 bottom-0 h-[38px] flex items-center justify-center pointer-events-none z-10 w-6 mb-[13px]"
-                        style="margin-bottom: 13px;">
-                        <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
-                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
-                            </circle>
-                            <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                            </path>
-                        </svg>
-                    </div>
+                <div>
+                    <x-select2 wire:model.live="perPage" :label="__('Per page')" :placeholder="__('Select')" :options="$this->perPageOptions()" minWidth="120px" :searchable="false" />
                 </div>
 
                 <div class="flex items-end">
@@ -64,10 +47,12 @@
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Level Name') }}
                         </th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">
-                            {{ __('Sidebar Menu Access') }}</th>
+                            {{ __('Sidebar Menu Access') }}
+                        </th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap">{{ __('Status') }}</th>
                         <th class="border-b border-border px-3 py-3 text-right whitespace-nowrap last:rounded-tr-xl">
-                            {{ __('Action') }}</th>
+                            {{ __('Action') }}
+                        </th>
                     </tr>
                 </thead>
                 <tbody>

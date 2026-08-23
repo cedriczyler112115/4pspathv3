@@ -245,12 +245,21 @@ class IndicatorRows extends Component
 
     public function render(): View
     {
+        $includeStrategic = \App\Models\ApplicationSetting::boolean('include_strategic_function', true);
+
+        $categories = collect([
+            (object) ['value' => '1', 'label' => 'Strategic Function'],
+            (object) ['value' => '2', 'label' => 'Core Function'],
+            (object) ['value' => '3', 'label' => 'Support Function'],
+        ])->when(! $includeStrategic, fn ($cats) => $cats->reject(fn ($c) => $c->value === '1')->values());
+
         return view('livewire.annual-target.indicator-rows', [
             'semesters' => collect([
                 (object) ['value' => '1', 'label' => '1st Semester'],
                 (object) ['value' => '2', 'label' => '2nd Semester'],
                 (object) ['value' => '3', 'label' => 'Both Semester'],
             ]),
+            'categories' => $categories,
         ]);
     }
 

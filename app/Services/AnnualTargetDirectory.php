@@ -2,72 +2,64 @@
 
 namespace App\Services;
 
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use stdClass;
 
-final class AnnualTargetDirectory
+class AnnualTargetDirectory
 {
     /** @return LengthAwarePaginator<int, stdClass> */
     public function paginate(
         ?int $userId,
         bool $includeStrategicFunction,
-        string $year,
-        string $category,
-        string $semester,
-        string $search,
+        ?string $year,
+        ?string $category,
+        ?string $semester,
+        ?string $search,
         int $perPage,
         bool $showOnlyDuplicates = false,
     ): LengthAwarePaginator {
-        if ($userId === null) {
-            return new LengthAwarePaginator([], 0, $perPage, 1, [
-                'path' => request()->url(),
-                'pageName' => 'page',
-            ]);
-        }
-
-        return DB::table('ipc_targets_indicators as iti')
-            ->leftJoin('ipc_targets_indicators_itemlist as itl', 'itl.ind_id', '=', 'iti.id')
-            ->where('iti.user_id', $userId)
-            ->where('iti.target_status', '<', 4)
-            ->where('itl.indi_status', '<', 4)
-            ->when(! $includeStrategicFunction, fn ($query) => $query->where('iti.kra_category', '!=', 1))
-            ->when($showOnlyDuplicates, function ($query) use ($userId, $year): void {
-                $dupSubquery = DB::table('ipc_targets_indicators')
-                    ->where('user_id', $userId)
-                    ->where('target_status', '<', 4);
-                if ($year !== '') {
-                    $dupSubquery->where('target_year', $year);
-                }
-                $dupActivities = $dupSubquery->select(DB::raw('LOWER(TRIM(activity)) as clean_activity'))
-                    ->groupBy(DB::raw('LOWER(TRIM(activity))'))
-                    ->havingRaw('COUNT(*) > 1')
-                    ->pluck('clean_activity')
-                    ->filter()
-                    ->all();
-
-                if (empty($dupActivities)) {
-                    $query->whereRaw('1 = 0');
-                } else {
-                    $query->whereIn(DB::raw('LOWER(TRIM(iti.activity))'), $dupActivities);
+        $query = DB::table('ipc_targets_indicators as iti')
+            ->join('ipc_targets_indicators_itemlist as itl', 'iti.id', '=', 'itl.ind_id')
+            ->when($userId !== null, fn(Builder $q) => $q->where('iti.user_id', $userId))
+            ->when(!$includeStrategicFunction, fn(Builder $q) => $q->where('iti.kra_category', '!=', 1))
+            ->when(filled($year), fn(Builder $q) => $q->where('iti.target_year', $year))
+            ->when(filled($category), fn(Builder $q) => $q->where('iti.kra_category', $category))
+            ->when(filled($semester), function (Builder $q) use ($semester): void {
+                $sem = (string) $semester;
+                if ($sem === '1') {
+                    $q->whereIn('itl.new_semester', [1, 3]);
+                } elseif ($sem === '2') {
+                    $q->whereIn('itl.new_semester', [2, 3]);
+                } elseif ($sem === '3') {
+                    $q->whereIn('itl.new_semester', [1, 2, 3]);
                 }
             })
+            ->when($showOnlyDuplicates, function (Builder $q) use ($userId): void {
+                $q->whereIn(DB::raw('(iti.user_id, iti.target_year, iti.kra_category, iti.activity)'), function ($sub) use ($userId): void {
+                    $sub->select('user_id', 'target_year', 'kra_category', 'activity')
+                        ->from('ipc_targets_indicators')
+                        ->when($userId !== null, fn($sq) => $sq->where('user_id', $userId))
+                        ->groupBy('user_id', 'target_year', 'kra_category', 'activity')
+                        ->havingRaw('COUNT(*) > 1');
+                });
+            })
             ->select([
-                DB::raw('iti.id as tarid'),
-                'itl.ind_id',
+                'iti.id as indicator_id',
                 'iti.target_group_id',
                 'iti.user_id',
-                DB::raw('iti.target_sem as target_sem_num'),
+                'iti.target_sem as target_sem_num',
                 DB::raw('(CASE WHEN iti.target_sem = 1 THEN "1st Semester" WHEN iti.target_sem = 2 THEN "2nd Semester" WHEN iti.target_sem = 3 THEN "Both Semester" END) as target_sem'),
-                DB::raw('itl.new_semester as new_semester'),
+                'itl.new_semester',
                 'iti.target_year',
                 'iti.kra_category',
-                DB::raw('iti.display_order as indicator_display_order'),
+                'iti.display_order as indicator_display_order',
                 'iti.activity',
                 'iti.target_status',
-                'itl.date_created',
                 'itl.id',
-                DB::raw('itl.display_order as item_display_order'),
+                'itl.display_order as item_display_order',
+                'itl.date_created',
                 'itl.description',
                 'itl.rg_efficiency_',
                 'itl.rg_quality_',
@@ -75,39 +67,32 @@ final class AnnualTargetDirectory
                 'itl.rg_mov_',
                 'itl.rg_remarks_',
                 'itl.indi_status',
-            ])
-            ->when($year !== '', fn ($query) => $query->where('iti.target_year', $year))
-            ->when($category !== '', fn ($query) => $query->where('iti.kra_category', $category))
-            ->when($semester !== '', function ($query) use ($semester): void {
-                $query->where(function ($semesterQuery) use ($semester): void {
-                    if ($semester === '1') {
-                        $semesterQuery->whereIn('iti.target_sem', [1, 3]);
-                    } elseif ($semester === '2') {
-                        $semesterQuery->whereIn('iti.target_sem', [2, 3]);
-                    } elseif ($semester === '3') {
-                        $semesterQuery->whereIn('iti.target_sem', [1, 2, 3]);
-                    } else {
-                        $semesterQuery->where('iti.target_sem', $semester);
-                    }
-                });
-            })
-            ->when($search !== '', function ($query) use ($search): void {
-                $like = '%'.$search.'%';
-                $query->where(function ($searchQuery) use ($like): void {
-                    $searchQuery
-                        ->where('iti.activity', 'like', $like)
-                        ->orWhere('itl.description', 'like', $like)
-                        ->orWhere('itl.remarks', 'like', $like);
-                });
-            })
-            ->orderBy('iti.kra_category')
+            ]);
+
+        if (filled($search)) {
+            $like = '%' . trim((string) $search) . '%';
+            $query->where(function (Builder $q) use ($like): void {
+                $q->where('iti.activity', 'like', $like)
+                    ->orWhere('itl.description', 'like', $like)
+                    ->orWhere('itl.rg_efficiency_', 'like', $like)
+                    ->orWhere('itl.rg_quality_', 'like', $like)
+                    ->orWhere('itl.rg_timeliness_', 'like', $like)
+                    ->orWhere('itl.rg_mov_', 'like', $like)
+                    ->orWhere('itl.rg_remarks_', 'like', $like);
+            });
+        }
+
+        $query->orderBy('iti.kra_category')
             ->orderByRaw('iti.display_order IS NULL')
             ->orderBy('iti.display_order')
             ->orderBy('iti.date_created')
             ->orderByRaw('itl.display_order IS NULL')
             ->orderBy('itl.display_order')
             ->orderBy('itl.date_created')
-            ->orderBy('itl.id')
-            ->paginate($perPage);
+            ->orderBy('itl.id');
+
+        $effectivePerPage = $perPage <= 0 ? max(1, (clone $query)->count()) : $perPage;
+
+        return $query->paginate($effectivePerPage);
     }
 }

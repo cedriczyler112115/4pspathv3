@@ -125,15 +125,20 @@ class AnnualTargetPage extends Component
 
     public string $editCategory = '';
 
-    /** @var array<int, array{semester:string, description:string, efficiency:string, quality:string, timeliness:string, movs:string, remarks:string}> */
     public array $editRows = [];
 
     public function mount(): void
     {
+        $userId = Auth::id();
+        $latestUserYear = DB::table('ipc_targets_indicators')
+            ->when($userId !== null, fn($q) => $q->where('user_id', $userId))
+            ->max('target_year');
+        $defaultYear = (string) ($latestUserYear ?? now()->year);
+
         $this->includeStrategicFunction = ApplicationSetting::boolean('include_strategic_function', true);
         $this->perPage = (int) Session::get($this->sessionKey('perPage'), 10);
         $this->search = (string) Session::get($this->sessionKey('search'), '');
-        $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), now()->year);
+        $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), $defaultYear);
         $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
         $this->semesterFilter = (string) Session::get($this->sessionKey('semesterFilter'), '');
         $this->showOnlyDuplicates = (bool) Session::get($this->sessionKey('showOnlyDuplicates'), false);
@@ -142,8 +147,6 @@ class AnnualTargetPage extends Component
             $this->categoryFilter = '';
             Session::forget($this->sessionKey('categoryFilter'));
         }
-
-        $userId = Auth::id();
 
         if ($userId === null) {
             return;
@@ -185,7 +188,7 @@ class AnnualTargetPage extends Component
             'categories' => $categories,
             'visibleCategories' => $this->categoryFilter === ''
                 ? $categories
-                : $categories->where('value', $this->categoryFilter)->values(),
+                : $categories->filter(fn(object $c): bool => (string) $c->value === (string) $this->categoryFilter)->values(),
             'semesters' => $this->semesters(),
             'perPageOptions' => $this->perPageOptions(),
         ]);
@@ -193,7 +196,7 @@ class AnnualTargetPage extends Component
 
     public function updatedPerPage(): void
     {
-        if (!in_array($this->perPage, [10, 20, 50], true)) {
+        if (!in_array((int) $this->perPage, [10, 20, 50, -1], true)) {
             $this->perPage = 10;
         }
 
@@ -491,11 +494,58 @@ class AnnualTargetPage extends Component
         $this->deletingIndicatorId = null;
     }
 
+    public function isYearExistingInIpcSemester(?int $year = null): bool
+    {
+        $userId = Auth::id();
+        if (!is_int($userId)) {
+            return false;
+        }
+
+        $yearsToCheck = [];
+
+        if ($year !== null && $year > 0) {
+            $yearsToCheck[] = $year;
+        } elseif (ctype_digit((string) $this->yearFilter) && (int) $this->yearFilter > 0) {
+            $yearsToCheck[] = (int) $this->yearFilter;
+        } else {
+            $yearsToCheck = DB::table('ipc_targets_indicators')
+                ->where('user_id', $userId)
+                ->where('target_status', 3)
+                ->pluck('target_year')
+                ->map(fn($y) => ctype_digit((string) $y) ? (int) $y : null)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        if (empty($yearsToCheck)) {
+            return false;
+        }
+
+        return DB::table('ipc_semester')
+            ->where('user_id', $userId)
+            ->whereIn('year', $yearsToCheck)
+            ->exists();
+    }
+
     public function confirmDelete(): void
     {
         $userId = Auth::id();
 
         if ($this->deletingIndicatorId === null || !is_int($userId)) {
+            return;
+        }
+
+        $targetYear = DB::table('ipc_targets_indicators')
+            ->where('id', $this->deletingIndicatorId)
+            ->where('user_id', $userId)
+            ->value('target_year');
+
+        if ($targetYear && $this->isYearExistingInIpcSemester(ctype_digit((string) $targetYear) ? (int) $targetYear : null)) {
+            $this->cancelDelete();
+            Flux::toast(variant: 'danger', text: __('Cannot delete target. A rating record for year :year exists in My Ratings (ipc_semester). Please remove the rating record first.', ['year' => $targetYear]));
+
             return;
         }
 
@@ -538,6 +588,19 @@ class AnnualTargetPage extends Component
 
         $itemId = $this->deletingSubTargetItemId;
 
+        $targetYear = DB::table('ipc_targets_indicators_itemlist as itl')
+            ->join('ipc_targets_indicators as iti', 'itl.ind_id', '=', 'iti.id')
+            ->where('itl.id', $itemId)
+            ->where('iti.user_id', $userId)
+            ->value('iti.target_year');
+
+        if ($targetYear && $this->isYearExistingInIpcSemester(ctype_digit((string) $targetYear) ? (int) $targetYear : null)) {
+            $this->cancelDeleteSubTarget();
+            Flux::toast(variant: 'danger', text: __('Cannot delete sub-target. A rating record for year :year exists in My Ratings (ipc_semester). Please remove the rating record first.', ['year' => $targetYear]));
+
+            return;
+        }
+
         if (app(DeleteAnnualTarget::class)->executeItem($itemId, $userId)) {
             $this->cancelDeleteSubTarget();
             Flux::toast(variant: 'success', text: __('Sub-target deleted.'));
@@ -548,6 +611,12 @@ class AnnualTargetPage extends Component
 
     public function requestLockAnnualTarget(): void
     {
+        if (empty($this->yearFilter) || !ctype_digit((string) $this->yearFilter)) {
+            Flux::toast(variant: 'danger', text: __('Please select a specific year before saving and locking annual targets.'));
+
+            return;
+        }
+
         $this->showLockModal = true;
     }
 
@@ -559,23 +628,205 @@ class AnnualTargetPage extends Component
     public function confirmLockAnnualTarget(): void
     {
         $userId = Auth::id();
-        if (!is_int($userId)) {
+        if (!is_int($userId) || empty($this->yearFilter) || !ctype_digit((string) $this->yearFilter)) {
             $this->cancelLockAnnualTarget();
 
             return;
         }
 
-        DB::transaction(function () use ($userId): void {
-            DB::table('ipc_targets_indicators')
+        $selectedYear = ctype_digit((string) $this->yearFilter) && (int) $this->yearFilter > 0
+            ? (int) $this->yearFilter
+            : (int) now()->year;
+
+        DB::transaction(function () use ($userId, $selectedYear): void {
+            $targetIds = DB::table('ipc_targets_indicators')
                 ->where('user_id', $userId)
+                ->where('target_year', $selectedYear)
+                ->pluck('id');
+
+            // STEP 1: Update target_status = 3 and indi_status = 3
+            DB::table('ipc_targets_indicators')
+                ->whereIn('id', $targetIds)
                 ->where('target_status', 1)
                 ->update(['target_status' => 3]);
 
-            DB::table('ipc_targets_indicators_itemlist as itl')
-                ->join('ipc_targets_indicators as iti', 'itl.ind_id', '=', 'iti.id')
+            DB::table('ipc_targets_indicators_itemlist')
+                ->whereIn('ind_id', $targetIds)
+                ->where('indi_status', 1)
+                ->update(['indi_status' => 3]);
+
+            $nowManila = \Illuminate\Support\Carbon::now('Asia/Manila');
+
+            // STEP 2: Query linked targets & itemlists using right join
+            $linkedRows = DB::table('ipc_targets_indicators as iti')
+                ->rightJoin('ipc_targets_indicators_itemlist as itl', 'iti.id', '=', 'itl.ind_id')
+                ->whereIn('iti.id', $targetIds)
                 ->where('iti.user_id', $userId)
-                ->where('itl.indi_status', 1)
-                ->update(['itl.indi_status' => 3]);
+                ->where('iti.target_year', $selectedYear)
+                ->where('iti.target_status', 3)
+                ->where('itl.indi_status', 3)
+                ->select(
+                    'iti.id as indicator_id',
+                    'iti.kra_category',
+                    'iti.display_order as indicator_display_order',
+                    'iti.activity',
+                    'itl.id as item_id',
+                    'itl.display_order as item_display_order',
+                    'itl.new_semester',
+                    'itl.description',
+                    'itl.quantity',
+                    'itl.quality',
+                    'itl.timeliness',
+                    'itl.rg_efficiency_',
+                    'itl.rg_quality_',
+                    'itl.rg_timeliness_',
+                    'itl.rg_ratingperiod_',
+                    'itl.rg_mov_',
+                    'itl.rg_remarks_',
+                    'itl.remarks as item_remarks'
+                )
+                ->get();
+
+            $groupedByIndicator = $linkedRows->groupBy('indicator_id');
+
+            foreach ([1, 2] as $semester) {
+                $existingSem = DB::table('ipc_semester')
+                    ->where('user_id', $userId)
+                    ->where('year', $selectedYear)
+                    ->where('semester', $semester)
+                    ->first();
+
+                if ($existingSem) {
+                    $ipcSemesterId = $existingSem->id;
+                    DB::table('ipc_semester')
+                        ->where('id', $ipcSemesterId)
+                        ->update([
+                            'sem_status' => 1,
+                            'modified_by' => $userId,
+                            'last_date_modified' => $nowManila,
+                        ]);
+                } else {
+                    $ipcSemesterId = DB::table('ipc_semester')->insertGetId([
+                        'year' => $selectedYear,
+                        'semester' => $semester,
+                        'user_id' => $userId,
+                        'sem_status' => 1,
+                        'created_by' => $userId,
+                        'date_created' => $nowManila,
+                        'modified_by' => $userId,
+                        'last_date_modified' => $nowManila,
+                    ]);
+                }
+
+                foreach ($groupedByIndicator as $indicatorId => $items) {
+                    if (empty($indicatorId)) {
+                        continue;
+                    }
+
+                    $firstItem = $items->first();
+
+                    $matchingItems = $items->filter(function ($item) use ($semester) {
+                        $rawSem = $item->new_semester ?? 0;
+                        $sem = 0;
+                        if (is_numeric($rawSem)) {
+                            $sem = (int) $rawSem;
+                        } elseif (is_string($rawSem)) {
+                            $lower = strtolower($rawSem);
+                            if (str_contains($lower, '1st') || $lower === '1') {
+                                $sem = 1;
+                            } elseif (str_contains($lower, '2nd') || $lower === '2') {
+                                $sem = 2;
+                            } elseif (str_contains($lower, 'both') || $lower === '3') {
+                                $sem = 3;
+                            }
+                        }
+
+                        if ($semester === 1) {
+                            return $sem === 1 || $sem === 3;
+                        }
+
+                        if ($semester === 2) {
+                            return $sem === 2 || $sem === 3;
+                        }
+
+                        return false;
+                    });
+
+                    if ($matchingItems->isEmpty()) {
+                        continue;
+                    }
+
+                    $semTargetId = (int) DB::table('ipc_sem_targets_indicator')->insertGetId([
+                        'ipc_target_indicator_id' => $firstItem->indicator_id,
+                        'semester_id' => $ipcSemesterId,
+                        'kra_category' => $firstItem->kra_category,
+                        'display_order' => $firstItem->indicator_display_order ?? null,
+                        'activity' => $firstItem->activity,
+                        'verified' => null,
+                        'verified_by' => null,
+                        'date_verified' => null,
+                        'remarks' => null,
+                        'target_status' => 1,
+                        'created_by' => $userId,
+                        'date_created' => $nowManila,
+                        'modified_by' => $userId,
+                        'last_date_modified' => $nowManila,
+                        'target_from' => $userId,
+                    ]);
+
+                    foreach ($matchingItems as $itl) {
+                        DB::table('ipc_sem_targets_indicator_itemlist')->insert([
+                            'target_orig_id' => $itl->item_id,
+                            'sem_target_id' => $semTargetId,
+                            'display_order' => $itl->item_display_order ?? null,
+                            'sem_item_id' => $ipcSemesterId,
+                            'new_semester' => $itl->new_semester,
+                            'description' => $itl->description,
+                            'actual_accomp' => null,
+                            'weight' => null,
+                            'quantity' => null,
+                            'quality' => null,
+                            'timeliness' => null,
+                            'a_quantity' => null,
+                            'a_quality' => null,
+                            'a_timeliness' => null,
+                            'quantity_score' => null,
+                            'quality_score' => null,
+                            'timeliness_score' => null,
+                            'average' => null,
+                            'weighted_average' => null,
+                            'scorecard_quantity_score' => null,
+                            'scorecard_quality_score' => null,
+                            'scorecard_timeliness_score' => null,
+                            'scorecard_remarks' => null,
+                            'scorecard_created' => null,
+                            'scorecard_remarks_created' => null,
+                            'na_quality' => null,
+                            'na_timeliness' => null,
+                            'na_quantity' => null,
+                            'rg_quantity' => $itl->rg_efficiency_ ?? $itl->quantity ?? null,
+                            'rg_quality' => $itl->rg_quality_ ?? $itl->quality ?? null,
+                            'rg_timeliness' => $itl->rg_timeliness_ ?? $itl->timeliness ?? null,
+                            'rg_ratingperiod' => $itl->rg_ratingperiod_ ?? null,
+                            'rg_movs' => $itl->rg_mov_ ?? null,
+                            'rg_remarks' => $itl->rg_remarks_ ?? $itl->item_remarks ?? null,
+                            'remarks' => 1,
+                            'target_remarks' => null,
+                            'target_movs' => null,
+                            'supervisor_remarks' => null,
+                            'target_not_applicable' => null,
+                            'has_attachments' => null,
+                            'verified' => null,
+                            'verified_by' => null,
+                            'date_verified' => null,
+                            'created_by' => $userId,
+                            'date_created' => $nowManila,
+                            'modified_by' => $userId,
+                            'date_modified' => $nowManila,
+                        ]);
+                    }
+                }
+            }
         });
 
         $this->cancelLockAnnualTarget();
@@ -605,6 +856,12 @@ class AnnualTargetPage extends Component
 
     public function requestUnlockAnnualTarget(): void
     {
+        if ($this->isYearExistingInIpcSemester()) {
+            Flux::toast(variant: 'danger', text: __('Cannot unlock targets. A rating record for the selected year already exists in My Ratings (ipc_semester). Please remove the rating record first.'));
+
+            return;
+        }
+
         $this->showUnlockModal = true;
     }
 
@@ -618,6 +875,13 @@ class AnnualTargetPage extends Component
         $userId = Auth::id();
         if (!is_int($userId)) {
             $this->cancelUnlockAnnualTarget();
+
+            return;
+        }
+
+        if ($this->isYearExistingInIpcSemester()) {
+            $this->cancelUnlockAnnualTarget();
+            Flux::toast(variant: 'danger', text: __('Cannot unlock targets. A rating record for the selected year already exists in My Ratings (ipc_semester). Please remove the rating record first.'));
 
             return;
         }
@@ -1355,6 +1619,7 @@ class AnnualTargetPage extends Component
             (object) ['value' => 10, 'label' => '10'],
             (object) ['value' => 20, 'label' => '20'],
             (object) ['value' => 50, 'label' => '50'],
+            (object) ['value' => -1, 'label' => 'All'],
         ]);
     }
 }
