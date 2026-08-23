@@ -152,38 +152,59 @@
                     </tr>
                 </thead>
 
+                @php
+                    $isAllCategories = empty($categoryFilter);
+                    $isNotAllPerPage = (int) $perPage !== -1;
+                @endphp
+
                 @foreach ($visibleCategories as $category)
                     @php
                         $categoryRows = collect($semestralTargets->items())->filter(fn($row) => (int) ($row->kra_category ?? 0) === (int) $category->value);
                         $groupedByIndicator = $categoryRows->groupBy(fn($row) => (int) ($row->sem_target_id ?? 0));
+                        $hideIfEmptySlice = $isAllCategories && $isNotAllPerPage && $groupedByIndicator->isEmpty();
                     @endphp
-                    <tbody wire:key="semestral-target-category-heading-{{ $category->value }}"
-                        x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
-                        x-on:drop.prevent="dropOn($event, { type: 'category', kra: {{ (int) $category->value }}, indicatorId: 0, itemId: 0 })">
-                        <tr class="bg-muted/30">
-                            <td colspan="8" class="border-b border-border px-3 py-2">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    {{ $category->label }}
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
 
-                    @forelse ($groupedByIndicator as $indId => $rows)
-                        @php
-                            $groupRows = $rows->values();
-                        @endphp
-                        <livewire:semestral-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :key="'semestral-target-indicator-' . $indId . '-' . $groupRows->pluck('sem_item_id')->join('-')" />
-                    @empty
-                        <tbody wire:key="semestral-target-empty-{{ $category->value }}">
-                            <tr>
-                                <td colspan="8" class="border-b border-border px-3 py-6 text-center text-muted-foreground">
-                                    {{ __('No semestral target entries under :category', ['category' => $category->label]) }}
+                    @if (!$hideIfEmptySlice)
+                        <tbody wire:key="semestral-target-category-heading-{{ $category->value }}"
+                            x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
+                            x-on:drop.prevent="dropOn($event, { type: 'category', kra: {{ (int) $category->value }}, indicatorId: 0, itemId: 0 })">
+                            <tr class="bg-muted/30">
+                                <td colspan="8" class="border-b border-border px-3 py-2">
+                                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                        {{ $category->label }}
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
-                    @endforelse
+
+                        @forelse ($groupedByIndicator as $indId => $rows)
+                            @php
+                                $groupRows = $rows->values();
+                            @endphp
+                            <livewire:semestral-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :key="'semestral-target-indicator-' . $indId . '-' . $groupRows->pluck('sem_item_id')->join('-')" />
+                        @empty
+                            @if (!($isAllCategories && $isNotAllPerPage))
+                                <tbody wire:key="semestral-target-empty-{{ $category->value }}">
+                                    <tr>
+                                        <td colspan="8" class="border-b border-border px-3 py-6 text-center text-muted-foreground">
+                                            {{ __('No semestral target entries under :category', ['category' => $category->label]) }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            @endif
+                        @endforelse
+                    @endif
                 @endforeach
+
+                @if ($semestralTargets->total() === 0)
+                    <tbody wire:key="semestral-target-empty-total">
+                        <tr>
+                            <td colspan="8" class="border-b border-border px-3 py-6 text-center text-muted-foreground">
+                                {{ __('No semestral target entries found.') }}
+                            </td>
+                        </tr>
+                    </tbody>
+                @endif
             </table>
         </div>
 

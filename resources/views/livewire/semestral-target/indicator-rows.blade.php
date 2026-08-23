@@ -412,4 +412,35 @@
             </button>
         </div>
     </template>
+
+    <!-- Justification Modal for 2026 2nd Semester Edit -->
+    <template x-teleport="body">
+        <flux:modal wire:model="showJustificationModal" dismissible class="max-w-lg">
+            <div class="space-y-5">
+                <div class="space-y-1">
+                    <flux:heading size="lg">{{ __('Edit Justification Required') }}</flux:heading>
+                    <flux:subheading>
+                        {{ __('Please provide a reason/justification for modifying this semestral target.') }}
+                    </flux:subheading>
+                </div>
+
+                <div class="grid gap-2">
+                    <flux:label>{{ __('Justification Remarks') }} <span class="text-red-500">*</span></flux:label>
+                    <textarea wire:model="justificationText" rows="3"
+                        placeholder="{{ __('Enter the reason for updating this target...') }}"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2">
+                    <flux:button variant="ghost" type="button" wire:click="$set('showJustificationModal', false)">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                    <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700"
+                        wire:click="save">
+                        {{ __('Submit & Save Changes') }}
+                    </flux:button>
+                </div>
+            </div>
+        </flux:modal>
+    </template>
 </tbody>

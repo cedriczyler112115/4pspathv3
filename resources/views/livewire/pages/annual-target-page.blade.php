@@ -35,10 +35,12 @@
                     {{ __('Save and Lock Annual Target') }}
                 </flux:button>
             @endif
-            <flux:button type="button" icon="document-duplicate" wire:click="openCopyModal"
-                class="bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400">
-                {{ __('Copy Target') }}
-            </flux:button>
+            @if (!$this->isLocked())
+                <flux:button type="button" icon="document-duplicate" wire:click="openCopyModal"
+                    class="bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400">
+                    {{ __('Copy Target') }}
+                </flux:button>
+            @endif
             <flux:button type="button" icon="printer"
                 class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:hover:bg-slate-400">
                 {{ __('Print') }}
@@ -111,7 +113,7 @@
                                 </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <x-select2 wire:model.live="yearFilter" :label="__('Year')" :placeholder="__('All years')" :options="$years" minWidth="120px" />
+                                <x-select2 wire:model.live="yearFilter" :label="__('Year')" :placeholder="null" :options="$years" minWidth="120px" />
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
                                 <x-select2 wire:model.live="categoryFilter" :label="__('Category')"

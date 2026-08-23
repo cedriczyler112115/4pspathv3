@@ -217,10 +217,45 @@ class MyRatingsPage extends Component
             return;
         }
 
-        DB::table('ipc_semester')
+        $rating = DB::table('ipc_semester')
             ->where('id', $this->deletingId)
             ->where('user_id', $userId)
-            ->delete();
+            ->first();
+
+        if ($rating === null) {
+            $this->cancelDelete();
+
+            return;
+        }
+
+        if ((int) ($rating->is_ready ?? 0) === 1 || filled($rating->date_verified)) {
+            $this->cancelDelete();
+            \Flux::toast(variant: 'danger', text: __('Cannot remove rating record because it is verified or marked as ready.'));
+
+            return;
+        }
+
+        DB::transaction(function () use ($rating, $userId): void {
+            $semTargetIds = DB::table('ipc_sem_targets_indicator')
+                ->where('semester_id', $rating->id)
+                ->pluck('id')
+                ->all();
+
+            if (!empty($semTargetIds)) {
+                DB::table('ipc_sem_targets_indicator_itemlist')
+                    ->whereIn('sem_target_id', $semTargetIds)
+                    ->delete();
+
+                DB::table('ipc_sem_targets_indicator')
+                    ->where('semester_id', $rating->id)
+                    ->delete();
+            }
+
+            DB::table('ipc_semester')
+                ->where('id', $rating->id)
+                ->where('user_id', $userId)
+                ->delete();
+        });
 
         $this->cancelDelete();
 

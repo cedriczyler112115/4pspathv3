@@ -32,11 +32,51 @@ class IndicatorRows extends Component
     /** @var array<int, array{description:string, quantity:string, quality:string, timeliness:string, movs:string, remarks:string}> */
     public array $pendingSubTargets = [];
 
+    public bool $showJustificationModal = false;
+
+    public string $justificationText = '';
+
     /** @param array<int, array<string, mixed>> $rows */
     public function mount(int $indicatorId, array $rows): void
     {
         $this->indicatorId = $indicatorId;
         $this->rows = $rows;
+    }
+
+    protected function is2026SecondSemesterOrBeyond(): bool
+    {
+        $semesterId = 0;
+        $firstRow = $this->rows[0] ?? null;
+
+        if ($firstRow && ! empty($firstRow['semester_id'])) {
+            $semesterId = (int) $firstRow['semester_id'];
+        } else {
+            $semesterId = (int) DB::table('ipc_sem_targets_indicator')
+                ->where('id', $this->indicatorId)
+                ->value('semester_id');
+        }
+
+        if ($semesterId <= 0) {
+            return false;
+        }
+
+        $semRecord = DB::table('ipc_semester')->where('id', $semesterId)->first();
+        if (! $semRecord) {
+            return false;
+        }
+
+        $year = (int) ($semRecord->year ?? 0);
+        $sem = (int) ($semRecord->semester ?? 0);
+
+        if ($year > 2026) {
+            return true;
+        }
+
+        if ($year === 2026 && $sem >= 2) {
+            return true;
+        }
+
+        return false;
     }
 
     public function edit(): void
@@ -71,6 +111,8 @@ class IndicatorRows extends Component
         $this->editCategory = '';
         $this->editRows = [];
         $this->pendingSubTargets = [];
+        $this->showJustificationModal = false;
+        $this->justificationText = '';
     }
 
     public function save(): void
@@ -81,10 +123,41 @@ class IndicatorRows extends Component
             return;
         }
 
+        $is2026Sem2 = $this->is2026SecondSemesterOrBeyond();
+
+        if ($is2026Sem2 && ! $this->creatingSubTarget && ! $this->showJustificationModal) {
+            $existingJustification = DB::table('ipc_sem_target_edit_histories')
+                ->where('sem_target_id', $this->indicatorId)
+                ->whereNotNull('justification')
+                ->where('justification', '!=', '')
+                ->latest('id')
+                ->value('justification');
+
+            $this->justificationText = (string) ($existingJustification ?? '');
+            $this->showJustificationModal = true;
+
+            return;
+        }
+
+        if ($is2026Sem2 && ! $this->creatingSubTarget && empty(trim($this->justificationText))) {
+            Flux::toast(variant: 'danger', text: __('Justification is required before saving changes.'));
+
+            return;
+        }
+
         $nowManila = Carbon::now('Asia/Manila');
 
-        DB::transaction(function () use ($userId, $nowManila): void {
+        DB::transaction(function () use ($userId, $nowManila, $is2026Sem2): void {
             if (! $this->creatingSubTarget) {
+                $firstRow = $this->rows[0] ?? null;
+                $oldActivity = $firstRow ? $this->normalizeTextareaValue($firstRow['activity'] ?? '') : '';
+                $oldCategory = $firstRow ? (string) ($firstRow['kra_category'] ?? '') : '';
+
+                if ($is2026Sem2) {
+                    $this->logFieldHistory($this->indicatorId, null, 'activity', $oldActivity, $this->editActivity, $userId, $nowManila);
+                    $this->logFieldHistory($this->indicatorId, null, 'kra_category', $oldCategory, (string) $this->editCategory, $userId, $nowManila);
+                }
+
                 DB::table('ipc_sem_targets_indicator')
                     ->where('id', $this->indicatorId)
                     ->update([
@@ -95,16 +168,40 @@ class IndicatorRows extends Component
                     ]);
 
                 foreach ($this->editRows as $itemId => $values) {
+                    $itemRow = collect($this->rows)->firstWhere('sem_item_id', $itemId);
+                    $oldDesc = $itemRow ? $this->normalizeTextareaValue($itemRow['description'] ?? '') : '';
+                    $oldQty = $itemRow ? $this->normalizeTextareaValue($itemRow['rg_quantity'] ?? '') : '';
+                    $oldQual = $itemRow ? $this->normalizeTextareaValue($itemRow['rg_quality'] ?? '') : '';
+                    $oldTime = $itemRow ? $this->normalizeTextareaValue($itemRow['rg_timeliness'] ?? '') : '';
+                    $oldMovs = $itemRow ? $this->normalizeTextareaValue($itemRow['rg_movs'] ?? '') : '';
+                    $oldRem = $itemRow ? $this->normalizeTextareaValue($itemRow['rg_remarks'] ?? '') : '';
+
+                    $newDesc = $values['description'] ?? '';
+                    $newQty = $values['quantity'] ?? '';
+                    $newQual = $values['quality'] ?? '';
+                    $newTime = $values['timeliness'] ?? '';
+                    $newMovs = $values['movs'] ?? '';
+                    $newRem = $values['remarks'] ?? '';
+
+                    if ($is2026Sem2) {
+                        $this->logFieldHistory($this->indicatorId, (int) $itemId, 'description', $oldDesc, $newDesc, $userId, $nowManila);
+                        $this->logFieldHistory($this->indicatorId, (int) $itemId, 'rg_quantity', $oldQty, $newQty, $userId, $nowManila);
+                        $this->logFieldHistory($this->indicatorId, (int) $itemId, 'rg_quality', $oldQual, $newQual, $userId, $nowManila);
+                        $this->logFieldHistory($this->indicatorId, (int) $itemId, 'rg_timeliness', $oldTime, $newTime, $userId, $nowManila);
+                        $this->logFieldHistory($this->indicatorId, (int) $itemId, 'rg_movs', $oldMovs, $newMovs, $userId, $nowManila);
+                        $this->logFieldHistory($this->indicatorId, (int) $itemId, 'rg_remarks', $oldRem, $newRem, $userId, $nowManila);
+                    }
+
                     DB::table('ipc_sem_targets_indicator_itemlist')
                         ->where('id', (int) $itemId)
                         ->where('sem_target_id', $this->indicatorId)
                         ->update([
-                            'description' => $values['description'] ?? '',
-                            'rg_quantity' => $values['quantity'] ?? null,
-                            'rg_quality' => $values['quality'] ?? null,
-                            'rg_timeliness' => $values['timeliness'] ?? null,
-                            'rg_movs' => $values['movs'] ?? null,
-                            'rg_remarks' => $values['remarks'] ?? null,
+                            'description' => $newDesc,
+                            'rg_quantity' => $newQty ?: null,
+                            'rg_quality' => $newQual ?: null,
+                            'rg_timeliness' => $newTime ?: null,
+                            'rg_movs' => $newMovs ?: null,
+                            'rg_remarks' => $newRem ?: null,
                             'modified_by' => $userId,
                             'date_modified' => $nowManila,
                         ]);
@@ -185,7 +282,54 @@ class IndicatorRows extends Component
         }
 
         $this->cancel();
+        $this->dispatch('semestral-target-updated');
         Flux::toast(variant: 'success', text: __('Semestral target updated successfully.'));
+    }
+
+    protected function logFieldHistory(int $semTargetId, ?int $semItemId, string $fieldName, string $oldVal, string $newVal, int $userId, Carbon $now): void
+    {
+        if ($oldVal === $newVal) {
+            return;
+        }
+
+        $query = DB::table('ipc_sem_target_edit_histories')
+            ->where('sem_target_id', $semTargetId)
+            ->where('field_name', $fieldName);
+
+        if ($semItemId !== null) {
+            $query->where('sem_item_id', $semItemId);
+        } else {
+            $query->whereNull('sem_item_id');
+        }
+
+        $existingHistory = (clone $query)->first();
+
+        if ($existingHistory !== null) {
+            $query->update([
+                'old_value' => $oldVal,
+                'new_value' => $newVal,
+                'last_edited_value' => $oldVal,
+                'justification' => trim($this->justificationText),
+                'user_id' => $userId,
+                'date_created' => $now,
+                'updated_at' => $now,
+            ]);
+        } else {
+            DB::table('ipc_sem_target_edit_histories')->insert([
+                'sem_target_id' => $semTargetId,
+                'sem_item_id' => $semItemId,
+                'field_name' => $fieldName,
+                'original_value' => $oldVal,
+                'old_value' => $oldVal,
+                'new_value' => $newVal,
+                'last_edited_value' => $oldVal,
+                'justification' => trim($this->justificationText),
+                'user_id' => $userId,
+                'date_created' => $now,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
     }
 
     public function requestAddSubTarget(): void

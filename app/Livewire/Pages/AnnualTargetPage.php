@@ -130,18 +130,19 @@ class AnnualTargetPage extends Component
     public function mount(): void
     {
         $userId = Auth::id();
-        $latestUserYear = DB::table('ipc_targets_indicators')
-            ->when($userId !== null, fn($q) => $q->where('user_id', $userId))
-            ->max('target_year');
-        $defaultYear = (string) ($latestUserYear ?? now()->year);
+        $currentYear = (string) now()->year;
 
         $this->includeStrategicFunction = ApplicationSetting::boolean('include_strategic_function', true);
         $this->perPage = (int) Session::get($this->sessionKey('perPage'), 10);
         $this->search = (string) Session::get($this->sessionKey('search'), '');
-        $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), $defaultYear);
+        $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), $currentYear);
         $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
         $this->semesterFilter = (string) Session::get($this->sessionKey('semesterFilter'), '');
         $this->showOnlyDuplicates = (bool) Session::get($this->sessionKey('showOnlyDuplicates'), false);
+
+        if (empty($this->yearFilter)) {
+            $this->yearFilter = $currentYear;
+        }
 
         if (!$this->includeStrategicFunction && $this->categoryFilter === '1') {
             $this->categoryFilter = '';
@@ -212,6 +213,10 @@ class AnnualTargetPage extends Component
 
     public function updatedYearFilter(): void
     {
+        if (empty($this->yearFilter)) {
+            $this->yearFilter = (string) now()->year;
+        }
+
         Session::put($this->sessionKey('yearFilter'), $this->yearFilter);
         $this->resetPage();
     }
@@ -841,17 +846,20 @@ class AnnualTargetPage extends Component
             return false;
         }
 
-        $activeCount = DB::table('ipc_targets_indicators')
-            ->where('user_id', $userId)
-            ->where('target_status', 1)
-            ->count();
+        $year = trim($this->yearFilter);
 
-        $lockedCount = DB::table('ipc_targets_indicators')
+        $query = DB::table('ipc_targets_indicators')
             ->where('user_id', $userId)
-            ->where('target_status', 3)
-            ->count();
+            ->when(filled($year), fn($q) => $q->where('target_year', $year));
 
-        return $lockedCount > 0 && $activeCount === 0;
+        $totalCount = (clone $query)->count();
+        if ($totalCount === 0) {
+            return false;
+        }
+
+        $unlockedCount = (clone $query)->where('target_status', '!=', 3)->count();
+
+        return $unlockedCount === 0;
     }
 
     public function requestUnlockAnnualTarget(): void
@@ -886,17 +894,24 @@ class AnnualTargetPage extends Component
             return;
         }
 
-        DB::transaction(function () use ($userId): void {
-            DB::table('ipc_targets_indicators')
+        $year = trim($this->yearFilter);
+
+        DB::transaction(function () use ($userId, $year): void {
+            $targetQuery = DB::table('ipc_targets_indicators')
                 ->where('user_id', $userId)
                 ->where('target_status', 3)
-                ->update(['target_status' => 1]);
+                ->when(filled($year), fn($q) => $q->where('target_year', $year));
 
-            DB::table('ipc_targets_indicators_itemlist as itl')
-                ->join('ipc_targets_indicators as iti', 'itl.ind_id', '=', 'iti.id')
-                ->where('iti.user_id', $userId)
-                ->where('itl.indi_status', 3)
-                ->update(['itl.indi_status' => 1]);
+            $targetIds = (clone $targetQuery)->pluck('id');
+
+            $targetQuery->update(['target_status' => 1]);
+
+            if ($targetIds->isNotEmpty()) {
+                DB::table('ipc_targets_indicators_itemlist')
+                    ->whereIn('ind_id', $targetIds)
+                    ->where('indi_status', 3)
+                    ->update(['indi_status' => 1]);
+            }
         });
 
         $this->cancelUnlockAnnualTarget();

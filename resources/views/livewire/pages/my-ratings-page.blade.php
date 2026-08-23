@@ -115,55 +115,63 @@
                             {{ __('Final Rating') }}</th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap" style="width: 160px;">
                             {{ __('Adjectival Rating') }}</th>
-                        <th class="border-b border-r border-border px-3 py-3 text-center whitespace-nowrap"
-                            style="width: 100px;">{{ __('Status') }}</th>
-                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap" style="width: 150px;">
+                        <th class="border-b border-r border-border px-4 py-3 text-center whitespace-nowrap"
+                            style="width: 220px;">{{ __('Status') }}</th>
+                        <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap" style="width: 160px;">
                             {{ __('Date Created') }}</th>
                         <th class="border-b border-border px-3 py-3 text-center whitespace-nowrap last:rounded-tr-xl"
-                            style="width: 160px;">{{ __('Action') }}</th>
+                            style="width: 120px;">{{ __('Action') }}</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($myRatings as $rating)
                         <tr wire:key="rating-row-{{ $rating->id }}"
                             class="border-t border-border/60 text-sm hover:bg-muted/20">
-                            <td class="border-b border-r border-border px-3 py-3 text-center text-muted-foreground">
+                            <td class="border-b border-r border-border px-3 py-3 text-center text-muted-foreground align-middle">
                                 {{ ($myRatings->firstItem() ?? 1) + $loop->index }}
                             </td>
-                            <td class="border-b border-r border-border px-3 py-3 font-semibold text-foreground">
+                            <td class="border-b border-r border-border px-3 py-3 font-semibold text-foreground align-middle">
                                 {{ $rating->year }}
                             </td>
-                            <td class="border-b border-r border-border px-3 py-3 font-medium">
+                            <td class="border-b border-r border-border px-3 py-3 font-medium align-middle">
                                 {{ (int) $rating->semester === 1 ? __('1st Semester') : ((int) $rating->semester === 2 ? __('2nd Semester') : $rating->semester) }}
                             </td>
-                            <td class="border-b border-r border-border px-3 py-3 font-mono">
+                            <td class="border-b border-r border-border px-3 py-3 font-mono align-middle">
                                 {{ $rating->final_rating ?: '0.00000' }}
                             </td>
-                            <td class="border-b border-r border-border px-3 py-3">
+                            <td class="border-b border-r border-border px-3 py-3 align-middle">
                                 {{ $rating->adjectival_rating ?: '-' }}
                             </td>
-                            <td class="border-b border-r border-border px-3 py-3 text-center">
-                                @if ((int) $rating->sem_status === 1)
-                                    <flux:badge color="green" size="sm">{{ __('Active') }}</flux:badge>
+                            <td class="border-b border-r border-border px-4 py-3 align-middle whitespace-nowrap">
+                                @if (!empty($rating->date_verified))
+                                    <div class="flex items-center gap-2 ml-[10px]">
+                                        <svg class="size-5 text-emerald-600 dark:text-emerald-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.352-.272-2.64-.765-3.815a.75.75 0 00-.722-.516l-.143.001a11.209 11.209 0 01-7.59-3.25zm-2.486 11.41l-2.03-2.03a.75.75 0 00-1.06 1.06l2.56 2.56a.75.75 0 001.06 0l5.56-5.56a.75.75 0 00-1.06-1.06l-5.03 5.03z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                                            {{ \Illuminate\Support\Carbon::parse($rating->date_verified)->format('M d, Y h:i A') }}
+                                        </span>
+                                    </div>
                                 @else
-                                    <flux:badge color="zinc" size="sm">{{ __('Inactive') }}</flux:badge>
+                                    <div class="text-center text-muted-foreground">-</div>
                                 @endif
                             </td>
-                            <td class="border-b border-r border-border px-3 py-3 text-xs text-muted-foreground">
+                            <td class="border-b border-r border-border px-3 py-3 text-xs text-muted-foreground align-middle">
                                 {{ $rating->date_created ? \Illuminate\Support\Carbon::parse($rating->date_created)->format('M d, Y h:i A') : '-' }}
                             </td>
-                            <td class="border-b border-border px-3 py-3 text-center whitespace-nowrap">
-                                <div class="flex items-center justify-center gap-1.5">
-                                    <flux:button size="xs" variant="ghost" icon="eye"
+                            <td class="border-b border-border px-3 py-3 align-middle whitespace-nowrap">
+                                <div class="inline-flex items-center gap-2 ml-[10px]">
+                                    <flux:button size="sm" variant="primary" icon="eye" square
                                         href="{{ route('myratings.semestral-target', ['sem_id' => $rating->id]) }}"
-                                        wire:navigate>
-                                        {{ __('View') }}
-                                    </flux:button>
-                                    <flux:button size="xs" variant="ghost" icon="trash"
-                                        class="text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10"
-                                        wire:click="confirmDelete({{ $rating->id }})">
-                                        {{ __('Remove') }}
-                                    </flux:button>
+                                        wire:navigate
+                                        title="{{ __('View') }}"
+                                        class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700" />
+                                    @if ((int) ($rating->is_ready ?? 0) !== 1 && empty($rating->date_verified))
+                                        <flux:button size="sm" variant="danger" icon="trash" square
+                                            title="{{ __('Remove') }}"
+                                            class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700"
+                                            wire:click="confirmDelete({{ $rating->id }})" />
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -237,10 +245,17 @@
                     <div class="flex justify-between border-b border-border pb-2">
                         <span class="text-muted-foreground">{{ __('Status') }}:</span>
                         <div>
-                            @if ((int) $viewingRating->sem_status === 1)
-                                <flux:badge color="green" size="sm">{{ __('Active') }}</flux:badge>
+                            @if (!empty($viewingRating->date_verified))
+                                <div class="inline-flex items-center gap-1.5">
+                                    <svg class="size-6 text-emerald-600 dark:text-emerald-500 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.352-.272-2.64-.765-3.815a.75.75 0 00-.722-.516l-.143.001a11.209 11.209 0 01-7.59-3.25zm-2.486 11.41l-2.03-2.03a.75.75 0 00-1.06 1.06l2.56 2.56a.75.75 0 001.06 0l5.56-5.56a.75.75 0 00-1.06-1.06l-5.03 5.03z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                                        {{ \Illuminate\Support\Carbon::parse($viewingRating->date_verified)->format('M d, Y h:i A') }}
+                                    </span>
+                                </div>
                             @else
-                                <flux:badge color="zinc" size="sm">{{ __('Inactive') }}</flux:badge>
+                                <span class="text-muted-foreground">-</span>
                             @endif
                         </div>
                     </div>

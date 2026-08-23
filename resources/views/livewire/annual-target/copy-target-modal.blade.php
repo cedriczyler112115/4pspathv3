@@ -80,7 +80,6 @@
                             </div>
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap align-bottom">
-                            <div class="flex h-full items-end">
                                 <flux:button variant="primary" type="button" icon="document-duplicate" wire:click="requestCopyAllStaff"
                                     class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700">
                                     {{ __('Copy All Filtered Result') }}

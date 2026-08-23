@@ -215,6 +215,12 @@ class SemestralTargetPage extends Component
         return $firstSem ? (int) $firstSem : null;
     }
 
+    #[On('semestral-target-updated')]
+    public function refreshTargets(): void
+    {
+        // Triggers re-render to instantly move targets to their new KRA category sections
+    }
+
     // Add Target Methods
     #[On('open-add-target-modal')]
     public function handleOpenAddTargetModal(array $payload = []): void
