@@ -142,6 +142,16 @@ class SemestralTargetPage extends Component
         $this->resetPage();
     }
 
+    public function printIpcrf(): void
+    {
+        Flux::toast(variant: 'info', text: __('Preparing IPCR-F document for print...'));
+    }
+
+    public function printCheckpoint(): void
+    {
+        Flux::toast(variant: 'info', text: __('Preparing Checkpoint document for print...'));
+    }
+
     /**
      * @return Collection<int, object>
      */
