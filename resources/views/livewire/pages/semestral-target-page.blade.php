@@ -13,6 +13,25 @@
         </div>
     </div>
 
+    @if ($unauthorizedErrorMessage)
+        <div class="rounded-2xl border border-red-300 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-red-500/10 p-5 text-red-900 dark:border-red-800/80 dark:from-red-950/70 dark:via-rose-950/70 dark:to-red-950/70 dark:text-red-200 shadow-md flex items-start gap-4">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm shrink-0">
+                <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="flex-1 space-y-1.5">
+                <h4 class="font-bold text-base text-red-700 dark:text-red-300">{{ __('Access Denied') }}</h4>
+                <p class="text-xs leading-relaxed text-muted-foreground dark:text-red-300/90 font-medium">{{ $unauthorizedErrorMessage }}</p>
+                <div class="pt-2">
+                    <flux:button href="{{ route('myratings.index') }}" wire:navigate size="sm" icon="arrow-left" class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 shadow-sm font-semibold">
+                        {{ __('Return to My Ratings') }}
+                    </flux:button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Container for Login / User Profile Info -->
     <div class="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div class="overflow-x-auto">
@@ -102,7 +121,12 @@
                     </table>
                 </div>
 
-                <div class="px-2 py-1 whitespace-nowrap align-bottom flex items-end">
+                <div class="px-2 py-1 whitespace-nowrap align-bottom flex items-end gap-2">
+                    <flux:button type="button" icon="document-duplicate" wire:click="openCopyModal"
+                        class="bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400">
+                        {{ __('Copy Target from Previous Semester') }}
+                    </flux:button>
+
                     <flux:dropdown position="bottom-end">
                         <flux:button variant="primary" icon="printer" icon-trailing="chevron-down"
                             class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700">
@@ -371,6 +395,34 @@
                 </flux:button>
                 <flux:button variant="danger" wire:click="confirmDeleteSubTarget">
                     {{ __('Delete') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Copy Target Modal -->
+    <flux:modal wire:model="showCopyModal" dismissible style="width: 80%; max-width: 80%; height: 90%; max-height: 90%;"
+        class="overflow-y-auto">
+        @include('livewire.semestral-target.copy-target-modal')
+    </flux:modal>
+
+    <!-- Confirm Copy All Modal -->
+    <flux:modal wire:model="showCopyAllConfirmModal" dismissible>
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Copy all filtered targets?') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Are you sure you want to copy all filtered target results to your semestral target list?') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex items-center justify-end gap-2">
+                <flux:button variant="ghost" type="button" wire:click="cancelCopyAllConfirm">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
+                    wire:click="confirmCopyAll">
+                    {{ __('Confirm and Copy') }}
                 </flux:button>
             </div>
         </div>

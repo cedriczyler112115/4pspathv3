@@ -2,8 +2,10 @@
     $firstRow = $rows[0] ?? [];
     $pendingCount = count($pendingSubTargets ?? []);
     $rowSpan = count($rows) + $pendingCount;
-    $cellStyle = 'vertical-align: top !important; border-right: 1px solid var(--border);'.($editing ? ' background-color: #faf3de;' : '');
-    $lastCellStyle = 'vertical-align: top !important; border-left: 1px solid var(--border);'.($editing ? ' background-color: #faf3de;' : '');
+    $isEditingGroup = ($editing || ($creatingSubTarget ?? false));
+    $editingHighlightClass = $isEditingGroup ? 'bg-amber-100/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-100 font-medium' : '';
+    $cellStyle = 'vertical-align: top !important; border-right: 1px solid var(--border);';
+    $lastCellStyle = 'vertical-align: top !important; border-left: 1px solid var(--border);';
     $formatValue = static function (mixed $value): string {
         $text = html_entity_decode((string) ($value ?? '-'), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = preg_replace('/<br\s*\/?>/i', "\n", $text);
@@ -221,9 +223,8 @@
             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
             x-on:dragend="endDrag()"
             x-on:drop.prevent="dropOn($event, { type: 'main', indicatorId: {{ $indicatorId }}, itemId: {{ (int) ($firstRow['id'] ?? 0) }}, kra: {{ (int) ($firstRow['kra_category'] ?? 0) }} })"
-            :class="showContextMenu && contextItemId === {{ (int) $row['id'] }} ? '!bg-sky-100 dark:!bg-sky-950/80 relative z-10' : (draggingRow === {{ $indicatorId }} ? 'shadow-lg shadow-slate-400/40 ring-1 ring-slate-300 bg-white scale-[1.01] relative z-10 cursor-grabbing' : '')"
-            x-bind:style="showContextMenu && contextItemId === {{ (int) $row['id'] }} ? 'background-color: #bae6fd !important;' : ''"
-            class="border-t border-border/60 text-sm hover:bg-muted/20 transition-colors">
+            :class="showContextMenu && contextItemId === {{ (int) $row['id'] }} ? '!bg-sky-100 dark:!bg-sky-950/80 text-sky-950 dark:text-sky-100 relative z-10' : (draggingRow === {{ $indicatorId }} ? 'shadow-lg shadow-slate-400/40 ring-1 ring-slate-300 bg-white dark:bg-zinc-800 scale-[1.01] relative z-10 cursor-grabbing' : '')"
+            class="border-t border-border/60 text-sm hover:bg-muted/20 transition-colors {{ $editingHighlightClass }}">
             @if ($groupIndex === 0)
                 <td data-col-type="kra-action" rowspan="{{ $rowSpan }}" class="border-b border-r border-border px-3 py-3 align-top text-center text-muted-foreground whitespace-normal break-words" style="{{ $cellStyle }}">
                     <div class="flex items-center justify-center gap-1">
@@ -316,20 +317,21 @@
     @endif
 
     <template x-teleport="body">
+    <template x-teleport="body">
         <div x-show="showContextMenu"
             x-cloak
             x-on:close-all-target-context-menus.window="closeContextMenu()"
             x-on:click.outside="closeContextMenu()"
             x-on:keydown.escape.window="closeContextMenu()"
             x-on:scroll.window="closeContextMenu()"
-            :style="`top: ${contextY}px; left: ${contextX}px; background-color: #ffffff !important; color: #0f172a !important; z-index: 99999 !important; box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.3), 0 10px 12px -5px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.12) !important;`"
-            class="fixed min-w-[14rem] rounded-xl border border-slate-200 bg-white text-slate-900 p-1.5 text-xs font-medium opacity-100 animate-in fade-in-50 zoom-in-95">
+            :style="`top: ${contextY}px; left: ${contextX}px; z-index: 99999 !important;`"
+            class="fixed min-w-[14rem] rounded-xl border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 p-1.5 text-xs font-medium opacity-100 shadow-2xl animate-in fade-in-50 zoom-in-95">
             
             <div class="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 mb-1 flex items-center justify-between cursor-move select-none"
                 x-on:pointerdown="startMenuDrag($event)"
                 title="{{ __('Drag to move popup') }}">
                 <div class="flex items-center gap-1.5">
-                    <flux:icon icon="adjustments-horizontal" class="size-3.5 text-emerald-600" />
+                    <flux:icon icon="adjustments-horizontal" class="size-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>{{ __('OPTIONS') }}</span>
                 </div>
             </div>
@@ -340,7 +342,7 @@
                 x-on:mouseenter="if (isPositionSelected) openAddSubMenu($event)"
                 x-on:click="if (isPositionSelected) toggleAddSubMenu($event)"
                 class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
-                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : (activeSubMenu === 'add' ? 'bg-accent text-accent-foreground' : 'text-foreground hover:bg-accent hover:text-accent-foreground')">
+                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : (activeSubMenu === 'add' ? 'bg-accent dark:bg-zinc-800 text-accent-foreground' : 'text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800')">
                 <div class="flex items-center gap-2">
                     <flux:icon icon="plus-circle" class="size-4" :class="!isPositionSelected ? 'text-slate-400 dark:text-zinc-500' : 'text-slate-700 dark:text-slate-300'" />
                     <span>{{ __('Add Target') }}</span>
@@ -353,8 +355,8 @@
                 x-on:mouseenter="activeSubMenu = null"
                 x-on:click="if (isPositionSelected) { closeContextMenu(); $wire.edit(); }"
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
-                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-foreground hover:bg-accent hover:text-accent-foreground'">
-                <flux:icon icon="pencil-square" class="size-4" :class="!isPositionSelected ? 'text-slate-400 dark:text-zinc-500' : 'text-amber-500'" />
+                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800'">
+                <flux:icon icon="pencil-square" class="size-4" :class="!isPositionSelected ? 'text-slate-400 dark:text-zinc-500' : 'text-amber-500 dark:text-amber-400'" />
                 <span>{{ __('Edit Target') }}</span>
             </button>
 
@@ -366,9 +368,9 @@
                 x-on:mouseenter="if (isPositionSelected) openDeleteSubMenu($event)"
                 x-on:click="if (isPositionSelected) toggleDeleteSubMenu($event)"
                 class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
-                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : (activeSubMenu === 'delete' ? 'bg-accent' : 'text-red-600 dark:text-red-400 hover:bg-accent')">
+                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : (activeSubMenu === 'delete' ? 'bg-red-50 dark:bg-red-950/40' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40')">
                 <div class="flex items-center gap-2">
-                    <flux:icon icon="trash" class="size-4" :class="!isPositionSelected ? 'text-slate-400 dark:text-zinc-500' : 'text-red-500'" />
+                    <flux:icon icon="trash" class="size-4" :class="!isPositionSelected ? 'text-slate-400 dark:text-zinc-500' : 'text-red-500 dark:text-red-400'" />
                     <span>{{ __('Delete') }}</span>
                 </div>
                 <flux:icon icon="chevron-right" class="size-3.5 text-muted-foreground" />
@@ -382,19 +384,19 @@
             x-on:close-all-target-context-menus.window="closeContextMenu()"
             x-on:keydown.escape.window="closeContextMenu()"
             x-on:scroll.window="closeContextMenu()"
-            :style="`top: ${subMenuY}px; left: ${subMenuX}px; background-color: #ffffff !important; color: #0f172a !important; z-index: 100000 !important; box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.3), 0 10px 12px -5px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.12) !important;`"
-            class="fixed min-w-[12rem] rounded-xl border border-slate-200 bg-white text-slate-900 p-1.5 text-xs font-medium opacity-100 animate-in fade-in-50 zoom-in-95">
+            :style="`top: ${subMenuY}px; left: ${subMenuX}px; z-index: 100000 !important;`"
+            class="fixed min-w-[12rem] rounded-xl border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 p-1.5 text-xs font-medium opacity-100 shadow-2xl animate-in fade-in-50 zoom-in-95">
             
             <button type="button"
                 x-on:click="closeContextMenu(); $dispatch('open-add-target-modal', { kraCategory: contextKra, kra: contextKra })"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800 transition-colors">
                 <flux:icon icon="plus" class="size-4 text-slate-700 dark:text-slate-300" />
                 <span>{{ __('Add new target') }}</span>
             </button>
 
             <button type="button"
                 x-on:click="closeContextMenu(); $wire.requestAddSubTarget()"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800 transition-colors">
                 <flux:icon icon="document-plus" class="size-4 text-slate-700 dark:text-slate-300" />
                 <span>{{ __('Add sub-target') }}</span>
             </button>
@@ -407,15 +409,15 @@
             x-on:close-all-target-context-menus.window="closeContextMenu()"
             x-on:keydown.escape.window="closeContextMenu()"
             x-on:scroll.window="closeContextMenu()"
-            :style="`top: ${deleteSubMenuY}px; left: ${deleteSubMenuX}px; background-color: #ffffff !important; color: #0f172a !important; z-index: 100000 !important; box-shadow: 0 20px 30px -5px rgba(0, 0, 0, 0.3), 0 10px 12px -5px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0,0,0,0.12) !important;`"
-            class="fixed min-w-[17rem] rounded-xl border border-slate-200 bg-white text-slate-900 p-1.5 text-xs font-medium opacity-100 animate-in fade-in-50 zoom-in-95">
+            :style="`top: ${deleteSubMenuY}px; left: ${deleteSubMenuX}px; z-index: 100000 !important;`"
+            class="fixed min-w-[17rem] rounded-xl border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 p-1.5 text-xs font-medium opacity-100 shadow-2xl animate-in fade-in-50 zoom-in-95">
             
             <button type="button"
                 :disabled="!canDeleteTarget"
                 x-on:click="if (canDeleteTarget) { closeContextMenu(); $wire.requestDelete(); }"
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
-                :class="!canDeleteTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-accent'">
-                <flux:icon icon="trash" class="size-4" :class="!canDeleteTarget ? 'text-slate-400 dark:text-zinc-500' : 'text-red-500'" />
+                :class="!canDeleteTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'">
+                <flux:icon icon="trash" class="size-4" :class="!canDeleteTarget ? 'text-slate-400 dark:text-zinc-500' : 'text-red-500 dark:text-red-400'" />
                 <span>{{ __('Delete selected target and its sub-target') }}</span>
             </button>
 
@@ -423,8 +425,8 @@
                 :disabled="!canDeleteSubTarget"
                 x-on:click="if (canDeleteSubTarget) { const targetId = contextItemId; closeContextMenu(); $wire.requestDeleteSubTarget(targetId); }"
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
-                :class="!canDeleteSubTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-accent'">
-                <flux:icon icon="minus-circle" class="size-4" :class="!canDeleteSubTarget ? 'text-slate-400 dark:text-zinc-500' : 'text-rose-500'" />
+                :class="!canDeleteSubTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'">
+                <flux:icon icon="minus-circle" class="size-4" :class="!canDeleteSubTarget ? 'text-slate-400 dark:text-zinc-500' : 'text-rose-500 dark:text-rose-400'" />
                 <span>{{ __('Delete selected sub-target') }}</span>
             </button>
         </div>

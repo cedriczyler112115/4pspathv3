@@ -113,7 +113,8 @@
                                 </div>
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
-                                <x-select2 wire:model.live="yearFilter" :label="__('Year')" :placeholder="null" :options="$years" minWidth="120px" />
+                                <x-select2 wire:model.live="yearFilter" :label="__('Year')" :placeholder="null"
+                                    :options="$years" minWidth="120px" />
                             </td>
                             <td class="px-2 py-1 whitespace-nowrap">
                                 <x-select2 wire:model.live="categoryFilter" :label="__('Category')"

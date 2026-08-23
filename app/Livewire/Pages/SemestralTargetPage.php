@@ -52,6 +52,19 @@ class SemestralTargetPage extends Component
     public bool $showDeleteSubTargetModal = false;
     public ?int $deletingSemItemId = null;
 
+    // Copy Target Modal
+    public bool $showCopyModal = false;
+    public bool $showCopyAllConfirmModal = false;
+    public string $copySourceYear = '';
+    public string $copySourceCategory = '';
+    public string $copySourceSemester = '';
+    public string $copySourceStatusFilter = '';
+    public string $copySourceSearch = '';
+    public int $copyPage = 1;
+    public int $copyPerPage = 5;
+
+    public ?string $unauthorizedErrorMessage = null;
+
     public function mount(): void
     {
         $this->includeStrategicFunction = ApplicationSetting::boolean('include_strategic_function', true);
@@ -64,7 +77,27 @@ class SemestralTargetPage extends Component
             $this->categoryFilter = '';
         }
 
+        $this->validateSemId();
         $this->loadUserProfile();
+
+        if ($this->unauthorizedErrorMessage !== null) {
+            Flux::toast(variant: 'danger', text: $this->unauthorizedErrorMessage);
+        }
+    }
+
+    protected function validateSemId(): void
+    {
+        $userId = Auth::id();
+
+        if ($this->semId !== null && $this->semId > 0 && $userId !== null) {
+            $semRecord = DB::table('ipc_semester')->where('id', $this->semId)->first();
+
+            if ($semRecord === null) {
+                $this->unauthorizedErrorMessage = __('The requested semestral target record (ID: :id) does not exist.', ['id' => $this->semId]);
+            } elseif ((int) $semRecord->user_id !== (int) $userId) {
+                $this->unauthorizedErrorMessage = __('Unauthorized access: The requested semestral target record does not belong to your account.');
+            }
+        }
     }
 
     protected function loadUserProfile(): void
@@ -183,38 +216,54 @@ class SemestralTargetPage extends Component
     public function semesterHeading(): string
     {
         $userId = Auth::id();
-        $semNumber = null;
+        $semRecord = null;
 
         if ($this->semId !== null && $this->semId > 0) {
-            $semNumber = DB::table('ipc_semester')
+            $semRecord = DB::table('ipc_semester')
                 ->where('id', $this->semId)
                 ->where('user_id', $userId)
-                ->value('semester');
+                ->select(['semester', 'year'])
+                ->first();
         }
 
-        if ($semNumber === null) {
-            $first = DB::table('ipc_sem_targets_indicator as sti')
+        if ($semRecord === null) {
+            $semRecord = DB::table('ipc_sem_targets_indicator as sti')
                 ->join('ipc_semester as sem', 'sti.semester_id', '=', 'sem.id')
                 ->where('sem.user_id', $userId)
-                ->value('sem.semester');
-            $semNumber = $first;
+                ->select(['sem.semester', 'sem.year'])
+                ->first();
         }
 
-        $semInt = (int) $semNumber;
+        $semInt = (int) ($semRecord->semester ?? 0);
+        $year = $semRecord->year ?? null;
+
         if ($semInt === 1) {
-            return __('Semestral Target for 1st Semester');
+            return $year ? __('Semestral Target for 1st Semester of :year', ['year' => $year]) : __('Semestral Target for 1st Semester');
         }
         if ($semInt === 2) {
-            return __('Semestral Target for 2nd Semester');
+            return $year ? __('Semestral Target for 2nd Semester of :year', ['year' => $year]) : __('Semestral Target for 2nd Semester');
         }
 
-        return __('Semestral Target');
+        return $year ? __('Semestral Target of :year', ['year' => $year]) : __('Semestral Target');
     }
 
     public function activeSemesterId(): ?int
     {
+        if ($this->unauthorizedErrorMessage !== null) {
+            return null;
+        }
+
         if ($this->semId !== null && $this->semId > 0) {
-            return $this->semId;
+            $isOwner = DB::table('ipc_semester')
+                ->where('id', $this->semId)
+                ->where('user_id', Auth::id())
+                ->exists();
+
+            if ($isOwner) {
+                return $this->semId;
+            }
+
+            return null;
         }
 
         $firstSem = DB::table('ipc_semester')
@@ -465,6 +514,10 @@ class SemestralTargetPage extends Component
     {
         $userId = Auth::id();
 
+        if ($this->unauthorizedErrorMessage !== null) {
+            return new LengthAwarePaginator([], 0, (int) $this->perPage <= 0 ? 10 : (int) $this->perPage, 1);
+        }
+
         $query = DB::table('ipc_sem_targets_indicator as sti')
             ->join('ipc_sem_targets_indicator_itemlist as stil', 'sti.id', '=', 'stil.sem_target_id')
             ->leftJoin('ipc_semester as sem', 'sti.semester_id', '=', 'sem.id')
@@ -538,6 +591,367 @@ class SemestralTargetPage extends Component
         $effectivePerPage = (int) $this->perPage <= 0 ? max(1, (clone $query)->count()) : (int) $this->perPage;
 
         return $query->paginate($effectivePerPage);
+    }
+
+    public function openCopyModal(): void
+    {
+        if ($this->unauthorizedErrorMessage !== null) {
+            Flux::toast(variant: 'danger', text: $this->unauthorizedErrorMessage);
+            return;
+        }
+
+        $this->showCopyModal = true;
+
+        if ($this->copySourceYear === '' || $this->copySourceSemester === '') {
+            $activeSemId = $this->activeSemesterId();
+            $semRecord = $activeSemId ? DB::table('ipc_semester')->where('id', $activeSemId)->first() : null;
+
+            if ($semRecord && filled($semRecord->year) && filled($semRecord->semester)) {
+                $currYear = (int) $semRecord->year;
+                $currSem = (int) $semRecord->semester;
+            } else {
+                $currYear = (int) now()->year;
+                $currSem = now()->month >= 7 ? 2 : 1;
+            }
+
+            if ($currSem === 2) {
+                $prevYear = $currYear;
+                $prevSem = 1;
+            } else {
+                $prevYear = $currYear - 1;
+                $prevSem = 2;
+            }
+
+            if ($this->copySourceYear === '') {
+                $this->copySourceYear = (string) $prevYear;
+            }
+
+            if ($this->copySourceSemester === '') {
+                $this->copySourceSemester = (string) $prevSem;
+            }
+        }
+    }
+
+    public function closeCopyModal(): void
+    {
+        $this->showCopyModal = false;
+    }
+
+    /** @return Collection<int, object> */
+    public function years(): Collection
+    {
+        $currentYear = now()->year;
+
+        return collect(range(2021, $currentYear + 1))
+            ->reverse()
+            ->values()
+            ->map(fn(int $year): object => (object) ['target_year' => (string) $year]);
+    }
+
+    /** @return Collection<int, object> */
+    public function semesters(): Collection
+    {
+        return collect([
+            (object) ['value' => '1', 'label' => __('1st Semester')],
+            (object) ['value' => '2', 'label' => __('2nd Semester')],
+            (object) ['value' => '3', 'label' => __('Both Semester')],
+        ]);
+    }
+
+    public function copySourceYears(): Collection
+    {
+        $userId = Auth::id();
+        if (!is_int($userId)) {
+            return $this->years();
+        }
+
+        $years = DB::table('ipc_semester')
+            ->where('user_id', $userId)
+            ->whereNotNull('year')
+            ->select('year as target_year')
+            ->distinct()
+            ->orderBy('year', 'desc')
+            ->get()
+            ->map(fn(object $row): object => (object) ['target_year' => (string) $row->target_year]);
+
+        return $years->isNotEmpty() ? $years : $this->years();
+    }
+
+    /** @return array<int, string> */
+    public function getExistingActivitiesProperty(): array
+    {
+        $ipcSemesterId = $this->activeSemesterId();
+        if (!$ipcSemesterId) {
+            return [];
+        }
+
+        return DB::table('ipc_sem_targets_indicator')
+            ->where('semester_id', $ipcSemesterId)
+            ->pluck('activity')
+            ->map(fn($act) => trim(mb_strtolower((string) $act)))
+            ->filter()
+            ->all();
+    }
+
+    public function updatedCopySourceYear(): void
+    {
+        $this->copyPage = 1;
+    }
+
+    public function updatedCopySourceCategory(): void
+    {
+        $this->copyPage = 1;
+    }
+
+    public function updatedCopySourceSemester(): void
+    {
+        $this->copyPage = 1;
+    }
+
+    public function updatedCopySourceStatusFilter(): void
+    {
+        $this->copyPage = 1;
+    }
+
+    public function updatedCopySourceSearch(): void
+    {
+        $this->copyPage = 1;
+    }
+
+    public function previousCopyPage(): void
+    {
+        if ($this->copyPage > 1) {
+            $this->copyPage--;
+        }
+    }
+
+    public function nextCopyPage(): void
+    {
+        $this->copyPage++;
+    }
+
+    public function copySemestralTargetGroups(bool $paginate = true): LengthAwarePaginator|Collection
+    {
+        $userId = Auth::id();
+        $activeSemId = $this->activeSemesterId();
+
+        if (!$userId) {
+            return $paginate ? new LengthAwarePaginator([], 0, max(1, $this->copyPerPage), 1) : collect();
+        }
+
+        $query = DB::table('ipc_sem_targets_indicator as sti')
+            ->join('ipc_sem_targets_indicator_itemlist as stil', 'stil.sem_target_id', '=', 'sti.id')
+            ->leftJoin('ipc_semester as sem', 'sti.semester_id', '=', 'sem.id')
+            ->where('sem.user_id', $userId)
+            ->where('sti.target_status', 3)
+            ->where('stil.remarks', 3);
+
+        if ($activeSemId) {
+            $query->where('sti.semester_id', '!=', $activeSemId);
+        }
+
+        if ($this->copySourceYear !== '') {
+            $query->where('sem.year', $this->copySourceYear);
+        }
+
+        if ($this->copySourceCategory !== '') {
+            $query->where('sti.kra_category', (int) $this->copySourceCategory);
+        }
+
+        if ($this->copySourceSemester !== '') {
+            $query->where(function ($q): void {
+                $q->where('sem.semester', (int) $this->copySourceSemester)
+                    ->orWhere('stil.new_semester', (int) $this->copySourceSemester);
+            });
+        }
+
+        if (trim($this->copySourceSearch) !== '') {
+            $search = '%' . trim($this->copySourceSearch) . '%';
+            $query->where(function ($q) use ($search): void {
+                $q->where('sti.activity', 'like', $search)
+                    ->orWhere('stil.description', 'like', $search);
+            });
+        }
+
+        $rows = $query->select([
+            'sti.id as ind_id',
+            'sti.kra_category',
+            'sti.activity',
+            'sem.year as target_year',
+            'sem.semester as target_sem',
+            'stil.id as item_id',
+            'stil.new_semester',
+            'stil.description',
+            'stil.rg_quantity',
+            'stil.rg_quality',
+            'stil.rg_timeliness',
+            'stil.rg_ratingperiod',
+            'stil.rg_movs',
+            'stil.rg_remarks',
+        ])
+            ->orderBy('sem.year', 'desc')
+            ->orderBy('sem.semester', 'asc')
+            ->orderBy('sti.kra_category', 'asc')
+            ->orderBy('sti.display_order', 'asc')
+            ->orderBy('stil.display_order', 'asc')
+            ->get();
+
+        $grouped = $rows->groupBy('ind_id');
+
+        if (!$paginate) {
+            return $grouped;
+        }
+
+        $total = $grouped->count();
+        $perPage = max(1, $this->copyPerPage);
+        $lastPage = (int) ceil($total / $perPage) ?: 1;
+        $currentPage = max(1, min($this->copyPage, $lastPage));
+        if ($this->copyPage !== $currentPage) {
+            $this->copyPage = $currentPage;
+        }
+
+        $pagedItems = $grouped->slice(($currentPage - 1) * $perPage, $perPage);
+
+        return new LengthAwarePaginator(
+            $pagedItems,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => request()->url(),
+                'pageName' => 'copyPage',
+            ]
+        );
+    }
+
+    public function requestCopyAllSemestral(): void
+    {
+        $this->showCopyAllConfirmModal = true;
+    }
+
+    public function cancelCopyAllConfirm(): void
+    {
+        $this->showCopyAllConfirmModal = false;
+    }
+
+    public function confirmCopyAll(): void
+    {
+        $this->showCopyAllConfirmModal = false;
+        $this->copyAllSemestralTargetGroups();
+    }
+
+    public function copyAllSemestralTargetGroups(): void
+    {
+        $groups = $this->copySemestralTargetGroups(false);
+        if ($groups->isEmpty()) {
+            return;
+        }
+
+        $existingActivities = $this->existingActivities;
+        $copiedCount = 0;
+
+        foreach ($groups as $indicatorId => $items) {
+            $first = $items->first();
+            if ($first === null) {
+                continue;
+            }
+
+            $activityClean = trim(mb_strtolower((string) ($first->activity ?? '')));
+            if ($activityClean !== '' && in_array($activityClean, $existingActivities, true)) {
+                continue;
+            }
+
+            $this->copySemestralTargetGroup((int) $indicatorId);
+            $existingActivities[] = $activityClean;
+            $copiedCount++;
+        }
+
+        if ($copiedCount > 0) {
+            Flux::toast(variant: 'success', text: __(':count semestral target group(s) copied successfully.', ['count' => $copiedCount]));
+        } else {
+            Flux::toast(variant: 'warning', text: __('No new semestral targets available to copy (all matching results already exist).'));
+        }
+    }
+
+    public function copySemestralTargetGroup(int $indicatorId): void
+    {
+        $ipcSemesterId = $this->activeSemesterId();
+        $userId = Auth::id();
+
+        if (!$ipcSemesterId || !$userId) {
+            Flux::toast(variant: 'danger', text: __('Unable to copy target. Semester not found.'));
+            return;
+        }
+
+        $sourceIndicator = DB::table('ipc_sem_targets_indicator')
+            ->where('id', $indicatorId)
+            ->where('target_status', 3)
+            ->first();
+        if ($sourceIndicator === null) {
+            return;
+        }
+
+        $sourceItems = DB::table('ipc_sem_targets_indicator_itemlist')
+            ->where('sem_target_id', $indicatorId)
+            ->where('remarks', 3)
+            ->get();
+
+        $nowManila = \Illuminate\Support\Carbon::now('Asia/Manila');
+
+        DB::transaction(function () use ($sourceIndicator, $sourceItems, $ipcSemesterId, $userId, $nowManila): void {
+            $maxOrder = (int) DB::table('ipc_sem_targets_indicator')
+                ->where('semester_id', $ipcSemesterId)
+                ->where('kra_category', $sourceIndicator->kra_category)
+                ->max('display_order');
+
+            $newSemTargetId = (int) DB::table('ipc_sem_targets_indicator')->insertGetId([
+                'ipc_target_indicator_id' => $sourceIndicator->ipc_target_indicator_id ?? 0,
+                'semester_id' => $ipcSemesterId,
+                'kra_category' => $sourceIndicator->kra_category,
+                'display_order' => $maxOrder + 1,
+                'activity' => $sourceIndicator->activity,
+                'verified' => null,
+                'verified_by' => null,
+                'date_verified' => null,
+                'remarks' => $sourceIndicator->remarks,
+                'target_status' => 1,
+                'created_by' => $userId,
+                'date_created' => $nowManila,
+                'modified_by' => $userId,
+                'last_date_modified' => $nowManila,
+                'target_from' => $userId,
+            ]);
+
+            foreach ($sourceItems as $item) {
+                DB::table('ipc_sem_targets_indicator_itemlist')->insert([
+                    'target_orig_id' => $item->target_orig_id ?? 0,
+                    'sem_target_id' => $newSemTargetId,
+                    'display_order' => $item->display_order,
+                    'sem_item_id' => $ipcSemesterId,
+                    'new_semester' => $item->new_semester,
+                    'description' => $item->description,
+                    'actual_accomp' => null,
+                    'weight' => $item->weight,
+                    'quantity' => $item->quantity,
+                    'quality' => $item->quality,
+                    'timeliness' => $item->timeliness,
+                    'rg_quantity' => $item->rg_quantity,
+                    'rg_quality' => $item->rg_quality,
+                    'rg_timeliness' => $item->rg_timeliness,
+                    'rg_ratingperiod' => $item->rg_ratingperiod,
+                    'rg_movs' => $item->rg_movs,
+                    'rg_remarks' => $item->rg_remarks,
+                    'remarks' => 1,
+                    'created_by' => $userId,
+                    'date_created' => $nowManila,
+                    'modified_by' => $userId,
+                    'date_modified' => $nowManila,
+                ]);
+            }
+        });
+
+        $this->dispatch('semestral-target-updated');
+        Flux::toast(variant: 'success', text: __('Target copied successfully.'));
     }
 
     public function render(): View
