@@ -946,9 +946,16 @@ class AnnualTargetPage extends Component
         $this->showCopyModal = false;
     }
 
+    protected static ?Collection $copyStaffUsersCache = null;
+    protected static ?Collection $copyHarmonizedPositionsCache = null;
+
     public function copyStaffUsers(): Collection
     {
-        return DB::table('ipc_targets_indicators as iti')
+        if (static::$copyStaffUsersCache !== null) {
+            return static::$copyStaffUsersCache;
+        }
+
+        return static::$copyStaffUsersCache = DB::table('ipc_targets_indicators as iti')
             ->join('users as u', 'iti.user_id', '=', 'u.id')
             ->where('iti.user_id', '!=', Auth::id())
             ->select(['u.id', 'u.first_name', 'u.middle_name', 'u.last_name', 'u.position'])
@@ -970,17 +977,21 @@ class AnnualTargetPage extends Component
 
     public function copyHarmonizedPositions(): Collection
     {
+        if (static::$copyHarmonizedPositionsCache !== null) {
+            return static::$copyHarmonizedPositionsCache;
+        }
+
         if (DB::getSchemaBuilder()->hasTable('lib_harmonized_positions')) {
             $positions = DB::table('lib_harmonized_positions')
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get();
             if ($positions->isNotEmpty()) {
-                return $positions;
+                return static::$copyHarmonizedPositionsCache = $positions;
             }
         }
 
-        return DB::table('harmonized_ipc_targets_indicators')
+        return static::$copyHarmonizedPositionsCache = DB::table('harmonized_ipc_targets_indicators')
             ->whereNotNull('harmonized_position_id')
             ->distinct()
             ->pluck('harmonized_position_id')

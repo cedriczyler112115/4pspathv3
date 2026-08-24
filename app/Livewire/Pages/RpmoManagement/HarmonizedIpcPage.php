@@ -806,14 +806,21 @@ class HarmonizedIpcPage extends Component
         ]);
     }
 
+    /** @var Collection<int, object>|null */
+    protected static ?Collection $positionsCache = null;
+
     /** @return Collection<int, object> */
     public function positions(): Collection
     {
-        if (! DB::getSchemaBuilder()->hasTable('lib_harmonized_positions')) {
-            return collect();
+        if (static::$positionsCache !== null) {
+            return static::$positionsCache;
         }
 
-        return DB::table('lib_harmonized_positions')
+        if (! DB::getSchemaBuilder()->hasTable('lib_harmonized_positions')) {
+            return static::$positionsCache = collect();
+        }
+
+        return static::$positionsCache = DB::table('lib_harmonized_positions')
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get();

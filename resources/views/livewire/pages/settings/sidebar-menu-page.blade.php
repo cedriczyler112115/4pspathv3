@@ -276,7 +276,7 @@
                             </div>
                         </div>
 
-                        <flux:input wire:model.live="iconSearch" :label="__('Search icons')" placeholder="bars, user, home..." />
+                        <flux:input wire:model.live.debounce.300ms="iconSearch" :label="__('Search icons')" placeholder="bars, user, home..." />
 
                         <div class="max-h-64 overflow-y-auto rounded-xl border border-border bg-background p-3">
                             <div class="grid grid-cols-4 gap-2 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7">

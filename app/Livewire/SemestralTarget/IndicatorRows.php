@@ -43,6 +43,9 @@ class IndicatorRows extends Component
         $this->rows = $rows;
     }
 
+    /** @var array<int, object|null> */
+    protected static array $semesterRecordCache = [];
+
     protected function is2026SecondSemesterOrBeyond(): bool
     {
         $semesterId = 0;
@@ -60,7 +63,11 @@ class IndicatorRows extends Component
             return false;
         }
 
-        $semRecord = DB::table('ipc_semester')->where('id', $semesterId)->first();
+        if (! array_key_exists($semesterId, static::$semesterRecordCache)) {
+            static::$semesterRecordCache[$semesterId] = DB::table('ipc_semester')->where('id', $semesterId)->first();
+        }
+
+        $semRecord = static::$semesterRecordCache[$semesterId];
         if (! $semRecord) {
             return false;
         }
