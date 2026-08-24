@@ -24,6 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::redirect('annualtarget', 'ipcrf/annualtarget');
     Route::get('ipcrf/myratings', \App\Livewire\Pages\MyRatingsPage::class)->name('myratings.index');
     Route::get('ipcrf/myratings/semestral-target', \App\Livewire\Pages\SemestralTargetPage::class)->name('myratings.semestral-target');
+    Route::get('ipcrf/myratings/semestral-target/print-checkpoint', [\App\Http\Controllers\PrintCheckpointController::class, 'show'])->name('myratings.semestral-target.print-checkpoint');
     Route::redirect('myratings', 'ipcrf/myratings');
     Route::get('rpmo-management/harmonized-ipc', \App\Livewire\Pages\RpmoManagement\HarmonizedIpcPage::class)->name('harmonized-ipc.index');
     Route::redirect('harmonized-ipc', 'rpmo-management/harmonized-ipc');

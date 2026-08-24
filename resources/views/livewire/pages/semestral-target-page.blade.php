@@ -1,4 +1,4 @@
-<section class="w-full space-y-6">
+<section class="w-full space-y-6" x-data x-on:open-new-tab.window="window.open($event.detail.url, '_blank')">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div class="space-y-1">
             <flux:heading size="lg" level="1">{{ $semesterHeading }}</flux:heading>
@@ -137,26 +137,32 @@
                             <flux:menu.item icon="document-text" wire:click="printIpcrf">
                                 {{ __('Print IPCR-F') }}
                             </flux:menu.item>
-                            <flux:menu.item icon="clipboard-document-check" wire:click="printCheckpoint">
-                                {{ __('Print Checkpoint') }}
-                            </flux:menu.item>
+                            @if ($semId)
+                                <flux:menu.item icon="clipboard-document-check" as="a" href="{{ route('myratings.semestral-target.print-checkpoint', ['sem_id' => $semId]) }}" target="_blank">
+                                    {{ __('Print Checkpoint') }}
+                                </flux:menu.item>
+                            @else
+                                <flux:menu.item icon="clipboard-document-check" wire:click="printCheckpoint">
+                                    {{ __('Print Checkpoint') }}
+                                </flux:menu.item>
+                            @endif
                         </flux:menu>
                     </flux:dropdown>
                 </div>
             </div>
         </div>
 
-        <div class="w-full overflow-x-auto rounded-xl border border-border">
-            <table class="w-full min-w-[1100px] table-fixed border-separate border-spacing-0 text-sm">
+        <div class="w-full rounded-xl border border-border">
+            <table class="w-full table-fixed border-separate border-spacing-0 text-sm">
                 <colgroup>
-                    <col style="width: 6%; !important;">
-                    <col style="width: 18%; !important;">
-                    <col style="width: 18%; !important;">
-                    <col style="width: 15%; !important;">
-                    <col style="width: 15%; !important;">
-                    <col style="width: 14%; !important;">
-                    <col style="width: 7%; !important;">
-                    <col style="width: 7%; !important;">
+                    <col style="width: 5%;">
+                    <col style="width: 17%;">
+                    <col style="width: 17%;">
+                    <col style="width: 15%;">
+                    <col style="width: 15%;">
+                    <col style="width: 14%;">
+                    <col style="width: 8.5%;">
+                    <col style="width: 8.5%;">
                 </colgroup>
                 <thead
                     class="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -300,17 +306,19 @@
 
             <div class="grid items-start gap-4 md:grid-cols-2">
                 <div class="grid gap-1">
-                    <flux:label>{{ __('Key Result Area') }}</flux:label>
+                    <flux:label>{{ __('Key Result Area') }} <span class="text-red-500">*</span></flux:label>
                     <textarea data-autosize="true" wire:model="addActivity" rows="1"
                         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                         style="resize:none;"></textarea>
+                    <flux:error name="addActivity" />
                 </div>
 
                 <div class="grid gap-1">
-                    <flux:label>{{ __('Success Indicator') }}</flux:label>
+                    <flux:label>{{ __('Success Indicator') }} <span class="text-red-500">*</span></flux:label>
                     <textarea data-autosize="true" wire:model="addDescription" rows="1"
                         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                         style="resize:none;"></textarea>
+                    <flux:error name="addDescription" />
                 </div>
             </div>
 
@@ -324,38 +332,43 @@
 
             <div class="grid items-start gap-4 md:grid-cols-2">
                 <div class="grid gap-1">
-                    <flux:label>{{ __('Efficiency') }}</flux:label>
+                    <flux:label>{{ __('Efficiency') }} <span class="text-red-500">*</span></flux:label>
                     <textarea data-autosize="true" wire:model="addEfficiency" rows="1"
                         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                         style="resize:none;"></textarea>
+                    <flux:error name="addEfficiency" />
                 </div>
 
                 <div class="grid gap-1">
-                    <flux:label>{{ __('Quality') }}</flux:label>
+                    <flux:label>{{ __('Quality') }} <span class="text-red-500">*</span></flux:label>
                     <textarea data-autosize="true" wire:model="addQuality" rows="1"
                         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                         style="resize:none;"></textarea>
+                    <flux:error name="addQuality" />
                 </div>
 
                 <div class="grid gap-1">
-                    <flux:label>{{ __('Timeliness') }}</flux:label>
+                    <flux:label>{{ __('Timeliness') }} <span class="text-red-500">*</span></flux:label>
                     <textarea data-autosize="true" wire:model="addTimeliness" rows="1"
                         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                         style="resize:none;"></textarea>
+                    <flux:error name="addTimeliness" />
                 </div>
 
                 <div class="grid gap-1">
-                    <flux:label>{{ __('MOVs') }}</flux:label>
+                    <flux:label>{{ __('MOVs') }} <span class="text-red-500">*</span></flux:label>
                     <textarea data-autosize="true" wire:model="addMovs" rows="1"
                         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                         style="resize:none;"></textarea>
+                    <flux:error name="addMovs" />
                 </div>
 
                 <div class="grid gap-1 md:col-span-2" style="grid-column: 1 / -1;">
-                    <flux:label>{{ __('Remarks') }}</flux:label>
+                    <flux:label>{{ __('Remarks') }} <span class="text-xs text-muted-foreground">({{ __('Optional') }})</span></flux:label>
                     <textarea data-autosize="true" wire:model="addRemarks" rows="1"
                         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                         style="resize:none;"></textarea>
+                    <flux:error name="addRemarks" />
                 </div>
             </div>
 
@@ -445,6 +458,75 @@
                     wire:click="confirmCopyAll">
                     {{ __('Confirm and Copy') }}
                 </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Show Edit History Modal -->
+    <flux:modal wire:model="showHistoryModal" style="width: min(56rem, calc(100vw - 2rem)); max-width: min(56rem, calc(100vw - 2rem));">
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Edit History') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Review all modifications, edits, and justifications recorded for the selected target.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="max-h-[60vh] overflow-y-auto rounded-xl border border-border">
+                <table class="w-full border-collapse text-xs">
+                    <thead class="sticky top-0 bg-muted/90 backdrop-blur-md text-left font-semibold uppercase text-muted-foreground border-b border-border">
+                        <tr>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('Field / Type') }}</th>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('Original / Old Value') }}</th>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('New Value') }}</th>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('Justification') }}</th>
+                            <th class="px-3 py-2.5">{{ __('Date & User') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($historyRecords as $history)
+                            <tr class="border-b border-border/60 hover:bg-muted/20">
+                                <td class="px-3 py-2 font-semibold text-slate-800 dark:text-zinc-200 uppercase">
+                                    {{ str_replace('_', ' ', $history['field_name']) }}
+                                </td>
+                                <td class="px-3 py-2 text-muted-foreground">
+                                    {{ $history['old_value'] ?: ($history['original_value'] ?: '-') }}
+                                </td>
+                                <td class="px-3 py-2 font-medium text-emerald-600 dark:text-emerald-400">
+                                    {{ $history['new_value'] ?: '-' }}
+                                </td>
+                                <td class="px-3 py-2 text-foreground italic">
+                                    {{ $history['justification'] }}
+                                </td>
+                                <td class="px-3 py-2 text-muted-foreground whitespace-nowrap">
+                                    <div>{{ $history['date_created'] }}</div>
+                                    <div class="text-[10px] font-semibold text-slate-500">{{ $history['user_name'] }}</div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">
+                                    {{ __('No edit history records found for this target entry.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 pt-2">
+                <flux:button variant="danger" type="button" icon="trash"
+                    wire:click="discardEditHistory"
+                    :disabled="empty($historyRecords)"
+                    class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700">
+                    {{ __('Discard') }}
+                </flux:button>
+
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button" wire:click="closeEditHistoryModal">
+                        {{ __('Close') }}
+                    </flux:button>
+                </flux:modal.close>
             </div>
         </div>
     </flux:modal>

@@ -351,6 +351,13 @@
                 <span>{{ __('Edit Target') }}</span>
             </button>
 
+            <button type="button" x-on:mouseenter="activeSubMenu = null"
+                x-on:click="const item = contextItemId; const ind = contextIndicatorId; closeContextMenu(); $dispatch('show-semestral-target-edit-history', { itemId: item, indicatorId: ind })"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800 transition-colors">
+                <flux:icon icon="clock" class="size-4 text-blue-500 dark:text-blue-400" />
+                <span>{{ __('Show Edit History') }}</span>
+            </button>
+
             <div class="my-1 border-t border-border/60"></div>
 
             <button type="button" x-on:mouseenter="openDeleteSubMenu($event)" x-on:click="toggleDeleteSubMenu($event)"
