@@ -33,9 +33,6 @@
         contextItemId: 0,
         canDeleteTarget: true,
         canDeleteSubTarget: false,
-        get isPositionSelected() {
-            return Boolean(this.$wire.positionFilter && String(this.$wire.positionFilter).trim() !== '');
-        },
         targetStatus: {{ (int) ($firstRow['target_status'] ?? 0) }},
         isDraggingMenu: false,
         dragStartX: 0,
@@ -88,10 +85,7 @@
             this.contextIndicatorId = indicatorId;
             this.contextItemId = itemId;
 
-            if (!this.isPositionSelected) {
-                this.canDeleteTarget = false;
-                this.canDeleteSubTarget = false;
-            } else if (subTargetCount <= 1) {
+            if (subTargetCount <= 1) {
                 this.canDeleteTarget = true;
                 this.canDeleteSubTarget = false;
             } else if (isKraOrAction) {
@@ -128,8 +122,6 @@
             this.contextItemId = 0;
         },
         openAddSubMenu(event = null) {
-            if (!this.isPositionSelected) return;
-
             let rect = null;
             if (event && event.currentTarget) {
                 rect = event.currentTarget.getBoundingClientRect();
@@ -150,7 +142,6 @@
             this.activeSubMenu = 'add';
         },
         toggleAddSubMenu(event = null) {
-            if (!this.isPositionSelected) return;
             if (this.activeSubMenu === 'add') {
                 this.activeSubMenu = null;
             } else {
@@ -158,8 +149,6 @@
             }
         },
         openDeleteSubMenu(event = null) {
-            if (!this.isPositionSelected) return;
-
             let rect = null;
             if (event && event.currentTarget) {
                 rect = event.currentTarget.getBoundingClientRect();
@@ -180,7 +169,6 @@
             this.activeSubMenu = 'delete';
         },
         toggleDeleteSubMenu(event = null) {
-            if (!this.isPositionSelected) return;
             if (this.activeSubMenu === 'delete') {
                 this.activeSubMenu = null;
             } else {
@@ -219,7 +207,7 @@
     }">
     @foreach ($rows as $groupIndex => $row)
         <tr wire:key="harmonized-row-{{ $row['id'] }}-{{ $editing ? 'edit' : 'view' }}"
-            x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($firstRow['kra_category'] ?? 1) }}, {{ $indicatorId }}, {{ (int) $row['id'] }}, {{ count($rows) }})"
+            x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($row['kra_category'] ?? $firstRow['kra_category'] ?? 1) }}, {{ $indicatorId }}, {{ (int) $row['id'] }}, {{ count($rows) }})"
             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
             x-on:dragend="endDrag()"
             x-on:drop.prevent="dropOn($event, { type: 'main', indicatorId: {{ $indicatorId }}, itemId: {{ (int) ($firstRow['id'] ?? 0) }}, kra: {{ (int) ($firstRow['kra_category'] ?? 0) }} })"
@@ -317,7 +305,6 @@
     @endif
 
     <template x-teleport="body">
-    <template x-teleport="body">
         <div x-show="showContextMenu"
             x-cloak
             x-on:close-all-target-context-menus.window="closeContextMenu()"
@@ -338,25 +325,22 @@
 
             <button type="button"
                 x-ref="addMenuBtn"
-                :disabled="!isPositionSelected"
-                x-on:mouseenter="if (isPositionSelected) openAddSubMenu($event)"
-                x-on:click="if (isPositionSelected) toggleAddSubMenu($event)"
-                class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
-                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : (activeSubMenu === 'add' ? 'bg-accent dark:bg-zinc-800 text-accent-foreground' : 'text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800')">
+                x-on:mouseenter="openAddSubMenu($event)"
+                x-on:click="toggleAddSubMenu($event)"
+                class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800 transition-colors"
+                :class="activeSubMenu === 'add' ? 'bg-accent dark:bg-zinc-800 text-accent-foreground' : ''">
                 <div class="flex items-center gap-2">
-                    <flux:icon icon="plus-circle" class="size-4" :class="!isPositionSelected ? 'text-slate-400 dark:text-zinc-500' : 'text-slate-700 dark:text-slate-300'" />
+                    <flux:icon icon="plus-circle" class="size-4 text-slate-700 dark:text-slate-300" />
                     <span>{{ __('Add Target') }}</span>
                 </div>
                 <flux:icon icon="chevron-right" class="size-3.5 text-muted-foreground" />
             </button>
 
             <button type="button"
-                :disabled="!isPositionSelected"
                 x-on:mouseenter="activeSubMenu = null"
-                x-on:click="if (isPositionSelected) { closeContextMenu(); $wire.edit(); }"
-                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
-                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800'">
-                <flux:icon icon="pencil-square" class="size-4" :class="!isPositionSelected ? 'text-slate-400 dark:text-zinc-500' : 'text-amber-500 dark:text-amber-400'" />
+                x-on:click="closeContextMenu(); $wire.edit()"
+                class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800 transition-colors">
+                <flux:icon icon="pencil-square" class="size-4 text-amber-500 dark:text-amber-400" />
                 <span>{{ __('Edit Target') }}</span>
             </button>
 
@@ -364,13 +348,12 @@
 
             <button type="button"
                 x-ref="deleteMenuBtn"
-                :disabled="!isPositionSelected"
-                x-on:mouseenter="if (isPositionSelected) openDeleteSubMenu($event)"
-                x-on:click="if (isPositionSelected) toggleDeleteSubMenu($event)"
-                class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
-                :class="!isPositionSelected ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : (activeSubMenu === 'delete' ? 'bg-red-50 dark:bg-red-950/40' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40')">
+                x-on:mouseenter="openDeleteSubMenu($event)"
+                x-on:click="toggleDeleteSubMenu($event)"
+                class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+                :class="activeSubMenu === 'delete' ? 'bg-red-50 dark:bg-red-950/40' : ''">
                 <div class="flex items-center gap-2">
-                    <flux:icon icon="trash" class="size-4" :class="!isPositionSelected ? 'text-slate-400 dark:text-zinc-500' : 'text-red-500 dark:text-red-400'" />
+                    <flux:icon icon="trash" class="size-4 text-red-500 dark:text-red-400" />
                     <span>{{ __('Delete') }}</span>
                 </div>
                 <flux:icon icon="chevron-right" class="size-3.5 text-muted-foreground" />

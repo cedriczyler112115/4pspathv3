@@ -282,9 +282,24 @@ class SemestralTargetPage extends Component
 
     // Add Target Methods
     #[On('open-add-target-modal')]
-    public function handleOpenAddTargetModal(array $payload = []): void
+    public function handleOpenAddTargetModal(mixed $kraCategory = null, mixed $payload = null): void
     {
-        $kraCategory = (int) ($payload['kraCategory'] ?? $payload['kra'] ?? 1);
+        $category = 1;
+        if (is_numeric($kraCategory)) {
+            $category = (int) $kraCategory;
+        } elseif (is_array($kraCategory)) {
+            $category = (int) ($kraCategory['kraCategory'] ?? $kraCategory['kra'] ?? $kraCategory['category'] ?? 1);
+        } elseif (is_array($payload)) {
+            $category = (int) ($payload['kraCategory'] ?? $payload['kra'] ?? $payload['category'] ?? 1);
+        } elseif (is_numeric($payload)) {
+            $category = (int) $payload;
+        }
+
+        $this->openAddTargetModal($category);
+    }
+
+    public function openAddModal(int $kraCategory): void
+    {
         $this->openAddTargetModal($kraCategory);
     }
 
@@ -350,7 +365,7 @@ class SemestralTargetPage extends Component
                 'target_from' => $userId,
             ]);
 
-            DB::table('ipc_sem_targets_indicator_itemlist')->insert([
+            $semItemId = (int) DB::table('ipc_sem_targets_indicator_itemlist')->insertGetId([
                 'target_orig_id' => 0,
                 'sem_target_id' => $semTargetId,
                 'display_order' => 1,
@@ -373,6 +388,25 @@ class SemestralTargetPage extends Component
                 'modified_by' => $userId,
                 'date_modified' => $nowManila,
             ]);
+
+            $this->logSemTargetHistory($semTargetId, $semItemId, 'activity', null, $this->addActivity, $userId, $nowManila, 'Target Added');
+            $this->logSemTargetHistory($semTargetId, $semItemId, 'description', null, $this->addDescription, $userId, $nowManila, 'Target Added');
+            if (! blank($this->addEfficiency)) {
+                $this->logSemTargetHistory($semTargetId, $semItemId, 'rg_quantity', null, $this->addEfficiency, $userId, $nowManila, 'Target Added');
+            }
+            if (! blank($this->addQuality)) {
+                $this->logSemTargetHistory($semTargetId, $semItemId, 'rg_quality', null, $this->addQuality, $userId, $nowManila, 'Target Added');
+            }
+            if (! blank($this->addTimeliness)) {
+                $this->logSemTargetHistory($semTargetId, $semItemId, 'rg_timeliness', null, $this->addTimeliness, $userId, $nowManila, 'Target Added');
+            }
+            if (! blank($this->addMovs)) {
+                $this->logSemTargetHistory($semTargetId, $semItemId, 'rg_movs', null, $this->addMovs, $userId, $nowManila, 'Target Added');
+            }
+            if (! blank($this->addRemarks)) {
+                $this->logSemTargetHistory($semTargetId, $semItemId, 'rg_remarks', null, $this->addRemarks, $userId, $nowManila, 'Target Added');
+            }
+            $this->logSemTargetHistory($semTargetId, $semItemId, 'created', null, 'Target Created', $userId, $nowManila, 'Target Added');
         });
 
         $this->cancelAdd();
@@ -399,7 +433,31 @@ class SemestralTargetPage extends Component
             return;
         }
 
-        DB::transaction(function (): void {
+        $userId = Auth::id() ?? 0;
+        $nowManila = \Illuminate\Support\Carbon::now('Asia/Manila');
+
+        DB::transaction(function () use ($userId, $nowManila): void {
+            $targetRow = DB::table('ipc_sem_targets_indicator')
+                ->where('id', $this->deletingSemTargetId)
+                ->first();
+
+            $itemRows = DB::table('ipc_sem_targets_indicator_itemlist')
+                ->where('sem_target_id', $this->deletingSemTargetId)
+                ->get();
+
+            foreach ($itemRows as $item) {
+                $this->logSemTargetHistory(
+                    $this->deletingSemTargetId,
+                    (int) $item->id,
+                    'deleted',
+                    (($targetRow->activity ?? '') ? $targetRow->activity . ' | ' : '') . ($item->description ?? ''),
+                    'DELETED',
+                    $userId,
+                    $nowManila,
+                    'Target Deleted'
+                );
+            }
+
             DB::table('ipc_sem_targets_indicator_itemlist')
                 ->where('sem_target_id', $this->deletingSemTargetId)
                 ->delete();
@@ -433,9 +491,31 @@ class SemestralTargetPage extends Component
             return;
         }
 
-        DB::table('ipc_sem_targets_indicator_itemlist')
-            ->where('id', $this->deletingSemItemId)
-            ->delete();
+        $userId = Auth::id() ?? 0;
+        $nowManila = \Illuminate\Support\Carbon::now('Asia/Manila');
+
+        DB::transaction(function () use ($userId, $nowManila): void {
+            $itemRow = DB::table('ipc_sem_targets_indicator_itemlist')
+                ->where('id', $this->deletingSemItemId)
+                ->first();
+
+            if ($itemRow !== null) {
+                $this->logSemTargetHistory(
+                    (int) $itemRow->sem_target_id,
+                    (int) $itemRow->id,
+                    'deleted',
+                    (string) ($itemRow->description ?? ''),
+                    'DELETED',
+                    $userId,
+                    $nowManila,
+                    'Sub-target Deleted'
+                );
+            }
+
+            DB::table('ipc_sem_targets_indicator_itemlist')
+                ->where('id', $this->deletingSemItemId)
+                ->delete();
+        });
 
         $this->cancelDeleteSubTarget();
         Flux::toast(variant: 'success', text: __('Sub-target deleted successfully.'));
@@ -923,7 +1003,7 @@ class SemestralTargetPage extends Component
             ]);
 
             foreach ($sourceItems as $item) {
-                DB::table('ipc_sem_targets_indicator_itemlist')->insert([
+                $newItemId = (int) DB::table('ipc_sem_targets_indicator_itemlist')->insertGetId([
                     'target_orig_id' => $item->target_orig_id ?? 0,
                     'sem_target_id' => $newSemTargetId,
                     'display_order' => $item->display_order,
@@ -947,11 +1027,39 @@ class SemestralTargetPage extends Component
                     'modified_by' => $userId,
                     'date_modified' => $nowManila,
                 ]);
+
+                $this->logSemTargetHistory($newSemTargetId, $newItemId, 'created', null, (string) ($item->description ?? ''), $userId, $nowManila, 'Target Copied');
             }
         });
 
         $this->dispatch('semestral-target-updated');
         Flux::toast(variant: 'success', text: __('Target copied successfully.'));
+    }
+
+    protected function logSemTargetHistory(
+        int $semTargetId,
+        ?int $semItemId,
+        string $fieldName,
+        ?string $oldVal,
+        ?string $newVal,
+        int $userId,
+        \Illuminate\Support\Carbon $now,
+        ?string $justification = null
+    ): void {
+        DB::table('ipc_sem_target_edit_histories')->insert([
+            'sem_target_id' => $semTargetId,
+            'sem_item_id' => $semItemId,
+            'field_name' => $fieldName,
+            'original_value' => $oldVal,
+            'old_value' => $oldVal,
+            'new_value' => $newVal,
+            'last_edited_value' => $oldVal,
+            'justification' => $justification,
+            'user_id' => $userId,
+            'date_created' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
     }
 
     public function render(): View

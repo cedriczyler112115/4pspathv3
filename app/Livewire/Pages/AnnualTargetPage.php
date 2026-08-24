@@ -329,17 +329,28 @@ class AnnualTargetPage extends Component
     }
 
     #[On('open-add-target-modal')]
-    public function openAddModal(int $kraCategory): void
+    public function openAddModal(mixed $kraCategory = null, mixed $payload = null): void
     {
+        $category = 1;
+        if (is_numeric($kraCategory)) {
+            $category = (int) $kraCategory;
+        } elseif (is_array($kraCategory)) {
+            $category = (int) ($kraCategory['kraCategory'] ?? $kraCategory['kra'] ?? $kraCategory['category'] ?? 1);
+        } elseif (is_array($payload)) {
+            $category = (int) ($payload['kraCategory'] ?? $payload['kra'] ?? $payload['category'] ?? 1);
+        } elseif (is_numeric($payload)) {
+            $category = (int) $payload;
+        }
+
         $userId = Auth::id();
 
-        if ($userId === null || !in_array($kraCategory, $this->allowedKraCategories(), true)) {
+        if ($userId === null || !in_array($category, $this->allowedKraCategories(), true)) {
             return;
         }
 
         $this->cancelEdit();
         $this->showAddModal = true;
-        $this->addingKraCategory = $kraCategory;
+        $this->addingKraCategory = $category;
         $this->addingYear = ctype_digit($this->yearFilter) ? (int) $this->yearFilter : now()->year;
         $this->addActivity = '';
         $this->addSemester = ctype_digit($this->semesterFilter) ? (string) $this->semesterFilter : '1';

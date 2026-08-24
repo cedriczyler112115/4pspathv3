@@ -268,9 +268,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelDelete">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-red-600 text-white hover:bg-red-700"
                     wire:click="confirmDelete">
                     {{ __('Delete') }}
@@ -289,9 +291,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelDeleteSubTarget">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-red-600 text-white hover:bg-red-700"
                     wire:click="confirmDeleteSubTarget">
                     {{ __('Delete') }}
@@ -342,9 +346,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelLockAnnualTarget">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
                     wire:click="confirmLockAnnualTarget">
                     {{ __('Confirm and Lock') }}
@@ -363,9 +369,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelUnlockAnnualTarget">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" wire:click="confirmUnlockAnnualTarget">
                     {{ __('Confirm and Unlock') }}
                 </flux:button>
@@ -388,9 +396,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelCopyAllConfirm">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
                     wire:click="confirmCopyAll">
                     {{ __('Confirm and Copy') }}
@@ -409,9 +419,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelTargetMove">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-blue-600 text-white hover:bg-blue-700"
                     wire:click="confirmTargetMove">
                     {{ __('Confirm move') }}
@@ -530,9 +542,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelAdd">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
                     wire:click="saveAdd">
                     {{ __('Save') }}

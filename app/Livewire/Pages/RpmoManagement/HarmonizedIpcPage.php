@@ -297,15 +297,32 @@ class HarmonizedIpcPage extends Component
     }
 
     #[On('open-add-target-modal')]
-    public function openAddModal(int $kraCategory): void
+    public function openAddModal(mixed $kraCategory = null, mixed $payload = null): void
     {
-        if (blank($this->positionFilter) || ! in_array($kraCategory, $this->allowedKraCategories(), true)) {
+        $category = 1;
+        if (is_numeric($kraCategory)) {
+            $category = (int) $kraCategory;
+        } elseif (is_array($kraCategory)) {
+            $category = (int) ($kraCategory['kraCategory'] ?? $kraCategory['kra'] ?? $kraCategory['category'] ?? 1);
+        } elseif (is_array($payload)) {
+            $category = (int) ($payload['kraCategory'] ?? $payload['kra'] ?? $payload['category'] ?? 1);
+        } elseif (is_numeric($payload)) {
+            $category = (int) $payload;
+        }
+
+        if (blank($this->positionFilter)) {
+            Flux::toast(variant: 'warning', text: __('Please select a position first before adding a target.'));
+
+            return;
+        }
+
+        if (! in_array($category, $this->allowedKraCategories(), true)) {
             return;
         }
 
         $this->cancelEdit();
         $this->showAddModal = true;
-        $this->addingKraCategory = $kraCategory;
+        $this->addingKraCategory = $category;
         $this->addingYear = ctype_digit($this->yearFilter) ? (int) $this->yearFilter : now()->year;
         $this->addActivity = '';
         $this->addSemester = ctype_digit($this->semesterFilter) ? (string) $this->semesterFilter : '1';
@@ -800,5 +817,22 @@ class HarmonizedIpcPage extends Component
             ->where('is_active', true)
             ->orderBy('sort_order')
             ->get();
+    }
+
+    public function selectedPositionName(): string
+    {
+        if (blank($this->positionFilter)) {
+            return __('All Positions');
+        }
+
+        $positionId = ctype_digit($this->positionFilter) ? (int) $this->positionFilter : null;
+
+        if ($positionId === null) {
+            return __('All Positions');
+        }
+
+        $name = DB::table('lib_harmonized_positions')->where('id', $positionId)->value('name');
+
+        return (string) ($name ?: __('Position #').$positionId);
     }
 }

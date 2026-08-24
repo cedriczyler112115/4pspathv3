@@ -202,9 +202,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelDelete">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-red-600 text-white hover:bg-red-700"
                     wire:click="deleteRating">
                     {{ __('Confirm and Remove') }}
@@ -268,9 +270,11 @@
             @endif
 
             <div class="flex items-center justify-end">
-                <flux:button variant="ghost" type="button" wire:click="cancelView">
-                    {{ __('Close') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Close') }}
+                    </flux:button>
+                </flux:modal.close>
             </div>
         </div>
     </flux:modal>

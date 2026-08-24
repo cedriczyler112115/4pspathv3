@@ -332,9 +332,11 @@
                     <flux:checkbox wire:model="is_active" :label="__('Active (visible in sidebar)')" />
 
                     <div class="flex items-center justify-end gap-2">
-                        <flux:button variant="ghost" type="button" wire:click="$set('showFormModal', false)">
-                            {{ __('Cancel') }}
-                        </flux:button>
+                        <flux:modal.close>
+                            <flux:button variant="ghost" type="button">
+                                {{ __('Cancel') }}
+                            </flux:button>
+                        </flux:modal.close>
                         <flux:button variant="primary" type="submit">
                             {{ $editingId ? __('Save changes') : __('Create') }}
                         </flux:button>
@@ -351,9 +353,11 @@
                 </div>
 
                 <div class="flex items-center justify-end gap-2">
-                    <flux:button variant="ghost" type="button" wire:click="$set('showDeleteModal', false)">
-                        {{ __('Cancel') }}
-                    </flux:button>
+                    <flux:modal.close>
+                        <flux:button variant="ghost" type="button">
+                            {{ __('Cancel') }}
+                        </flux:button>
+                    </flux:modal.close>
                     <flux:button variant="primary" type="button" class="bg-red-600 text-white hover:bg-red-700" wire:click="delete">
                         {{ __('Delete') }}
                     </flux:button>

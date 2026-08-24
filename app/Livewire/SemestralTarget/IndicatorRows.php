@@ -242,6 +242,9 @@ class IndicatorRows extends Component
                     ]);
 
                     if ($insertedId > 0) {
+                        $this->logFieldHistory($this->indicatorId, $insertedId, 'description', '', (string) ($pendingSubTarget['description'] ?? ''), $userId, $nowManila);
+                        $this->logFieldHistory($this->indicatorId, $insertedId, 'created', '', 'Sub-target Added', $userId, $nowManila);
+
                         $this->rows[] = [
                             'sem_target_id' => $this->indicatorId,
                             'semester_id' => $semesterId,

@@ -180,7 +180,7 @@
             $semItemId = (int) ($row['sem_item_id'] ?? 0);
         @endphp
         <tr wire:key="sem-row-{{ $semItemId }}-{{ $editing ? 'edit' : 'view' }}"
-            x-on:contextmenu.prevent="openContextMenu($event, {{ $kraCategory }}, {{ $indicatorId }}, {{ $semItemId }}, {{ count($groupRows) }})"
+            x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($row['kra_category'] ?? $kraCategory) }}, {{ $indicatorId }}, {{ $semItemId }}, {{ count($groupRows) }})"
             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'" x-on:dragend="endDrag()"
             x-on:drop.prevent="dropOn($event, { type: '{{ $index === 0 ? 'main' : 'sub' }}', indicatorId: {{ $indicatorId }}, itemId: {{ $semItemId }}, kra: {{ $kraCategory }} })"
             :class="showContextMenu && contextItemId === {{ $semItemId }} ? '!bg-sky-100 dark:!bg-sky-950/80 text-sky-950 dark:text-sky-100 relative z-10' : (draggingRow === {{ $indicatorId }} ? 'shadow-lg shadow-slate-400/40 ring-1 ring-slate-300 bg-white dark:bg-zinc-800 scale-[1.01] relative z-10 cursor-grabbing' : '')"
@@ -433,9 +433,11 @@
                 </div>
 
                 <div class="flex items-center justify-end gap-2">
-                    <flux:button variant="ghost" type="button" wire:click="$set('showJustificationModal', false)">
-                        {{ __('Cancel') }}
-                    </flux:button>
+                    <flux:modal.close>
+                        <flux:button variant="ghost" type="button">
+                            {{ __('Cancel') }}
+                        </flux:button>
+                    </flux:modal.close>
                     <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700"
                         wire:click="save">
                         {{ __('Submit & Save Changes') }}

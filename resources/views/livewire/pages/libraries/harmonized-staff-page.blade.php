@@ -147,9 +147,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelForm">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="submit">
                     {{ $editingId ? __('Save Changes') : __('Create Position') }}
                 </flux:button>
@@ -167,9 +169,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelDelete">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-red-600 text-white hover:bg-red-700"
                     wire:click="delete">
                     {{ __('Delete') }}

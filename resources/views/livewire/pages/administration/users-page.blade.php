@@ -199,9 +199,11 @@
                 </div>
 
                 <div class="flex justify-end gap-2">
-                    <flux:button variant="ghost" type="button" wire:click="$set('showEditModal', false)">
-                        {{ __('Cancel') }}
-                    </flux:button>
+                    <flux:modal.close>
+                        <flux:button variant="ghost" type="button">
+                            {{ __('Cancel') }}
+                        </flux:button>
+                    </flux:modal.close>
                     <flux:button variant="primary" type="submit">
                         {{ __('Save changes') }}
                     </flux:button>
@@ -227,9 +229,11 @@
             </div>
 
             <div class="flex justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="$set('showDeleteModal', false)">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="danger" type="button" wire:click="delete">
                     {{ __('Delete') }}
                 </flux:button>

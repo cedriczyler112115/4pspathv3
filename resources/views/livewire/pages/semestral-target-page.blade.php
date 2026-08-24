@@ -214,8 +214,11 @@
                             x-on:drop.prevent="dropOn($event, { type: 'category', kra: {{ (int) $category->value }}, indicatorId: 0, itemId: 0 })">
                             <tr class="bg-muted/30">
                                 <td colspan="8" class="border-b border-border px-3 py-2">
-                                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                        {{ $category->label }}
+                                    <div class="flex items-center justify-between font-bold text-foreground">
+                                        <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ $category->label }}</span>
+                                        <flux:button size="xs" variant="ghost" icon="plus" wire:click="openAddTargetModal({{ (int) $category->value }})">
+                                            {{ __('Add Target') }}
+                                        </flux:button>
                                     </div>
                                 </td>
                             </tr>
@@ -277,6 +280,16 @@
                                 <div>
                                     <flux:badge color="blue">
                                         {{ \App\Support\KraCategory::label($addingKraCategory ?? 1) }}
+                                    </flux:badge>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="w-1/2 align-top ps-3" style="border: 0;">
+                            <div class="grid gap-1">
+                                <flux:label>{{ __('Semester Period') }}</flux:label>
+                                <div>
+                                    <flux:badge color="zinc">
+                                        {{ $this->semesterHeading() }}
                                     </flux:badge>
                                 </div>
                             </div>
@@ -347,9 +360,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelAdd">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
                     wire:click="saveAdd">
                     {{ __('Save') }}
@@ -369,9 +384,11 @@
             </div>
 
             <div class="flex justify-end gap-2">
-                <flux:button variant="ghost" wire:click="cancelDeleteTarget">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="danger" wire:click="confirmDeleteTarget">
                     {{ __('Delete') }}
                 </flux:button>
@@ -390,9 +407,11 @@
             </div>
 
             <div class="flex justify-end gap-2">
-                <flux:button variant="ghost" wire:click="cancelDeleteSubTarget">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="danger" wire:click="confirmDeleteSubTarget">
                     {{ __('Delete') }}
                 </flux:button>
@@ -417,9 +436,11 @@
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <flux:button variant="ghost" type="button" wire:click="cancelCopyAllConfirm">
-                    {{ __('Cancel') }}
-                </flux:button>
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Cancel') }}
+                    </flux:button>
+                </flux:modal.close>
                 <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700"
                     wire:click="confirmCopyAll">
                     {{ __('Confirm and Copy') }}

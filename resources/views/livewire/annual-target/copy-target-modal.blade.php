@@ -371,11 +371,12 @@
         </div>
     </div>
 
-    <!-- Modal Footer -->
     <div class="flex items-center justify-end border-t border-border pt-3 shrink-0">
-        <button type="button" wire:click="closeCopyModal"
-            class="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-            {{ __('Close') }}
-        </button>
+        <flux:modal.close>
+            <button type="button"
+                class="rounded-lg px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+                {{ __('Close') }}
+            </button>
+        </flux:modal.close>
     </div>
 </div>
