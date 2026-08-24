@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use stdClass;
@@ -26,16 +27,22 @@ class HarmonizedIpcPage extends Component
 {
     use WithPagination;
 
+    #[Url(as: 'perPage', keep: true)]
     public int $perPage = 10;
 
+    #[Url(as: 'search', keep: true)]
     public string $search = '';
 
+    #[Url(as: 'year', keep: true)]
     public string $yearFilter = '';
 
+    #[Url(as: 'category', keep: true)]
     public string $categoryFilter = '';
 
+    #[Url(as: 'semester', keep: true)]
     public string $semesterFilter = '';
 
+    #[Url(as: 'position', keep: true)]
     public string $positionFilter = '';
 
     public string $fullName = '';
@@ -107,12 +114,32 @@ class HarmonizedIpcPage extends Component
     public function mount(): void
     {
         $this->includeStrategicFunction = ApplicationSetting::boolean('include_strategic_function', true);
-        $this->perPage = (int) Session::get($this->sessionKey('perPage'), 10);
-        $this->search = (string) Session::get($this->sessionKey('search'), '');
-        $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), now()->year);
-        $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
-        $this->semesterFilter = (string) Session::get($this->sessionKey('semesterFilter'), '');
-        $this->positionFilter = (string) Session::get($this->sessionKey('positionFilter'), '');
+
+        if ($this->perPage <= 0) {
+            $this->perPage = (int) Session::get($this->sessionKey('perPage'), 10);
+        }
+        if (blank($this->search)) {
+            $this->search = (string) Session::get($this->sessionKey('search'), '');
+        }
+        if (blank($this->yearFilter)) {
+            $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), (string) now()->year);
+        }
+        if (blank($this->categoryFilter)) {
+            $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
+        }
+        if (blank($this->semesterFilter)) {
+            $this->semesterFilter = (string) Session::get($this->sessionKey('semesterFilter'), '');
+        }
+        if (blank($this->positionFilter)) {
+            $this->positionFilter = (string) Session::get($this->sessionKey('positionFilter'), '');
+        }
+
+        Session::put($this->sessionKey('perPage'), $this->perPage);
+        Session::put($this->sessionKey('search'), $this->search);
+        Session::put($this->sessionKey('yearFilter'), $this->yearFilter);
+        Session::put($this->sessionKey('categoryFilter'), $this->categoryFilter);
+        Session::put($this->sessionKey('semesterFilter'), $this->semesterFilter);
+        Session::put($this->sessionKey('positionFilter'), $this->positionFilter);
 
         if (! $this->includeStrategicFunction && $this->categoryFilter === '1') {
             $this->categoryFilter = '';

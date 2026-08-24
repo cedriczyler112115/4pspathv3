@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use stdClass;
@@ -26,14 +27,19 @@ class AnnualTargetPage extends Component
 {
     use WithPagination;
 
+    #[Url(as: 'perPage', keep: true)]
     public int $perPage = 10;
 
+    #[Url(as: 'search', keep: true)]
     public string $search = '';
 
+    #[Url(as: 'year', keep: true)]
     public string $yearFilter = '';
 
+    #[Url(as: 'category', keep: true)]
     public string $categoryFilter = '';
 
+    #[Url(as: 'semester', keep: true)]
     public string $semesterFilter = '';
 
     public string $fullName = '';
@@ -48,6 +54,7 @@ class AnnualTargetPage extends Component
 
     public bool $includeStrategicFunction = true;
 
+    #[Url(as: 'duplicates', keep: true)]
     public bool $showOnlyDuplicates = false;
 
     public ?int $editingRowId = null;
@@ -133,11 +140,28 @@ class AnnualTargetPage extends Component
         $currentYear = (string) now()->year;
 
         $this->includeStrategicFunction = ApplicationSetting::boolean('include_strategic_function', true);
-        $this->perPage = (int) Session::get($this->sessionKey('perPage'), 10);
-        $this->search = (string) Session::get($this->sessionKey('search'), '');
-        $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), $currentYear);
-        $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
-        $this->semesterFilter = (string) Session::get($this->sessionKey('semesterFilter'), '');
+
+        if ($this->perPage <= 0) {
+            $this->perPage = (int) Session::get($this->sessionKey('perPage'), 10);
+        }
+        if (blank($this->search)) {
+            $this->search = (string) Session::get($this->sessionKey('search'), '');
+        }
+        if (blank($this->yearFilter)) {
+            $this->yearFilter = (string) Session::get($this->sessionKey('yearFilter'), $currentYear);
+        }
+        if (blank($this->categoryFilter)) {
+            $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
+        }
+        if (blank($this->semesterFilter)) {
+            $this->semesterFilter = (string) Session::get($this->sessionKey('semesterFilter'), '');
+        }
+
+        Session::put($this->sessionKey('perPage'), $this->perPage);
+        Session::put($this->sessionKey('search'), $this->search);
+        Session::put($this->sessionKey('yearFilter'), $this->yearFilter);
+        Session::put($this->sessionKey('categoryFilter'), $this->categoryFilter);
+        Session::put($this->sessionKey('semesterFilter'), $this->semesterFilter);
         $this->showOnlyDuplicates = (bool) Session::get($this->sessionKey('showOnlyDuplicates'), false);
 
         if (empty($this->yearFilter)) {
