@@ -40,11 +40,26 @@ class IndicatorRows extends Component
     /** @var array<int, array{quantity_score:string, quality_score:string, timeliness_score:string, average:string}> */
     public array $scores = [];
 
+    public bool $isSemesterLocked = false;
+
     /** @param array<int, array<string, mixed>> $rows */
-    public function mount(int $indicatorId, array $rows): void
+    public function mount(int $indicatorId, array $rows, bool $isSemesterLocked = false): void
     {
         $this->indicatorId = $indicatorId;
         $this->rows = $rows;
+
+        $semId = request()->query('sem_id');
+        if (!$semId && !empty($rows[0]['semester_id'])) {
+            $semId = (int) $rows[0]['semester_id'];
+        }
+
+        if ($semId) {
+            $lock = DB::table('ipc_semester')->where('id', $semId)->value('lock');
+            $this->isSemesterLocked = ((int) $lock === 1);
+        } else {
+            $this->isSemesterLocked = $isSemesterLocked;
+        }
+
         $this->initScores();
     }
 
@@ -442,6 +457,9 @@ class IndicatorRows extends Component
                 'stii.quantity_score',
                 'stii.quality_score',
                 'stii.timeliness_score',
+                'stii.na_quantity',
+                'stii.na_quality',
+                'stii.na_timeliness',
                 'stii.average',
                 'stii.actual_accomp',
                 'stii.target_movs',
@@ -464,16 +482,35 @@ class IndicatorRows extends Component
                 $q = $row['quantity_score'] ?? null;
                 $ql = $row['quality_score'] ?? null;
                 $t = $row['timeliness_score'] ?? null;
+                $naQ = (int) ($row['na_quantity'] ?? 0);
+                $naQl = (int) ($row['na_quality'] ?? 0);
+                $naT = (int) ($row['na_timeliness'] ?? 0);
                 $ave = $row['average'] ?? null;
                 $acc = $row['actual_accomp'] ?? null;
                 $movs = filled($row['target_movs'] ?? null) ? $row['target_movs'] : ($row['rg_movs'] ?? null);
                 $rem = filled($row['target_remarks'] ?? null) ? $row['target_remarks'] : ($row['rg_remarks'] ?? null);
 
+                // Fallback to 'N/A' text if na_quantity = 1, na_quality = 1, or na_timeliness = 1
+                $qStr = $naQ === 1 ? 'N/A' : ($q !== null && $q !== '' ? (string) $q : '');
+                $qlStr = $naQl === 1 ? 'N/A' : ($ql !== null && $ql !== '' ? (string) $ql : '');
+                $tStr = $naT === 1 ? 'N/A' : ($t !== null && $t !== '' ? (string) $t : '');
+
+                // Fallback inference if na_* column was not populated previously
+                if ($qStr === '' && $q === null && ($ave !== null || $ql !== null || $t !== null)) {
+                    $qStr = 'N/A';
+                }
+                if ($qlStr === '' && $ql === null && ($ave !== null || $q !== null || $t !== null)) {
+                    $qlStr = 'N/A';
+                }
+                if ($tStr === '' && $t === null && ($ave !== null || $q !== null || $ql !== null)) {
+                    $tStr = 'N/A';
+                }
+
                 $this->scores[$itemId] = [
-                    'quantity_score' => $q !== null && $q !== '' ? (string) $q : '',
-                    'quality_score' => $ql !== null && $ql !== '' ? (string) $ql : '',
-                    'timeliness_score' => $t !== null && $t !== '' ? (string) $t : '',
-                    'average' => $ave !== null && $ave !== '' ? number_format((float) $ave, 2, '.', '') : '',
+                    'quantity_score' => $qStr,
+                    'quality_score' => $qlStr,
+                    'timeliness_score' => $tStr,
+                    'average' => $ave !== null && $ave !== '' ? number_format((float) $ave, 2, '.', '') : ($qStr === 'N/A' || $qlStr === 'N/A' || $tStr === 'N/A' ? 'N/A' : ''),
                     'actual_accomp' => $acc !== null ? (string) $acc : '',
                     'target_movs' => $movs !== null ? (string) $movs : '',
                     'target_remarks' => $rem !== null ? (string) $rem : '',
@@ -498,12 +535,19 @@ class IndicatorRows extends Component
 
         $itemScores = $this->scores[$itemId] ?? [];
 
-        $qRaw = trim((string) ($itemScores['quantity_score'] ?? ''));
-        $qlRaw = trim((string) ($itemScores['quality_score'] ?? ''));
-        $tRaw = trim((string) ($itemScores['timeliness_score'] ?? ''));
+        $qRaw = strtoupper(trim((string) ($itemScores['quantity_score'] ?? '')));
+        $qlRaw = strtoupper(trim((string) ($itemScores['quality_score'] ?? '')));
+        $tRaw = strtoupper(trim((string) ($itemScores['timeliness_score'] ?? '')));
 
-        $clamp = function (?string $raw): ?float {
-            if ($raw === null || $raw === '' || ! is_numeric($raw)) {
+        $isQNa = in_array($qRaw, ['N/A', 'NA', 'N/A.'], true);
+        $isQlNa = in_array($qlRaw, ['N/A', 'NA', 'N/A.'], true);
+        $isTNa = in_array($tRaw, ['N/A', 'NA', 'N/A.'], true);
+
+        $parseScore = function (string $raw, bool $isNa): mixed {
+            if ($isNa) {
+                return 'N/A';
+            }
+            if ($raw === '' || ! is_numeric($raw)) {
                 return null;
             }
             $val = (float) $raw;
@@ -511,41 +555,59 @@ class IndicatorRows extends Component
                 $val = 5.0;
             }
             if ($val < 0) {
-                $val = 0.0;
+                return 0.0;
             }
             return round($val, 2);
         };
 
-        $q = $clamp($qRaw);
-        $ql = $clamp($qlRaw);
-        $t = $clamp($tRaw);
+        $q = $parseScore($qRaw, $isQNa);
+        $ql = $parseScore($qlRaw, $isQlNa);
+        $t = $parseScore($tRaw, $isTNa);
 
-        if ($q !== null && is_numeric($qRaw)) {
+        if ($q === 'N/A') {
+            $this->scores[$itemId]['quantity_score'] = 'N/A';
+        } elseif ($q !== null && is_numeric($qRaw)) {
             if ((float) $qRaw > 5) {
                 $this->scores[$itemId]['quantity_score'] = '5';
-            } elseif ((float) $qRaw < 0) {
-                $this->scores[$itemId]['quantity_score'] = '0';
             }
         }
-        if ($ql !== null && is_numeric($qlRaw)) {
+
+        if ($ql === 'N/A') {
+            $this->scores[$itemId]['quality_score'] = 'N/A';
+        } elseif ($ql !== null && is_numeric($qlRaw)) {
             if ((float) $qlRaw > 5) {
                 $this->scores[$itemId]['quality_score'] = '5';
-            } elseif ((float) $qlRaw < 0) {
-                $this->scores[$itemId]['quality_score'] = '0';
             }
         }
-        if ($t !== null && is_numeric($tRaw)) {
+
+        if ($t === 'N/A') {
+            $this->scores[$itemId]['timeliness_score'] = 'N/A';
+        } elseif ($t !== null && is_numeric($tRaw)) {
             if ((float) $tRaw > 5) {
                 $this->scores[$itemId]['timeliness_score'] = '5';
-            } elseif ((float) $tRaw < 0) {
-                $this->scores[$itemId]['timeliness_score'] = '0';
             }
         }
 
-        $validScores = array_filter([$q, $ql, $t], fn ($v) => $v !== null);
-        $average = ! empty($validScores) ? round(array_sum($validScores) / count($validScores), 2) : null;
+        // Calculate average using ONLY numeric scores
+        $validNumericScores = [];
+        if (is_numeric($q)) {
+            $validNumericScores[] = (float) $q;
+        }
+        if (is_numeric($ql)) {
+            $validNumericScores[] = (float) $ql;
+        }
+        if (is_numeric($t)) {
+            $validNumericScores[] = (float) $t;
+        }
 
-        $avgStr = $average !== null ? number_format($average, 2, '.', '') : '';
+        if (! empty($validNumericScores)) {
+            $average = round(array_sum($validNumericScores) / count($validNumericScores), 2);
+            $avgStr = number_format($average, 2, '.', '');
+        } else {
+            $average = null;
+            $avgStr = ($q === 'N/A' || $ql === 'N/A' || $t === 'N/A') ? 'N/A' : '';
+        }
+
         $this->scores[$itemId]['average'] = $avgStr;
 
         $actualAccomp = isset($itemScores['actual_accomp']) ? (string) $itemScores['actual_accomp'] : null;
@@ -555,12 +617,23 @@ class IndicatorRows extends Component
         $nowManila = Carbon::now('Asia/Manila');
         $userId = Auth::id();
 
+        $dbQ = is_numeric($q) ? (float) $q : null;
+        $dbQl = is_numeric($ql) ? (float) $ql : null;
+        $dbT = is_numeric($t) ? (float) $t : null;
+
+        $naQ = ($q === 'N/A') ? 1 : null;
+        $naQl = ($ql === 'N/A') ? 1 : null;
+        $naT = ($t === 'N/A') ? 1 : null;
+
         DB::table('ipc_sem_targets_indicator_itemlist')
             ->where('id', $itemId)
             ->update([
-                'quantity_score' => $q,
-                'quality_score' => $ql,
-                'timeliness_score' => $t,
+                'quantity_score' => $dbQ,
+                'quality_score' => $dbQl,
+                'timeliness_score' => $dbT,
+                'na_quantity' => $naQ,
+                'na_quality' => $naQl,
+                'na_timeliness' => $naT,
                 'average' => $average,
                 'actual_accomp' => $actualAccomp,
                 'target_movs' => $targetMovs,
@@ -568,6 +641,81 @@ class IndicatorRows extends Component
                 'date_modified' => $nowManila,
                 'modified_by' => $userId,
             ]);
+
+        $this->dispatch('semestral-target-updated');
+    }
+
+    public function batchSaveScores(array $items): void
+    {
+        if (empty($items)) {
+            return;
+        }
+
+        $nowManila = Carbon::now('Asia/Manila');
+        $userId = Auth::id() ?: 1;
+
+        foreach ($items as $item) {
+            $itemId = (int) ($item['id'] ?? 0);
+            if ($itemId <= 0) {
+                continue;
+            }
+
+            $qRaw = strtoupper(trim((string) ($item['quantity_score'] ?? '')));
+            $qlRaw = strtoupper(trim((string) ($item['quality_score'] ?? '')));
+            $tRaw = strtoupper(trim((string) ($item['timeliness_score'] ?? '')));
+            $avgRaw = trim((string) ($item['average'] ?? ''));
+
+            $isQNa = in_array($qRaw, ['N/A', 'NA', 'N/A.'], true);
+            $isQlNa = in_array($qlRaw, ['N/A', 'NA', 'N/A.'], true);
+            $isTNa = in_array($tRaw, ['N/A', 'NA', 'N/A.'], true);
+
+            $dbQ = is_numeric($qRaw) ? (float) $qRaw : null;
+            $dbQl = is_numeric($qlRaw) ? (float) $qlRaw : null;
+            $dbT = is_numeric($tRaw) ? (float) $tRaw : null;
+
+            if ($dbQ !== null && $dbQ > 5) $dbQ = 5.0;
+            if ($dbQl !== null && $dbQl > 5) $dbQl = 5.0;
+            if ($dbT !== null && $dbT > 5) $dbT = 5.0;
+
+            $naQ = $isQNa ? 1 : null;
+            $naQl = $isQlNa ? 1 : null;
+            $naT = $isTNa ? 1 : null;
+
+            $dbAverage = is_numeric($avgRaw) ? round((float) $avgRaw, 2) : null;
+
+            $actualAccomp = isset($item['actual_accomp']) ? (string) $item['actual_accomp'] : null;
+            $targetMovs = isset($item['target_movs']) ? (string) $item['target_movs'] : null;
+            $targetRemarks = isset($item['target_remarks']) ? (string) $item['target_remarks'] : null;
+
+            DB::table('ipc_sem_targets_indicator_itemlist')
+                ->where('id', $itemId)
+                ->update([
+                    'quantity_score' => $dbQ,
+                    'quality_score' => $dbQl,
+                    'timeliness_score' => $dbT,
+                    'na_quantity' => $naQ,
+                    'na_quality' => $naQl,
+                    'na_timeliness' => $naT,
+                    'average' => $dbAverage,
+                    'actual_accomp' => $actualAccomp,
+                    'target_movs' => $targetMovs,
+                    'target_remarks' => $targetRemarks,
+                    'date_modified' => $nowManila,
+                    'modified_by' => $userId,
+                ]);
+
+            $this->scores[$itemId] = [
+                'quantity_score' => $isQNa ? 'N/A' : ($dbQ !== null ? (string) $dbQ : ''),
+                'quality_score' => $isQlNa ? 'N/A' : ($dbQl !== null ? (string) $dbQl : ''),
+                'timeliness_score' => $isTNa ? 'N/A' : ($dbT !== null ? (string) $dbT : ''),
+                'average' => $dbAverage !== null ? number_format($dbAverage, 2, '.', '') : (($isQNa || $isQlNa || $isTNa) && $dbAverage === null ? 'N/A' : ''),
+                'actual_accomp' => $actualAccomp ?? '',
+                'target_movs' => $targetMovs ?? '',
+                'target_remarks' => $targetRemarks ?? '',
+            ];
+        }
+
+        $this->dispatch('semestral-target-updated');
     }
 
     public function render(): View

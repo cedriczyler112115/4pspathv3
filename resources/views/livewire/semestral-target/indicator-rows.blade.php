@@ -16,10 +16,40 @@
     $lastCellStyle = 'vertical-align: top !important; border-left: 1px solid var(--border);';
 @endphp
 
-<tbody wire:key="semestral-target-indicator-group-{{ $indicatorId }}" x-data="{
+<tbody wire:key="semestral-target-indicator-group-{{ $indicatorId }}"
+    x-on:semestral-target-updated.window="isSorting = false; releaseDragHandle()"
+    x-on:save-all-scores.window="saveAllScores()" x-data="{
         hasHistoryByItem: @js($hasHistoryByItem),
+        saveAllScores() {
+            let payload = [];
+            this.$el.querySelectorAll('[data-score-row]').forEach(row => {
+                let itemId = row.getAttribute('data-score-row');
+                let q = row.querySelector('[data-field=\'quantity\']')?.value || '';
+                let ql = row.querySelector('[data-field=\'quality\']')?.value || '';
+                let t = row.querySelector('[data-field=\'timeliness\']')?.value || '';
+                let avg = row.querySelector('[data-field=\'average\']')?.value || '';
+                let accomp = row.querySelector('[data-field=\'actual_accomp\']')?.value || '';
+                let movs = row.querySelector('[data-field=\'target_movs\']')?.value || '';
+                let remarks = row.querySelector('[data-field=\'target_remarks\']')?.value || '';
+
+                payload.push({
+                    id: itemId,
+                    quantity_score: q,
+                    quality_score: ql,
+                    timeliness_score: t,
+                    average: avg,
+                    actual_accomp: accomp,
+                    target_movs: movs,
+                    target_remarks: remarks
+                });
+            });
+            if (payload.length > 0) {
+                $wire.batchSaveScores(payload);
+            }
+        },
         draggingRow: null,
         dragHandlePressed: false,
+        isSorting: false,
         showContextMenu: false,
         contextX: 0,
         contextY: 0,
@@ -65,7 +95,10 @@
         },
         dropOn(event, target) {
             const raw = event.dataTransfer.getData('application/json');
-            if (raw) this.$dispatch('semestral-target-dropped', { source: JSON.parse(raw), target });
+            if (raw) {
+                this.isSorting = true;
+                this.$dispatch('semestral-target-dropped', { source: JSON.parse(raw), target });
+            }
         },
         openContextMenu(event, kra, indicatorId, itemId, subTargetCount, isLocked = false) {
             event.preventDefault();
@@ -184,7 +217,40 @@
             $semItemId = (int) ($row['sem_item_id'] ?? 0);
             $isRowLocked = $isSemesterLocked ?? false;
         @endphp
-        <tr wire:key="sem-row-{{ $semItemId }}-{{ $editing ? 'edit' : 'view' }}"
+        <tr wire:key="sem-row-{{ $semItemId }}-{{ $editing ? 'edit' : 'view' }}" data-score-row="{{ $semItemId }}" x-data="{
+                        q: @js($scores[$semItemId]['quantity_score'] ?? ''),
+                        ql: @js($scores[$semItemId]['quality_score'] ?? ''),
+                        t: @js($scores[$semItemId]['timeliness_score'] ?? ''),
+                        avg: @js($scores[$semItemId]['average'] ?? ''),
+                        accomp: @js($scores[$semItemId]['actual_accomp'] ?? ''),
+                        movs: @js($scores[$semItemId]['target_movs'] ?? ''),
+                        remarks: @js($scores[$semItemId]['target_remarks'] ?? ''),
+                        computeAverage() {
+                            let nums = [];
+                            let isNa = false;
+                            let qVal = (this.q || '').toString().trim().toUpperCase();
+                            let qlVal = (this.ql || '').toString().trim().toUpperCase();
+                            let tVal = (this.t || '').toString().trim().toUpperCase();
+
+                            if (qVal === 'N/A') isNa = true;
+                            else if (qVal !== '' && !isNaN(parseFloat(qVal))) nums.push(parseFloat(qVal));
+
+                            if (qlVal === 'N/A') isNa = true;
+                            else if (qlVal !== '' && !isNaN(parseFloat(qlVal))) nums.push(parseFloat(qlVal));
+
+                            if (tVal === 'N/A') isNa = true;
+                            else if (tVal !== '' && !isNaN(parseFloat(tVal))) nums.push(parseFloat(tVal));
+
+                            if (nums.length > 0) {
+                                let mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+                                this.avg = mean.toFixed(2);
+                            } else if (isNa) {
+                                this.avg = 'N/A';
+                            } else {
+                                this.avg = '';
+                            }
+                        }
+                    }" x-init="computeAverage()"
             x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($row['kra_category'] ?? $kraCategory) }}, {{ $indicatorId }}, {{ $semItemId }}, {{ count($groupRows) }}, {{ $isRowLocked ? 'true' : 'false' }})"
             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'" x-on:dragend="endDrag()"
             x-on:drop.prevent="dropOn($event, { type: '{{ $index === 0 ? 'main' : 'sub' }}', indicatorId: {{ $indicatorId }}, itemId: {{ $semItemId }}, kra: {{ $kraCategory }} })"
@@ -206,18 +272,30 @@
                             </div>
                         @else
                             <div class="flex flex-col items-center gap-1.5">
-                                <div draggable="true" x-on:pointerdown="pressDragHandle()"
-                                    x-on:pointerup.window="releaseDragHandle()" x-on:pointercancel.window="releaseDragHandle()"
-                                    x-on:dragstart="startDrag($event, { type: 'main', indicatorId: {{ $indicatorId }}, itemId: 0, kra: {{ $kraCategory }} })"
-                                    x-on:dragend="endDrag($event)"
-                                    class="inline-flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1"
-                                    x-bind:style="`cursor: ${dragHandlePressed ? 'grabbing' : 'grab'} !important;`"
-                                    aria-label="{{ __('Drag main target') }}" title="{{ __('Drag main target') }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                                        stroke="currentColor" class="size-5">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18m-18 0l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" />
-                                    </svg>
+                                <div class="inline-flex items-center justify-center p-1 relative">
+                                    <div x-show="!isSorting" draggable="true" x-on:pointerdown="pressDragHandle()"
+                                        x-on:pointerup.window="releaseDragHandle()" x-on:pointercancel.window="releaseDragHandle()"
+                                        x-on:dragstart="startDrag($event, { type: 'main', indicatorId: {{ $indicatorId }}, itemId: 0, kra: {{ $kraCategory }} })"
+                                        x-on:dragend="endDrag($event)"
+                                        class="inline-flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
+                                        x-bind:style="`cursor: ${dragHandlePressed ? 'grabbing' : 'grab'} !important;`"
+                                        aria-label="{{ __('Drag main target') }}" title="{{ __('Drag main target') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                            stroke="currentColor" class="size-5">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18m-18 0l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" />
+                                        </svg>
+                                    </div>
+                                    <div x-show="isSorting" class="flex items-center justify-center" x-cloak>
+                                        <svg class="animate-spin size-5 text-emerald-600 dark:text-emerald-400"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                    </div>
                                 </div>
 
                                 @if ($hasGroupHistory)
@@ -262,14 +340,12 @@
                 @endif
             </td>
             @if ($isRowLocked)
-                <td data-col-type="actual-accomp" class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                    <textarea data-autosize="true"
-                        wire:model.live.debounce.400ms="scores.{{ $semItemId }}.actual_accomp"
+                <td data-col-type="actual-accomp" class="border-b border-r border-border px-3 py-3 align-top text-xs"
+                    style="{{ $cellStyle }}">
+                    <textarea data-autosize="true" data-field="actual_accomp" x-model="accomp"
                         x-init="$nextTick(() => { $el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'; })"
                         x-on:input="$el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'"
-                        rows="3"
-                        placeholder="Actual accomplishment..."
-                        class="{{ $textareaClass }} min-h-[100px]"
+                        rows="3" placeholder="Actual accomplishment..." class="{{ $textareaClass }} min-h-[100px]"
                         style="resize:none; min-height: 100px;"></textarea>
                 </td>
             @endif
@@ -282,20 +358,64 @@
                         $qShort = $isLongQ ? mb_substr($rawQ, 0, 45) . '...' : $qFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="number" step="any" min="0" max="5"
-                            wire:model.live.debounce.400ms="scores.{{ $semItemId }}.quantity_score"
-                            x-on:input="if (parseFloat($el.value) > 5) $el.value = 5; if (parseFloat($el.value) < 0) $el.value = 0;"
-                            placeholder="Score (1-5)"
+                        <input type="text" data-field="quantity" x-model="q" x-on:keydown.down.prevent="
+                                                let valStr = (q || '').toString().trim().toUpperCase();
+                                                if (valStr === 'N/A') return;
+                                                let num = parseFloat(valStr);
+                                                if (isNaN(num) || num <= 1) {
+                                                    q = 'N/A';
+                                                } else {
+                                                    q = (num - 1).toFixed(2);
+                                                }
+                                                computeAverage();
+                                            " x-on:keydown.up.prevent="
+                                                let valStr = (q || '').toString().trim().toUpperCase();
+                                                if (valStr === 'N/A') {
+                                                    q = '1';
+                                                } else {
+                                                    let num = parseFloat(valStr);
+                                                    if (isNaN(num)) {
+                                                        q = '1';
+                                                    } else if (num < 5) {
+                                                        q = Math.min(5, num + 1).toFixed(2);
+                                                    }
+                                                }
+                                                computeAverage();
+                                            " x-on:input="
+                                                let raw = ($el.value || '').trim();
+                                                let upper = raw.toUpperCase();
+                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                    q = (upper === 'NA' || upper === 'N/A') ? 'N/A' : upper;
+                                                    computeAverage();
+                                                    return;
+                                                }
+                                                let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                let parts = cleaned.split('.');
+                                                if (parts.length > 2) {
+                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                }
+                                                let num = parseFloat(cleaned);
+                                                if (!isNaN(num) && num > 5) {
+                                                    cleaned = '5';
+                                                }
+                                                q = cleaned;
+                                                computeAverage();
+                                            " placeholder="Score (1-5 or N/A)"
                             class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         <div class="text-[10px] text-muted-foreground italic leading-tight">
                             <span x-show="expanded">{!! nl2br(e($qFull)) !!}</span>
                             <span x-show="!expanded">{!! nl2br(e($qShort)) !!}</span>
                         </div>
                         @if ($isLongQ)
-                            <button type="button" @click="expanded = !expanded" class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
+                            <button type="button" @click="expanded = !expanded"
+                                class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
                                 <span x-text="expanded ? 'Show less' : 'Show more'"></span>
-                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                </svg>
                             </button>
                         @endif
                     </div>
@@ -315,20 +435,64 @@
                         $qlShort = $isLongQl ? mb_substr($rawQl, 0, 45) . '...' : $qlFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="number" step="any" min="0" max="5"
-                            wire:model.live.debounce.400ms="scores.{{ $semItemId }}.quality_score"
-                            x-on:input="if (parseFloat($el.value) > 5) $el.value = 5; if (parseFloat($el.value) < 0) $el.value = 0;"
-                            placeholder="Score (1-5)"
+                        <input type="text" data-field="quality" x-model="ql" x-on:keydown.down.prevent="
+                                                let valStr = (ql || '').toString().trim().toUpperCase();
+                                                if (valStr === 'N/A') return;
+                                                let num = parseFloat(valStr);
+                                                if (isNaN(num) || num <= 1) {
+                                                    ql = 'N/A';
+                                                } else {
+                                                    ql = (num - 1).toFixed(2);
+                                                }
+                                                computeAverage();
+                                            " x-on:keydown.up.prevent="
+                                                let valStr = (ql || '').toString().trim().toUpperCase();
+                                                if (valStr === 'N/A') {
+                                                    ql = '1';
+                                                } else {
+                                                    let num = parseFloat(valStr);
+                                                    if (isNaN(num)) {
+                                                        ql = '1';
+                                                    } else if (num < 5) {
+                                                        ql = Math.min(5, num + 1).toFixed(2);
+                                                    }
+                                                }
+                                                computeAverage();
+                                            " x-on:input="
+                                                let raw = ($el.value || '').trim();
+                                                let upper = raw.toUpperCase();
+                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                    ql = (upper === 'NA' || upper === 'N/A') ? 'N/A' : upper;
+                                                    computeAverage();
+                                                    return;
+                                                }
+                                                let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                let parts = cleaned.split('.');
+                                                if (parts.length > 2) {
+                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                }
+                                                let num = parseFloat(cleaned);
+                                                if (!isNaN(num) && num > 5) {
+                                                    cleaned = '5';
+                                                }
+                                                ql = cleaned;
+                                                computeAverage();
+                                            " placeholder="Score (1-5 or N/A)"
                             class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         <div class="text-[10px] text-muted-foreground italic leading-tight">
                             <span x-show="expanded">{!! nl2br(e($qlFull)) !!}</span>
                             <span x-show="!expanded">{!! nl2br(e($qlShort)) !!}</span>
                         </div>
                         @if ($isLongQl)
-                            <button type="button" @click="expanded = !expanded" class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
+                            <button type="button" @click="expanded = !expanded"
+                                class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
                                 <span x-text="expanded ? 'Show less' : 'Show more'"></span>
-                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                </svg>
                             </button>
                         @endif
                     </div>
@@ -348,20 +512,64 @@
                         $tShort = $isLongT ? mb_substr($rawT, 0, 45) . '...' : $tFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="number" step="any" min="0" max="5"
-                            wire:model.live.debounce.400ms="scores.{{ $semItemId }}.timeliness_score"
-                            x-on:input="if (parseFloat($el.value) > 5) $el.value = 5; if (parseFloat($el.value) < 0) $el.value = 0;"
-                            placeholder="Score (1-5)"
+                        <input type="text" data-field="timeliness" x-model="t" x-on:keydown.down.prevent="
+                                                let valStr = (t || '').toString().trim().toUpperCase();
+                                                if (valStr === 'N/A') return;
+                                                let num = parseFloat(valStr);
+                                                if (isNaN(num) || num <= 1) {
+                                                    t = 'N/A';
+                                                } else {
+                                                    t = (num - 1).toFixed(2);
+                                                }
+                                                computeAverage();
+                                            " x-on:keydown.up.prevent="
+                                                let valStr = (t || '').toString().trim().toUpperCase();
+                                                if (valStr === 'N/A') {
+                                                    t = '1';
+                                                } else {
+                                                    let num = parseFloat(valStr);
+                                                    if (isNaN(num)) {
+                                                        t = '1';
+                                                    } else if (num < 5) {
+                                                        t = Math.min(5, num + 1).toFixed(2);
+                                                    }
+                                                }
+                                                computeAverage();
+                                            " x-on:input="
+                                                let raw = ($el.value || '').trim();
+                                                let upper = raw.toUpperCase();
+                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                    t = (upper === 'NA' || upper === 'N/A') ? 'N/A' : upper;
+                                                    computeAverage();
+                                                    return;
+                                                }
+                                                let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                let parts = cleaned.split('.');
+                                                if (parts.length > 2) {
+                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                }
+                                                let num = parseFloat(cleaned);
+                                                if (!isNaN(num) && num > 5) {
+                                                    cleaned = '5';
+                                                }
+                                                t = cleaned;
+                                                computeAverage();
+                                            " placeholder="Score (1-5 or N/A)"
                             class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         <div class="text-[10px] text-muted-foreground italic leading-tight">
                             <span x-show="expanded">{!! nl2br(e($tFull)) !!}</span>
                             <span x-show="!expanded">{!! nl2br(e($tShort)) !!}</span>
                         </div>
                         @if ($isLongT)
-                            <button type="button" @click="expanded = !expanded" class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
+                            <button type="button" @click="expanded = !expanded"
+                                class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
                                 <span x-text="expanded ? 'Show less' : 'Show more'"></span>
-                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path>
+                                </svg>
                             </button>
                         @endif
                     </div>
@@ -374,20 +582,17 @@
             </td>
             @if ($isRowLocked)
                 <td class="border-b border-r border-border px-2 py-3 align-top text-center text-xs" style="{{ $cellStyle }}">
-                    <div class="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
-                        {{ filled($scores[$semItemId]['average'] ?? null) ? $scores[$semItemId]['average'] : '-' }}
+                    <input type="hidden" data-field="average" x-model="avg">
+                    <div class="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs" x-text="avg || '-'">
                     </div>
                 </td>
             @endif
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
                 @if ($isRowLocked)
-                    <textarea data-autosize="true"
-                        wire:model.live.debounce.400ms="scores.{{ $semItemId }}.target_movs"
+                    <textarea data-autosize="true" data-field="target_movs" x-model="movs"
                         x-init="$nextTick(() => { $el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'; })"
                         x-on:input="$el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'"
-                        rows="3"
-                        placeholder="MOVs..."
-                        class="{{ $textareaClass }} min-h-[100px]"
+                        rows="3" placeholder="MOVs..." class="{{ $textareaClass }} min-h-[100px]"
                         style="resize:none; min-height: 100px;"></textarea>
                 @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.movs" rows="1"
@@ -398,13 +603,10 @@
             </td>
             <td class="border-b border-l border-border px-3 py-3 align-top text-xs" style="{{ $lastCellStyle }}">
                 @if ($isRowLocked)
-                    <textarea data-autosize="true"
-                        wire:model.live.debounce.400ms="scores.{{ $semItemId }}.target_remarks"
+                    <textarea data-autosize="true" data-field="target_remarks" x-model="remarks"
                         x-init="$nextTick(() => { $el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'; })"
                         x-on:input="$el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'"
-                        rows="3"
-                        placeholder="Remarks..."
-                        class="{{ $textareaClass }} min-h-[100px]"
+                        rows="3" placeholder="Remarks..." class="{{ $textareaClass }} min-h-[100px]"
                         style="resize:none; min-height: 100px;"></textarea>
                 @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.remarks" rows="1"

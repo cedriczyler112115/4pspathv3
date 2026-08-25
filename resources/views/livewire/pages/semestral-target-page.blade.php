@@ -1,4 +1,46 @@
-<section class="w-full space-y-6" x-data x-on:open-new-tab.window="window.open($event.detail.url, '_blank')">
+@push('header_actions')
+    @if ($semId)
+        <div class="flex items-center gap-2 text-xs">
+            <div class="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1">
+                <span class="text-muted-foreground font-medium">{{ __('Final Rating:') }}</span>
+                <span class="font-bold text-foreground">{{ $finalRating ?: '0.00' }}</span>
+                <span class="text-muted-foreground font-medium ms-1">{{ __('Adjectival:') }}</span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ $adjectivalRating ?: 'N/A' }}</span>
+            </div>
+        </div>
+    @endif
+@endpush
+
+<section class="w-full space-y-6" x-data="{
+        saveAllScores() {
+            let payload = [];
+            document.querySelectorAll('[data-score-row]').forEach(row => {
+                let itemId = row.getAttribute('data-score-row');
+                let q = row.querySelector('[data-field=\'quantity\']')?.value || '';
+                let ql = row.querySelector('[data-field=\'quality\']')?.value || '';
+                let t = row.querySelector('[data-field=\'timeliness\']')?.value || '';
+                let avg = row.querySelector('[data-field=\'average\']')?.value || '';
+                let accomp = row.querySelector('[data-field=\'actual_accomp\']')?.value || '';
+                let movs = row.querySelector('[data-field=\'target_movs\']')?.value || '';
+                let remarks = row.querySelector('[data-field=\'target_remarks\']')?.value || '';
+
+                payload.push({
+                    id: itemId,
+                    quantity_score: q,
+                    quality_score: ql,
+                    timeliness_score: t,
+                    average: avg,
+                    actual_accomp: accomp,
+                    target_movs: movs,
+                    target_remarks: remarks
+                });
+            });
+            if (payload.length > 0) {
+                $wire.batchSaveScores(payload);
+            }
+        }
+    }" x-on:save-all-scores.window="saveAllScores()"
+    x-on:open-new-tab.window="window.open($event.detail.url, '_blank')">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div class="space-y-1">
             <flux:heading size="lg" level="1">{{ $semesterHeading }}</flux:heading>
@@ -110,7 +152,20 @@
                                 </td>
                                 <td class="px-2 py-1 whitespace-nowrap align-bottom">
                                     <div class="flex items-center gap-2 pb-2">
-                                        <flux:checkbox wire:model.live="hasCheckpointTarget" :label="__('Has Checkpoint Target')" class="cursor-pointer font-medium text-xs text-foreground" />
+                                        <flux:checkbox wire:model.live="hasCheckpointTarget"
+                                            :label="__('Has Checkpoint Target')"
+                                            class="cursor-pointer font-medium text-xs text-foreground" />
+                                        <div wire:loading wire:target="hasCheckpointTarget"
+                                            class="flex items-center justify-center">
+                                            <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
+                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                    stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                                </path>
+                                            </svg>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-2 py-1 whitespace-nowrap">
@@ -133,9 +188,9 @@
 
                 <div class="px-2 py-1 whitespace-nowrap align-bottom flex items-end gap-2">
                     @if ($this->isSemestralTargetLocked())
-                        <flux:button variant="primary" type="button" icon="lock-open" wire:click="openUnlockConfirmModal"
-                            class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700 font-semibold">
-                            {{ __('Unlock Semestral Target') }}
+                        <flux:button variant="primary" type="button" icon="check-circle" wire:click="imReady"
+                            class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700 font-semibold cursor-pointer">
+                            {{ __("I'm Ready") }}
                         </flux:button>
                     @else
                         <flux:button variant="primary" type="button" icon="lock-closed" wire:click="openLockConfirmModal"
@@ -154,6 +209,12 @@
                             <flux:menu.item icon="document-duplicate" wire:click="openCopyModal">
                                 {{ __('Copy Target from Previous Semester') }}
                             </flux:menu.item>
+                            @if ($this->isSemestralTargetLocked())
+                                <flux:menu.separator />
+                                <flux:menu.item icon="lock-open" wire:click="openUnlockConfirmModal">
+                                    {{ __('Unlock Semestral Target') }}
+                                </flux:menu.item>
+                            @endif
                             <flux:menu.separator />
                             <flux:menu.item icon="arrow-path" wire:click="openRecoverModal">
                                 {{ __('Recover Deleted Targets') }}
@@ -299,12 +360,13 @@
                             @php
                                 $groupRows = $rows->values();
                             @endphp
-                            <livewire:semestral-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :key="'semestral-target-indicator-' . $indId . '-' . md5(json_encode($groupRows->all()))" />
+                            <livewire:semestral-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :is-semester-locked="$isSemesterLocked" :key="'semestral-target-indicator-' . $indId . '-' . md5(json_encode($groupRows->all()))" />
                         @empty
                             @if (!($isAllCategories && $isNotAllPerPage))
                                 <tbody wire:key="semestral-target-empty-{{ $category->value }}">
                                     <tr>
-                                        <td colspan="{{ $isSemesterLocked ? 10 : 8 }}" class="border-b border-border px-3 py-6 text-center text-muted-foreground">
+                                        <td colspan="{{ $isSemesterLocked ? 10 : 8 }}"
+                                            class="border-b border-border px-3 py-6 text-center text-muted-foreground">
                                             {{ __('No semestral target entries under :category', ['category' => $category->label]) }}
                                         </td>
                                     </tr>
@@ -474,7 +536,9 @@
             </div>
 
             <div class="grid gap-1">
-                <flux:label>{{ __('Justification') }} @if($this->is2026SecondSemesterOrBeyond()) <span class="text-red-500">*</span> @else <span class="text-xs text-muted-foreground">({{ __('Optional') }})</span> @endif</flux:label>
+                <flux:label>{{ __('Justification') }} @if($this->is2026SecondSemesterOrBeyond()) <span
+                class="text-red-500">*</span> @else <span
+                        class="text-xs text-muted-foreground">({{ __('Optional') }})</span> @endif</flux:label>
                 <textarea data-autosize="true" wire:model="deleteJustification" rows="2"
                     class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                     placeholder="{{ __('Enter justification for deleting this target...') }}"
@@ -506,7 +570,8 @@
 
             <div class="max-h-[60vh] overflow-y-auto rounded-xl border border-border">
                 <table class="w-full border-collapse text-xs">
-                    <thead class="sticky top-0 bg-muted/90 backdrop-blur-md text-left font-semibold uppercase text-muted-foreground border-b border-border">
+                    <thead
+                        class="sticky top-0 bg-muted/90 backdrop-blur-md text-left font-semibold uppercase text-muted-foreground border-b border-border">
                         <tr>
                             <th class="border-r border-border px-3 py-2.5">{{ __('KRA Category') }}</th>
                             <th class="border-r border-border px-3 py-2.5">{{ __('Key Result Area / Activity') }}</th>
@@ -518,16 +583,20 @@
                     <tbody>
                         @forelse ($deletedTargetsList as $item)
                             <tr class="border-b border-border/60 hover:bg-muted/20">
-                                <td class="border-r border-border px-3 py-2 align-top font-semibold text-slate-800 dark:text-zinc-200">
+                                <td
+                                    class="border-r border-border px-3 py-2 align-top font-semibold text-slate-800 dark:text-zinc-200">
                                     {{ $item['kra_category_label'] }}
                                 </td>
                                 <td class="border-r border-border px-3 py-2 align-top">
                                     <div class="font-bold text-slate-900 dark:text-zinc-100">{{ $item['activity'] }}</div>
-                                    @if (! empty($item['description']))
-                                        <div class="text-[11px] text-muted-foreground mt-1">{!! nl2br(e($item['description'])) !!}</div>
+                                    @if (!empty($item['description']))
+                                        <div class="text-[11px] text-muted-foreground mt-1">
+                                            {!! nl2br(e($item['description'])) !!}
+                                        </div>
                                     @endif
                                 </td>
-                                <td class="border-r border-border px-3 py-2 align-top text-muted-foreground whitespace-nowrap">
+                                <td
+                                    class="border-r border-border px-3 py-2 align-top text-muted-foreground whitespace-nowrap">
                                     <div>{{ $item['deleted_at'] }}</div>
                                     <div class="text-[10px] font-semibold text-slate-500">{{ $item['user_name'] }}</div>
                                 </td>
@@ -535,7 +604,9 @@
                                     {!! nl2br(e($item['justification'])) !!}
                                 </td>
                                 <td class="px-3 py-2 align-top text-center">
-                                    <flux:button size="xs" variant="primary" class="bg-emerald-600 text-white hover:bg-emerald-700 font-semibold" wire:click="recoverTarget({{ $item['sem_target_id'] }})">
+                                    <flux:button size="xs" variant="primary"
+                                        class="bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
+                                        wire:click="recoverTarget({{ $item['sem_target_id'] }})">
                                         {{ __('Restore') }}
                                     </flux:button>
                                 </td>
@@ -567,22 +638,63 @@
             <div class="space-y-1">
                 <flux:heading size="lg">{{ __('Delete Sub-Target Entry') }}</flux:heading>
                 <flux:subheading>
-                    {{ __('Are you sure you want to delete this sub-target item? This action cannot be undone.') }}
+                    {{ __('Are you sure you want to delete this sub-target item? It can be recovered later using the Recover Deleted Targets menu.') }}
                 </flux:subheading>
             </div>
 
+            <div class="grid gap-1">
+                <flux:label>{{ __('Justification') }} @if($this->is2026SecondSemesterOrBeyond()) <span
+                class="text-red-500">*</span> @else <span
+                        class="text-xs text-muted-foreground">({{ __('Optional') }})</span> @endif</flux:label>
+                <textarea data-autosize="true" wire:model="deleteJustification" rows="2"
+                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                    placeholder="{{ __('Enter justification for deleting this sub-target...') }}"
+                    style="resize:none;"></textarea>
+                <flux:error name="deleteJustification" />
+            </div>
+
             <div class="flex justify-end gap-2">
-                <flux:modal.close>
-                    <flux:button variant="ghost" type="button">
-                        {{ __('Cancel') }}
-                    </flux:button>
-                </flux:modal.close>
+                <flux:button variant="ghost" type="button" wire:click="cancelDeleteSubTarget">
+                    {{ __('Cancel') }}
+                </flux:button>
                 <flux:button variant="danger" wire:click="confirmDeleteSubTarget">
                     {{ __('Delete') }}
                 </flux:button>
             </div>
         </div>
     </flux:modal>
+
+    <!-- Reordering / Sorting Global Loading Overlay -->
+    <div wire:loading wire:target="targetDropped"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-xs">
+        <div class="flex items-center gap-3 rounded-2xl bg-card px-6 py-4 shadow-xl border border-border">
+            <svg class="animate-spin size-6 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg"
+                fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <span class="text-sm font-bold text-foreground">{{ __('Updating target positions...') }}</span>
+        </div>
+    </div>
+
+    <!-- Centered 20% Width Loading Overlay Modal for Batch Save -->
+    <div wire:loading.flex wire:target="batchSaveScores"
+        class="fixed inset-0 z-[9999999] items-center justify-center bg-black/40 backdrop-blur-xs"
+        style="position: fixed !important; inset: 0 !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999999 !important; background-color: rgba(0, 0, 0, 0.4) !important; backdrop-filter: blur(4px) !important;">
+        <div class="flex flex-col items-center justify-center gap-3 rounded-2xl bg-card p-6 shadow-2xl border border-border text-center"
+            style="width: 20% !important; min-width: 240px !important; max-width: 320px !important; margin: auto !important;">
+            <svg class="animate-spin size-8 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg"
+                fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            <span class="text-sm font-bold text-foreground leading-tight">{{ __('Saving...') }}</span>
+        </div>
+    </div>
 
     <!-- Copy Target Modal -->
     <flux:modal wire:model="showCopyModal" dismissible style="width: 80%; max-width: 80%; height: 90%; max-height: 90%;"
@@ -713,7 +825,7 @@
             </div>
 
             <div class="flex items-center justify-between gap-2 pt-2">
-                @if (! $this->isHistoryTargetLocked())
+                @if (!$this->isHistoryTargetLocked())
                     <flux:button variant="danger" type="button" icon="trash" wire:click="discardEditHistory"
                         :disabled="empty($historyRecords)"
                         class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700">
@@ -744,7 +856,8 @@
                 <flux:button variant="ghost" type="button" wire:click="cancelLockConfirm">
                     {{ __('Cancel') }}
                 </flux:button>
-                <flux:button variant="primary" type="button" class="bg-amber-600 text-white hover:bg-amber-700 font-semibold"
+                <flux:button variant="primary" type="button"
+                    class="bg-amber-600 text-white hover:bg-amber-700 font-semibold"
                     wire:click="saveAndLockSemestralTarget">
                     {{ __('Confirm and Lock') }}
                 </flux:button>
@@ -766,11 +879,52 @@
                 <flux:button variant="ghost" type="button" wire:click="cancelUnlockConfirm">
                     {{ __('Cancel') }}
                 </flux:button>
-                <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
+                <flux:button variant="primary" type="button"
+                    class="bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
                     wire:click="saveAndUnlockSemestralTarget">
                     {{ __('Confirm and Unlock') }}
                 </flux:button>
             </div>
         </div>
     </flux:modal>
+
+    @php
+        $targetSemId = request()->query('sem_id') ?: $semId;
+        $isSemLocked = false;
+        if ($targetSemId) {
+            $isSemLocked = (int) \Illuminate\Support\Facades\DB::table('ipc_semester')->where('id', $targetSemId)->value('lock') === 1;
+        }
+    @endphp
+
+    @if ($isSemLocked)
+        <div style="position: fixed !important; bottom: 2rem !important; right: 2rem !important; z-index: 999999 !important;"
+            x-data="{ isSaving: false }"
+            x-on:semestral-target-scores-saved.window="isSaving = false"
+            class="flex items-center gap-3">
+            <button type="button" x-on:click="isSaving = true; $dispatch('save-all-scores')" :disabled="isSaving"
+                class="inline-flex items-center justify-center gap-3 rounded-full bg-emerald-600 px-8 py-4 min-h-[58px] text-base font-black text-white shadow-2xl hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 dark:bg-emerald-500 dark:hover:bg-emerald-600 cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 border-2 border-white/40 ring-4 ring-black/10 disabled:opacity-85 disabled:cursor-not-allowed disabled:transform-none"
+                style="cursor: pointer !important;">
+
+                <template x-if="isSaving">
+                    <svg class="animate-spin size-6 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                </template>
+
+                <template x-if="!isSaving">
+                    <svg class="size-6 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                </template>
+
+                <span x-text="isSaving ? '{{ __('Saving Scores...') }}' : '{{ __('Save Scores') }}'"
+                    class="text-base font-black tracking-wider uppercase"></span>
+            </button>
+        </div>
+    @endif
 </section>

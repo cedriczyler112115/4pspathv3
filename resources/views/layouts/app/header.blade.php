@@ -86,8 +86,8 @@
         {{ $slot }}
 
         @persist('toast')
-            <flux:toast.group>
-                <flux:toast />
+            <flux:toast.group position="top right">
+                <flux:toast position="top right" />
             </flux:toast.group>
         @endpersist
 

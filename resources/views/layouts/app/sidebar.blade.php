@@ -87,6 +87,7 @@ data-theme="{{ $htmlTheme }}" @endif>
                 </div>
 
                 <div class="flex items-center gap-2">
+                    @stack('header_actions')
                     <div x-data class="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5">
                         <button type="button"
                             class="inline-flex items-center justify-center rounded-md px-1 py-0.5 text-xs transition"
@@ -261,8 +262,8 @@ data-theme="{{ $htmlTheme }}" @endif>
     </div>
 
     @persist('toast')
-    <flux:toast.group>
-        <flux:toast />
+    <flux:toast.group position="top right">
+        <flux:toast position="top right" />
     </flux:toast.group>
     @endpersist
 
