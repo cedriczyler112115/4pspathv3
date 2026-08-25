@@ -1298,6 +1298,13 @@ class SemestralTargetPage extends Component
             'stil.rg_movs',
             'stil.rg_remarks',
             'stil.remarks',
+            'stil.quantity_score',
+            'stil.quality_score',
+            'stil.timeliness_score',
+            'stil.average',
+            'stil.actual_accomp',
+            'stil.target_movs',
+            'stil.target_remarks',
             'sem.year',
             'sem.semester',
         ])
@@ -1598,7 +1605,11 @@ class SemestralTargetPage extends Component
             DB::table('ipc_sem_targets_indicator_itemlist')
                 ->whereIn('sem_target_id', $semTargetIds)
                 ->where('remarks', 1)
-                ->update(['remarks' => 3]);
+                ->update([
+                    'remarks' => 3,
+                    'target_movs' => DB::raw('rg_movs'),
+                    'target_remarks' => DB::raw('rg_remarks'),
+                ]);
 
             DB::table('ipc_semester')
                 ->where('id', $semId)

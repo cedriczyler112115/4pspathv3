@@ -5,7 +5,7 @@
 
         return str_replace(["\r\n", "\r"], "\n", $text ?? '-');
     };
-    $textareaClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-background';
+    $textareaClass = 'w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-background';
     $groupRows = collect($rows)->values();
     $rowSpan = count($groupRows) + count($pendingSubTargets);
     $firstRow = $groupRows->first() ?? [];
@@ -234,7 +234,7 @@
                     </div>
                 </td>
                 <td data-col-type="kra-action" rowspan="{{ $rowSpan }}"
-                    class="border-b border-r border-border px-3 py-3 font-semibold text-foreground align-top"
+                    class="border-b border-r border-border px-3 py-3 text-xs font-normal text-foreground align-top"
                     style="{{ $cellStyle }}">
                     @if ($editing && !$creatingSubTarget && !($isTargetNewlyAdded ?? false))
                         <textarea data-autosize="true" wire:model="editActivity" rows="1" class="{{ $textareaClass }}"
@@ -252,7 +252,7 @@
                 </td>
             @endif
 
-            <td data-col-type="sub-target" class="border-b border-r border-border px-3 py-3 align-top"
+            <td data-col-type="sub-target" class="border-b border-r border-border px-3 py-3 align-top text-xs"
                 style="{{ $cellStyle }}">
                 @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.description" rows="1"
@@ -261,8 +261,45 @@
                     {!! nl2br(e($formatValue($row['description'] ?? ''))) !!}
                 @endif
             </td>
+            @if ($isRowLocked)
+                <td data-col-type="actual-accomp" class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
+                    <textarea data-autosize="true"
+                        wire:model.live.debounce.400ms="scores.{{ $semItemId }}.actual_accomp"
+                        x-init="$nextTick(() => { $el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'; })"
+                        x-on:input="$el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'"
+                        rows="3"
+                        placeholder="Actual accomplishment..."
+                        class="{{ $textareaClass }} min-h-[100px]"
+                        style="resize:none; min-height: 100px;"></textarea>
+                </td>
+            @endif
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
+                @if ($isRowLocked)
+                    @php
+                        $rawQ = strip_tags($formatValue($row['rg_quantity'] ?? ''));
+                        $qFull = $formatValue($row['rg_quantity'] ?? '');
+                        $isLongQ = mb_strlen($rawQ) > 45;
+                        $qShort = $isLongQ ? mb_substr($rawQ, 0, 45) . '...' : $qFull;
+                    @endphp
+                    <div x-data="{ expanded: false }" class="space-y-1">
+                        <input type="number" step="any" min="0" max="5"
+                            wire:model.live.debounce.400ms="scores.{{ $semItemId }}.quantity_score"
+                            x-on:input="if (parseFloat($el.value) > 5) $el.value = 5; if (parseFloat($el.value) < 0) $el.value = 0;"
+                            placeholder="Score (1-5)"
+                            class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
+                        <div class="text-[10px] text-muted-foreground italic leading-tight">
+                            <span x-show="expanded">{!! nl2br(e($qFull)) !!}</span>
+                            <span x-show="!expanded">{!! nl2br(e($qShort)) !!}</span>
+                        </div>
+                        @if ($isLongQ)
+                            <button type="button" @click="expanded = !expanded" class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
+                                <span x-text="expanded ? 'Show less' : 'Show more'"></span>
+                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                            </button>
+                        @endif
+                    </div>
+                @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.quantity" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -270,7 +307,32 @@
                 @endif
             </td>
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
+                @if ($isRowLocked)
+                    @php
+                        $rawQl = strip_tags($formatValue($row['rg_quality'] ?? ''));
+                        $qlFull = $formatValue($row['rg_quality'] ?? '');
+                        $isLongQl = mb_strlen($rawQl) > 45;
+                        $qlShort = $isLongQl ? mb_substr($rawQl, 0, 45) . '...' : $qlFull;
+                    @endphp
+                    <div x-data="{ expanded: false }" class="space-y-1">
+                        <input type="number" step="any" min="0" max="5"
+                            wire:model.live.debounce.400ms="scores.{{ $semItemId }}.quality_score"
+                            x-on:input="if (parseFloat($el.value) > 5) $el.value = 5; if (parseFloat($el.value) < 0) $el.value = 0;"
+                            placeholder="Score (1-5)"
+                            class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
+                        <div class="text-[10px] text-muted-foreground italic leading-tight">
+                            <span x-show="expanded">{!! nl2br(e($qlFull)) !!}</span>
+                            <span x-show="!expanded">{!! nl2br(e($qlShort)) !!}</span>
+                        </div>
+                        @if ($isLongQl)
+                            <button type="button" @click="expanded = !expanded" class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
+                                <span x-text="expanded ? 'Show less' : 'Show more'"></span>
+                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                            </button>
+                        @endif
+                    </div>
+                @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.quality" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -278,15 +340,56 @@
                 @endif
             </td>
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
+                @if ($isRowLocked)
+                    @php
+                        $rawT = strip_tags($formatValue($row['rg_timeliness'] ?? ''));
+                        $tFull = $formatValue($row['rg_timeliness'] ?? '');
+                        $isLongT = mb_strlen($rawT) > 45;
+                        $tShort = $isLongT ? mb_substr($rawT, 0, 45) . '...' : $tFull;
+                    @endphp
+                    <div x-data="{ expanded: false }" class="space-y-1">
+                        <input type="number" step="any" min="0" max="5"
+                            wire:model.live.debounce.400ms="scores.{{ $semItemId }}.timeliness_score"
+                            x-on:input="if (parseFloat($el.value) > 5) $el.value = 5; if (parseFloat($el.value) < 0) $el.value = 0;"
+                            placeholder="Score (1-5)"
+                            class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
+                        <div class="text-[10px] text-muted-foreground italic leading-tight">
+                            <span x-show="expanded">{!! nl2br(e($tFull)) !!}</span>
+                            <span x-show="!expanded">{!! nl2br(e($tShort)) !!}</span>
+                        </div>
+                        @if ($isLongT)
+                            <button type="button" @click="expanded = !expanded" class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
+                                <span x-text="expanded ? 'Show less' : 'Show more'"></span>
+                                <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                <svg x-show="expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>
+                            </button>
+                        @endif
+                    </div>
+                @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.timeliness" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
                     {!! nl2br(e($formatValue($row['rg_timeliness'] ?? ''))) !!}
                 @endif
             </td>
+            @if ($isRowLocked)
+                <td class="border-b border-r border-border px-2 py-3 align-top text-center text-xs" style="{{ $cellStyle }}">
+                    <div class="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs">
+                        {{ filled($scores[$semItemId]['average'] ?? null) ? $scores[$semItemId]['average'] : '-' }}
+                    </div>
+                </td>
+            @endif
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
+                @if ($isRowLocked)
+                    <textarea data-autosize="true"
+                        wire:model.live.debounce.400ms="scores.{{ $semItemId }}.target_movs"
+                        x-init="$nextTick(() => { $el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'; })"
+                        x-on:input="$el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'"
+                        rows="3"
+                        placeholder="MOVs..."
+                        class="{{ $textareaClass }} min-h-[100px]"
+                        style="resize:none; min-height: 100px;"></textarea>
+                @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.movs" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -294,7 +397,16 @@
                 @endif
             </td>
             <td class="border-b border-l border-border px-3 py-3 align-top text-xs" style="{{ $lastCellStyle }}">
-                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
+                @if ($isRowLocked)
+                    <textarea data-autosize="true"
+                        wire:model.live.debounce.400ms="scores.{{ $semItemId }}.target_remarks"
+                        x-init="$nextTick(() => { $el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'; })"
+                        x-on:input="$el.style.height = '100px'; $el.style.height = Math.max(100, $el.scrollHeight) + 'px'"
+                        rows="3"
+                        placeholder="Remarks..."
+                        class="{{ $textareaClass }} min-h-[100px]"
+                        style="resize:none; min-height: 100px;"></textarea>
+                @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.remarks" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else

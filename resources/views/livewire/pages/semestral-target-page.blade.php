@@ -188,18 +188,37 @@
             </div>
         </div>
 
+        @php
+            $isSemesterLocked = $this->isSemestralTargetLocked();
+        @endphp
+
         <div class="w-full rounded-xl border border-border">
             <table class="w-full table-fixed border-separate border-spacing-0 text-sm">
-                <colgroup>
-                    <col style="width: 5%;">
-                    <col style="width: 17%;">
-                    <col style="width: 17%;">
-                    <col style="width: 15%;">
-                    <col style="width: 15%;">
-                    <col style="width: 14%;">
-                    <col style="width: 8.5%;">
-                    <col style="width: 8.5%;">
-                </colgroup>
+                @if ($isSemesterLocked)
+                    <colgroup>
+                        <col style="width: 4%;">
+                        <col style="width: 14%;">
+                        <col style="width: 14%;">
+                        <col style="width: 14%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 10%;">
+                        <col style="width: 5%;">
+                        <col style="width: 10%;">
+                        <col style="width: 9%;">
+                    </colgroup>
+                @else
+                    <colgroup>
+                        <col style="width: 5%;">
+                        <col style="width: 17%;">
+                        <col style="width: 17%;">
+                        <col style="width: 15%;">
+                        <col style="width: 15%;">
+                        <col style="width: 14%;">
+                        <col style="width: 8.5%;">
+                        <col style="width: 8.5%;">
+                    </colgroup>
+                @endif
                 <thead
                     class="bg-muted/50 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     <tr>
@@ -215,6 +234,12 @@
                             style="border-right: 1px solid var(--border);">
                             {{ __('Success Indicator') }}
                         </th>
+                        @if ($isSemesterLocked)
+                            <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
+                                style="border-right: 1px solid var(--border);">
+                                {{ __('Actual Accomplishment') }}
+                            </th>
+                        @endif
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                             style="border-right: 1px solid var(--border);">
                             {{ __('Efficiency') }}
@@ -227,6 +252,12 @@
                             style="border-right: 1px solid var(--border);">
                             {{ __('Timeliness') }}
                         </th>
+                        @if ($isSemesterLocked)
+                            <th class="border-b border-r border-border px-2 py-3 text-center whitespace-nowrap"
+                                style="border-right: 1px solid var(--border);">
+                                {{ __('AVE') }}
+                            </th>
+                        @endif
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                             style="border-right: 1px solid var(--border);">
                             {{ __('MOVs') }}
@@ -255,7 +286,7 @@
                             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
                             x-on:drop.prevent="dropOn($event, { type: 'category', kra: {{ (int) $category->value }}, indicatorId: 0, itemId: 0 })">
                             <tr class="bg-muted/30">
-                                <td colspan="8" class="border-b border-border px-3 py-2">
+                                <td colspan="{{ $isSemesterLocked ? 10 : 8 }}" class="border-b border-border px-3 py-2">
                                     <div class="font-bold text-foreground">
                                         <span
                                             class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ $category->label }}</span>
@@ -273,7 +304,7 @@
                             @if (!($isAllCategories && $isNotAllPerPage))
                                 <tbody wire:key="semestral-target-empty-{{ $category->value }}">
                                     <tr>
-                                        <td colspan="8" class="border-b border-border px-3 py-6 text-center text-muted-foreground">
+                                        <td colspan="{{ $isSemesterLocked ? 10 : 8 }}" class="border-b border-border px-3 py-6 text-center text-muted-foreground">
                                             {{ __('No semestral target entries under :category', ['category' => $category->label]) }}
                                         </td>
                                     </tr>

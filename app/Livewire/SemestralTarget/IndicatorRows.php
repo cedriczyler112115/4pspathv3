@@ -37,11 +37,15 @@ class IndicatorRows extends Component
 
     public string $justificationText = '';
 
+    /** @var array<int, array{quantity_score:string, quality_score:string, timeliness_score:string, average:string}> */
+    public array $scores = [];
+
     /** @param array<int, array<string, mixed>> $rows */
     public function mount(int $indicatorId, array $rows): void
     {
         $this->indicatorId = $indicatorId;
         $this->rows = $rows;
+        $this->initScores();
     }
 
     /** @var array<int, object|null> */
@@ -435,16 +439,140 @@ class IndicatorRows extends Component
                 'stii.rg_movs',
                 'stii.rg_remarks',
                 'stii.remarks',
+                'stii.quantity_score',
+                'stii.quality_score',
+                'stii.timeliness_score',
+                'stii.average',
+                'stii.actual_accomp',
+                'stii.target_movs',
+                'stii.target_remarks',
             ])
             ->get();
 
         if ($dbRows->isNotEmpty()) {
             $this->rows = $dbRows->map(fn ($r) => (array) $r)->all();
+            $this->scores = [];
+            $this->initScores();
         }
+    }
+
+    public function initScores(): void
+    {
+        foreach ($this->rows as $row) {
+            $itemId = (int) ($row['sem_item_id'] ?? 0);
+            if ($itemId > 0 && ! isset($this->scores[$itemId])) {
+                $q = $row['quantity_score'] ?? null;
+                $ql = $row['quality_score'] ?? null;
+                $t = $row['timeliness_score'] ?? null;
+                $ave = $row['average'] ?? null;
+                $acc = $row['actual_accomp'] ?? null;
+                $movs = filled($row['target_movs'] ?? null) ? $row['target_movs'] : ($row['rg_movs'] ?? null);
+                $rem = filled($row['target_remarks'] ?? null) ? $row['target_remarks'] : ($row['rg_remarks'] ?? null);
+
+                $this->scores[$itemId] = [
+                    'quantity_score' => $q !== null && $q !== '' ? (string) $q : '',
+                    'quality_score' => $ql !== null && $ql !== '' ? (string) $ql : '',
+                    'timeliness_score' => $t !== null && $t !== '' ? (string) $t : '',
+                    'average' => $ave !== null && $ave !== '' ? number_format((float) $ave, 2, '.', '') : '',
+                    'actual_accomp' => $acc !== null ? (string) $acc : '',
+                    'target_movs' => $movs !== null ? (string) $movs : '',
+                    'target_remarks' => $rem !== null ? (string) $rem : '',
+                ];
+            }
+        }
+    }
+
+    public function updatedScores(mixed $value, string $key): void
+    {
+        $parts = explode('.', $key);
+        if (count($parts) < 2) {
+            return;
+        }
+
+        $itemId = (int) $parts[0];
+        $field = $parts[1];
+
+        if ($itemId <= 0 || ! in_array($field, ['quantity_score', 'quality_score', 'timeliness_score', 'actual_accomp', 'target_movs', 'target_remarks'], true)) {
+            return;
+        }
+
+        $itemScores = $this->scores[$itemId] ?? [];
+
+        $qRaw = trim((string) ($itemScores['quantity_score'] ?? ''));
+        $qlRaw = trim((string) ($itemScores['quality_score'] ?? ''));
+        $tRaw = trim((string) ($itemScores['timeliness_score'] ?? ''));
+
+        $clamp = function (?string $raw): ?float {
+            if ($raw === null || $raw === '' || ! is_numeric($raw)) {
+                return null;
+            }
+            $val = (float) $raw;
+            if ($val > 5) {
+                $val = 5.0;
+            }
+            if ($val < 0) {
+                $val = 0.0;
+            }
+            return round($val, 2);
+        };
+
+        $q = $clamp($qRaw);
+        $ql = $clamp($qlRaw);
+        $t = $clamp($tRaw);
+
+        if ($q !== null && is_numeric($qRaw)) {
+            if ((float) $qRaw > 5) {
+                $this->scores[$itemId]['quantity_score'] = '5';
+            } elseif ((float) $qRaw < 0) {
+                $this->scores[$itemId]['quantity_score'] = '0';
+            }
+        }
+        if ($ql !== null && is_numeric($qlRaw)) {
+            if ((float) $qlRaw > 5) {
+                $this->scores[$itemId]['quality_score'] = '5';
+            } elseif ((float) $qlRaw < 0) {
+                $this->scores[$itemId]['quality_score'] = '0';
+            }
+        }
+        if ($t !== null && is_numeric($tRaw)) {
+            if ((float) $tRaw > 5) {
+                $this->scores[$itemId]['timeliness_score'] = '5';
+            } elseif ((float) $tRaw < 0) {
+                $this->scores[$itemId]['timeliness_score'] = '0';
+            }
+        }
+
+        $validScores = array_filter([$q, $ql, $t], fn ($v) => $v !== null);
+        $average = ! empty($validScores) ? round(array_sum($validScores) / count($validScores), 2) : null;
+
+        $avgStr = $average !== null ? number_format($average, 2, '.', '') : '';
+        $this->scores[$itemId]['average'] = $avgStr;
+
+        $actualAccomp = isset($itemScores['actual_accomp']) ? (string) $itemScores['actual_accomp'] : null;
+        $targetMovs = isset($itemScores['target_movs']) ? (string) $itemScores['target_movs'] : null;
+        $targetRemarks = isset($itemScores['target_remarks']) ? (string) $itemScores['target_remarks'] : null;
+
+        $nowManila = Carbon::now('Asia/Manila');
+        $userId = Auth::id();
+
+        DB::table('ipc_sem_targets_indicator_itemlist')
+            ->where('id', $itemId)
+            ->update([
+                'quantity_score' => $q,
+                'quality_score' => $ql,
+                'timeliness_score' => $t,
+                'average' => $average,
+                'actual_accomp' => $actualAccomp,
+                'target_movs' => $targetMovs,
+                'target_remarks' => $targetRemarks,
+                'date_modified' => $nowManila,
+                'modified_by' => $userId,
+            ]);
     }
 
     public function render(): View
     {
+        $this->initScores();
         $includeStrategic = \App\Models\ApplicationSetting::boolean('include_strategic_function', true);
 
         $categories = collect([
