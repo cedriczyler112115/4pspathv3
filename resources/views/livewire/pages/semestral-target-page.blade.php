@@ -14,17 +14,22 @@
     </div>
 
     @if ($unauthorizedErrorMessage)
-        <div class="rounded-2xl border border-red-300 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-red-500/10 p-5 text-red-900 dark:border-red-800/80 dark:from-red-950/70 dark:via-rose-950/70 dark:to-red-950/70 dark:text-red-200 shadow-md flex items-start gap-4">
+        <div
+            class="rounded-2xl border border-red-300 bg-gradient-to-r from-red-500/10 via-rose-500/10 to-red-500/10 p-5 text-red-900 dark:border-red-800/80 dark:from-red-950/70 dark:via-rose-950/70 dark:to-red-950/70 dark:text-red-200 shadow-md flex items-start gap-4">
             <div class="flex size-10 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm shrink-0">
                 <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
             </div>
             <div class="flex-1 space-y-1.5">
                 <h4 class="font-bold text-base text-red-700 dark:text-red-300">{{ __('Access Denied') }}</h4>
-                <p class="text-xs leading-relaxed text-muted-foreground dark:text-red-300/90 font-medium">{{ $unauthorizedErrorMessage }}</p>
+                <p class="text-xs leading-relaxed text-muted-foreground dark:text-red-300/90 font-medium">
+                    {{ $unauthorizedErrorMessage }}
+                </p>
                 <div class="pt-2">
-                    <flux:button href="{{ route('myratings.index') }}" wire:navigate size="sm" icon="arrow-left" class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 shadow-sm font-semibold">
+                    <flux:button href="{{ route('myratings.index') }}" wire:navigate size="sm" icon="arrow-left"
+                        class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700 shadow-sm font-semibold">
                         {{ __('Return to My Ratings') }}
                     </flux:button>
                 </div>
@@ -103,6 +108,11 @@
                                     <x-select2 wire:model.live="categoryFilter" :label="__('Category')"
                                         :placeholder="__('All categories')" :options="$categories" minWidth="160px" />
                                 </td>
+                                <td class="px-2 py-1 whitespace-nowrap align-bottom">
+                                    <div class="flex items-center gap-2 pb-2">
+                                        <flux:checkbox wire:model.live="hasCheckpointTarget" :label="__('Has Checkpoint Target')" class="cursor-pointer font-medium text-xs text-foreground" />
+                                    </div>
+                                </td>
                                 <td class="px-2 py-1 whitespace-nowrap">
                                     <x-select2 wire:model.live="perPage" :label="__('Records Per Page')"
                                         :placeholder="__('Select')" :options="$this->perPageOptions()" minWidth="120px"
@@ -122,10 +132,34 @@
                 </div>
 
                 <div class="px-2 py-1 whitespace-nowrap align-bottom flex items-end gap-2">
-                    <flux:button type="button" icon="document-duplicate" wire:click="openCopyModal"
-                        class="bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400">
-                        {{ __('Copy Target from Previous Semester') }}
-                    </flux:button>
+                    @if ($this->isSemestralTargetLocked())
+                        <flux:button variant="primary" type="button" icon="lock-open" wire:click="openUnlockConfirmModal"
+                            class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700 font-semibold">
+                            {{ __('Unlock Semestral Target') }}
+                        </flux:button>
+                    @else
+                        <flux:button variant="primary" type="button" icon="lock-closed" wire:click="openLockConfirmModal"
+                            class="bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:text-white dark:hover:bg-amber-700 font-semibold">
+                            {{ __('Save and Lock Semestral Target') }}
+                        </flux:button>
+                    @endif
+
+                    <flux:dropdown position="bottom-end">
+                        <flux:button variant="primary" icon="adjustments-horizontal" icon-trailing="chevron-down"
+                            class="bg-violet-600 text-white hover:bg-violet-700 dark:bg-violet-600 dark:text-white dark:hover:bg-violet-700">
+                            {{ __('Options') }}
+                        </flux:button>
+
+                        <flux:menu>
+                            <flux:menu.item icon="document-duplicate" wire:click="openCopyModal">
+                                {{ __('Copy Target from Previous Semester') }}
+                            </flux:menu.item>
+                            <flux:menu.separator />
+                            <flux:menu.item icon="arrow-path" wire:click="openRecoverModal">
+                                {{ __('Recover Deleted Targets') }}
+                            </flux:menu.item>
+                        </flux:menu>
+                    </flux:dropdown>
 
                     <flux:dropdown position="bottom-end">
                         <flux:button variant="primary" icon="printer" icon-trailing="chevron-down"
@@ -138,7 +172,9 @@
                                 {{ __('Print IPCR-F') }}
                             </flux:menu.item>
                             @if ($semId)
-                                <flux:menu.item icon="clipboard-document-check" as="a" href="{{ route('myratings.semestral-target.print-checkpoint', ['sem_id' => $semId]) }}" target="_blank">
+                                <flux:menu.item icon="clipboard-document-check" as="a"
+                                    href="{{ route('myratings.semestral-target.print-checkpoint', ['sem_id' => $semId]) }}"
+                                    target="_blank">
                                     {{ __('Print Checkpoint') }}
                                 </flux:menu.item>
                             @else
@@ -220,11 +256,9 @@
                             x-on:drop.prevent="dropOn($event, { type: 'category', kra: {{ (int) $category->value }}, indicatorId: 0, itemId: 0 })">
                             <tr class="bg-muted/30">
                                 <td colspan="8" class="border-b border-border px-3 py-2">
-                                    <div class="flex items-center justify-between font-bold text-foreground">
-                                        <span class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ $category->label }}</span>
-                                        <flux:button size="xs" variant="ghost" icon="plus" wire:click="openAddTargetModal({{ (int) $category->value }})">
-                                            {{ __('Add Target') }}
-                                        </flux:button>
+                                    <div class="font-bold text-foreground">
+                                        <span
+                                            class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{{ $category->label }}</span>
                                     </div>
                                 </td>
                             </tr>
@@ -234,7 +268,7 @@
                             @php
                                 $groupRows = $rows->values();
                             @endphp
-                            <livewire:semestral-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :key="'semestral-target-indicator-' . $indId . '-' . $groupRows->pluck('sem_item_id')->join('-')" />
+                            <livewire:semestral-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :key="'semestral-target-indicator-' . $indId . '-' . md5(json_encode($groupRows->all()))" />
                         @empty
                             @if (!($isAllCategories && $isNotAllPerPage))
                                 <tbody wire:key="semestral-target-empty-{{ $category->value }}">
@@ -364,11 +398,23 @@
                 </div>
 
                 <div class="grid gap-1 md:col-span-2" style="grid-column: 1 / -1;">
-                    <flux:label>{{ __('Remarks') }} <span class="text-xs text-muted-foreground">({{ __('Optional') }})</span></flux:label>
+                    <flux:label>{{ __('Remarks') }} <span
+                            class="text-xs text-muted-foreground">({{ __('Optional') }})</span></flux:label>
                     <textarea data-autosize="true" wire:model="addRemarks" rows="1"
                         class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
                         style="resize:none;"></textarea>
                     <flux:error name="addRemarks" />
+                </div>
+
+                <div class="grid gap-1 md:col-span-2" style="grid-column: 1 / -1;">
+                    <flux:label>{{ __('Justification') }} @if($this->is2026SecondSemesterOrBeyond()) <span
+                    class="text-red-500">*</span> @else <span
+                            class="text-xs text-muted-foreground">({{ __('Optional') }})</span> @endif</flux:label>
+                    <textarea data-autosize="true" wire:model="addJustification" rows="2"
+                        class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                        placeholder="{{ __('Enter justification for adding this target...') }}"
+                        style="resize:none;"></textarea>
+                    <flux:error name="addJustification" />
                 </div>
             </div>
 
@@ -392,19 +438,94 @@
             <div class="space-y-1">
                 <flux:heading size="lg">{{ __('Delete Target Entry') }}</flux:heading>
                 <flux:subheading>
-                    {{ __('Are you sure you want to delete this semestral target and all its sub-targets? This action cannot be undone.') }}
+                    {{ __('Are you sure you want to delete this semestral target entry? It can be recovered later using the Recover Deleted Targets menu.') }}
                 </flux:subheading>
             </div>
 
+            <div class="grid gap-1">
+                <flux:label>{{ __('Justification') }} @if($this->is2026SecondSemesterOrBeyond()) <span class="text-red-500">*</span> @else <span class="text-xs text-muted-foreground">({{ __('Optional') }})</span> @endif</flux:label>
+                <textarea data-autosize="true" wire:model="deleteJustification" rows="2"
+                    class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm"
+                    placeholder="{{ __('Enter justification for deleting this target...') }}"
+                    style="resize:none;"></textarea>
+                <flux:error name="deleteJustification" />
+            </div>
+
             <div class="flex justify-end gap-2">
-                <flux:modal.close>
-                    <flux:button variant="ghost" type="button">
-                        {{ __('Cancel') }}
-                    </flux:button>
-                </flux:modal.close>
+                <flux:button variant="ghost" type="button" wire:click="cancelDeleteTarget">
+                    {{ __('Cancel') }}
+                </flux:button>
                 <flux:button variant="danger" wire:click="confirmDeleteTarget">
                     {{ __('Delete') }}
                 </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Recover Deleted Targets Modal -->
+    <flux:modal wire:model="showRecoverModal"
+        style="width: min(66rem, calc(100vw - 2rem)); max-width: min(66rem, calc(100vw - 2rem));">
+        <div class="space-y-5">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Recover Deleted Targets') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Review and restore targets that were previously deleted from your semestral target list.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="max-h-[60vh] overflow-y-auto rounded-xl border border-border">
+                <table class="w-full border-collapse text-xs">
+                    <thead class="sticky top-0 bg-muted/90 backdrop-blur-md text-left font-semibold uppercase text-muted-foreground border-b border-border">
+                        <tr>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('KRA Category') }}</th>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('Key Result Area / Activity') }}</th>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('Deleted Date & User') }}</th>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('Justification') }}</th>
+                            <th class="px-3 py-2.5 text-center">{{ __('Action') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($deletedTargetsList as $item)
+                            <tr class="border-b border-border/60 hover:bg-muted/20">
+                                <td class="border-r border-border px-3 py-2 align-top font-semibold text-slate-800 dark:text-zinc-200">
+                                    {{ $item['kra_category_label'] }}
+                                </td>
+                                <td class="border-r border-border px-3 py-2 align-top">
+                                    <div class="font-bold text-slate-900 dark:text-zinc-100">{{ $item['activity'] }}</div>
+                                    @if (! empty($item['description']))
+                                        <div class="text-[11px] text-muted-foreground mt-1">{!! nl2br(e($item['description'])) !!}</div>
+                                    @endif
+                                </td>
+                                <td class="border-r border-border px-3 py-2 align-top text-muted-foreground whitespace-nowrap">
+                                    <div>{{ $item['deleted_at'] }}</div>
+                                    <div class="text-[10px] font-semibold text-slate-500">{{ $item['user_name'] }}</div>
+                                </td>
+                                <td class="border-r border-border px-3 py-2 align-top italic text-foreground">
+                                    {!! nl2br(e($item['justification'])) !!}
+                                </td>
+                                <td class="px-3 py-2 align-top text-center">
+                                    <flux:button size="xs" variant="primary" class="bg-emerald-600 text-white hover:bg-emerald-700 font-semibold" wire:click="recoverTarget({{ $item['sem_target_id'] }})">
+                                        {{ __('Restore') }}
+                                    </flux:button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">
+                                    {{ __('No deleted targets found for recovery.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <flux:modal.close>
+                    <flux:button variant="ghost" type="button">
+                        {{ __('Close') }}
+                    </flux:button>
+                </flux:modal.close>
             </div>
         </div>
     </flux:modal>
@@ -463,7 +584,8 @@
     </flux:modal>
 
     <!-- Show Edit History Modal -->
-    <flux:modal wire:model="showHistoryModal" style="width: min(56rem, calc(100vw - 2rem)); max-width: min(56rem, calc(100vw - 2rem));">
+    <flux:modal wire:model="showHistoryModal"
+        style="width: min(66rem, calc(100vw - 2rem)); max-width: min(66rem, calc(100vw - 2rem));">
         <div class="space-y-5">
             <div class="space-y-1">
                 <flux:heading size="lg">{{ __('Edit History') }}</flux:heading>
@@ -473,36 +595,81 @@
             </div>
 
             <div class="max-h-[60vh] overflow-y-auto rounded-xl border border-border">
+                @php
+                    $formatHistoryValue = static function (mixed $value): string {
+                        if ($value === null || $value === '') {
+                            return '-';
+                        }
+                        $text = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                        $text = preg_replace('/<br\s*\/?>/i', "\n", $text);
+                        $text = str_replace(["\r\n", "\r"], "\n", $text ?? '-');
+
+                        return trim($text) === '' ? '-' : $text;
+                    };
+                @endphp
                 <table class="w-full border-collapse text-xs">
-                    <thead class="sticky top-0 bg-muted/90 backdrop-blur-md text-left font-semibold uppercase text-muted-foreground border-b border-border">
+                    <thead
+                        class="sticky top-0 bg-muted/90 backdrop-blur-md text-left font-semibold uppercase text-muted-foreground border-b border-border">
                         <tr>
                             <th class="border-r border-border px-3 py-2.5">{{ __('Field / Type') }}</th>
                             <th class="border-r border-border px-3 py-2.5">{{ __('Original / Old Value') }}</th>
                             <th class="border-r border-border px-3 py-2.5">{{ __('New Value') }}</th>
-                            <th class="border-r border-border px-3 py-2.5">{{ __('Justification') }}</th>
-                            <th class="px-3 py-2.5">{{ __('Date & User') }}</th>
+                            <th class="border-r border-border px-3 py-2.5">{{ __('Date & User') }}</th>
+                            <th class="px-3 py-2.5">{{ __('Justification') }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($historyRecords as $history)
-                            <tr class="border-b border-border/60 hover:bg-muted/20">
-                                <td class="px-3 py-2 font-semibold text-slate-800 dark:text-zinc-200 uppercase">
-                                    {{ str_replace('_', ' ', $history['field_name']) }}
-                                </td>
-                                <td class="px-3 py-2 text-muted-foreground">
-                                    {{ $history['old_value'] ?: ($history['original_value'] ?: '-') }}
-                                </td>
-                                <td class="px-3 py-2 font-medium text-emerald-600 dark:text-emerald-400">
-                                    {{ $history['new_value'] ?: '-' }}
-                                </td>
-                                <td class="px-3 py-2 text-foreground italic">
-                                    {{ $history['justification'] }}
-                                </td>
-                                <td class="px-3 py-2 text-muted-foreground whitespace-nowrap">
-                                    <div>{{ $history['date_created'] }}</div>
-                                    <div class="text-[10px] font-semibold text-slate-500">{{ $history['user_name'] }}</div>
-                                </td>
-                            </tr>
+                            @if ($history['is_separator'] ?? false)
+                                <tr class="bg-muted/50 border-y border-border text-muted-foreground text-[11px] font-semibold">
+                                    <td colspan="3"
+                                        class="border-r border-border px-3 py-1.5 text-center tracking-wide uppercase bg-slate-100 dark:bg-zinc-800/70 text-slate-600 dark:text-zinc-300 align-top max-w-0">
+                                        <div class="truncate max-w-full"
+                                            title="{{ '--- ' . ($history['separator_title'] ?? __('Group')) . ' ---' }}">
+                                            {{ '--- ' . ($history['separator_title'] ?? __('Group')) . ' ---' }}
+                                        </div>
+                                    </td>
+                                    <td
+                                        class="border-r border-border px-3 py-2 align-top text-muted-foreground whitespace-nowrap bg-background">
+                                        <div>{{ $history['date_created'] }}</div>
+                                        <div class="text-[10px] font-semibold text-slate-500">{{ $history['user_name'] }}</div>
+                                    </td>
+                                    @if (($history['justification_rowspan'] ?? 1) > 0)
+                                        <td @if(($history['justification_rowspan'] ?? 1) > 1)
+                                        rowspan="{{ $history['justification_rowspan'] }}" @endif
+                                            class="px-3 py-2 align-top text-foreground italic bg-background">
+                                            {!! nl2br(e($history['justification'])) !!}
+                                        </td>
+                                    @endif
+                                </tr>
+                            @else
+                                <tr class="border-b border-border/60 hover:bg-muted/20">
+                                    <td
+                                        class="border-r border-border px-3 py-2 align-top font-semibold text-slate-800 dark:text-zinc-200 uppercase">
+                                        {{ $history['field_label'] ?? str_replace('_', ' ', $history['field_name']) }}
+                                    </td>
+                                    <td
+                                        class="border-r border-border px-3 py-2 align-top text-muted-foreground whitespace-pre-line">
+                                        {!! nl2br(e($formatHistoryValue($history['old_value'] ?: ($history['original_value'] ?: '-')))) !!}
+                                    </td>
+                                    <td
+                                        class="border-r border-border px-3 py-2 align-top font-medium text-emerald-600 dark:text-emerald-400 whitespace-pre-line">
+                                        {!! nl2br(e($formatHistoryValue($history['new_value'] ?: '-'))) !!}
+                                    </td>
+                                    <td
+                                        class="border-r border-border px-3 py-2 align-top text-muted-foreground whitespace-nowrap">
+                                        <div>{{ $history['date_created'] }}</div>
+                                        <div class="text-[10px] font-semibold text-slate-500">{{ $history['user_name'] }}</div>
+                                    </td>
+                                    @if (($history['justification_rowspan'] ?? 1) > 0)
+                                        <td @if(($history['justification_rowspan'] ?? 1) > 1)
+                                        rowspan="{{ $history['justification_rowspan'] }}" @endif
+                                            class="px-3 py-2 align-top text-foreground italic">
+                                            {!! nl2br(e($history['justification'])) !!}
+                                        </td>
+                                    @endif
+                                </tr>
+                            @endif
                         @empty
                             <tr>
                                 <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">
@@ -515,18 +682,63 @@
             </div>
 
             <div class="flex items-center justify-between gap-2 pt-2">
-                <flux:button variant="danger" type="button" icon="trash"
-                    wire:click="discardEditHistory"
-                    :disabled="empty($historyRecords)"
-                    class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700">
-                    {{ __('Discard') }}
-                </flux:button>
+                @if (! $this->isHistoryTargetLocked())
+                    <flux:button variant="danger" type="button" icon="trash" wire:click="discardEditHistory"
+                        :disabled="empty($historyRecords)"
+                        class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700">
+                        {{ __('Discard') }}
+                    </flux:button>
+                @endif
 
                 <flux:modal.close>
                     <flux:button variant="ghost" type="button" wire:click="closeEditHistoryModal">
                         {{ __('Close') }}
                     </flux:button>
                 </flux:modal.close>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Save and Lock Confirm Modal -->
+    <flux:modal wire:model="showLockConfirmModal" dismissible>
+        <div class="space-y-4">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Save and Lock Semestral Target') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Are you sure you want to save and lock all targets for this semester? Once locked, targets cannot be edited, deleted, or modified via right-click.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <flux:button variant="ghost" type="button" wire:click="cancelLockConfirm">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" class="bg-amber-600 text-white hover:bg-amber-700 font-semibold"
+                    wire:click="saveAndLockSemestralTarget">
+                    {{ __('Confirm and Lock') }}
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Unlock Confirm Modal -->
+    <flux:modal wire:model="showUnlockConfirmModal" dismissible>
+        <div class="space-y-4">
+            <div class="space-y-1">
+                <flux:heading size="lg">{{ __('Unlock Semestral Target') }}</flux:heading>
+                <flux:subheading>
+                    {{ __('Are you sure you want to unlock all targets for this semester? Once unlocked, targets can be edited, deleted, or modified via right-click.') }}
+                </flux:subheading>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <flux:button variant="ghost" type="button" wire:click="cancelUnlockConfirm">
+                    {{ __('Cancel') }}
+                </flux:button>
+                <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
+                    wire:click="saveAndUnlockSemestralTarget">
+                    {{ __('Confirm and Unlock') }}
+                </flux:button>
             </div>
         </div>
     </flux:modal>

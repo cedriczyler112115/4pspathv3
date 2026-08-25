@@ -17,6 +17,7 @@
 @endphp
 
 <tbody wire:key="semestral-target-indicator-group-{{ $indicatorId }}" x-data="{
+        hasHistoryByItem: @js($hasHistoryByItem),
         draggingRow: null,
         dragHandlePressed: false,
         showContextMenu: false,
@@ -66,8 +67,11 @@
             const raw = event.dataTransfer.getData('application/json');
             if (raw) this.$dispatch('semestral-target-dropped', { source: JSON.parse(raw), target });
         },
-        openContextMenu(event, kra, indicatorId, itemId, subTargetCount) {
+        openContextMenu(event, kra, indicatorId, itemId, subTargetCount, isLocked = false) {
             event.preventDefault();
+            if (isLocked) {
+                return;
+            }
             window.dispatchEvent(new CustomEvent('close-all-target-context-menus'));
 
             const clickedTd = event.target ? event.target.closest('td') : null;
@@ -178,9 +182,10 @@
     @foreach ($groupRows as $index => $row)
         @php
             $semItemId = (int) ($row['sem_item_id'] ?? 0);
+            $isRowLocked = $isSemesterLocked ?? false;
         @endphp
         <tr wire:key="sem-row-{{ $semItemId }}-{{ $editing ? 'edit' : 'view' }}"
-            x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($row['kra_category'] ?? $kraCategory) }}, {{ $indicatorId }}, {{ $semItemId }}, {{ count($groupRows) }})"
+            x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($row['kra_category'] ?? $kraCategory) }}, {{ $indicatorId }}, {{ $semItemId }}, {{ count($groupRows) }}, {{ $isRowLocked ? 'true' : 'false' }})"
             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'" x-on:dragend="endDrag()"
             x-on:drop.prevent="dropOn($event, { type: '{{ $index === 0 ? 'main' : 'sub' }}', indicatorId: {{ $indicatorId }}, itemId: {{ $semItemId }}, kra: {{ $kraCategory }} })"
             :class="showContextMenu && contextItemId === {{ $semItemId }} ? '!bg-sky-100 dark:!bg-sky-950/80 text-sky-950 dark:text-sky-100 relative z-10' : (draggingRow === {{ $indicatorId }} ? 'shadow-lg shadow-slate-400/40 ring-1 ring-slate-300 bg-white dark:bg-zinc-800 scale-[1.01] relative z-10 cursor-grabbing' : '')"
@@ -200,18 +205,30 @@
                                     aria-label="{{ __('Cancel') }}" />
                             </div>
                         @else
-                            <div draggable="true" x-on:pointerdown="pressDragHandle()" x-on:pointerup.window="releaseDragHandle()"
-                                x-on:pointercancel.window="releaseDragHandle()"
-                                x-on:dragstart="startDrag($event, { type: 'main', indicatorId: {{ $indicatorId }}, itemId: 0, kra: {{ $kraCategory }} })"
-                                x-on:dragend="endDrag($event)"
-                                class="inline-flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1"
-                                x-bind:style="`cursor: ${dragHandlePressed ? 'grabbing' : 'grab'} !important;`"
-                                aria-label="{{ __('Drag main target') }}" title="{{ __('Drag main target') }}">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                                    stroke="currentColor" class="size-5">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18m-18 0l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" />
-                                </svg>
+                            <div class="flex flex-col items-center gap-1.5">
+                                <div draggable="true" x-on:pointerdown="pressDragHandle()"
+                                    x-on:pointerup.window="releaseDragHandle()" x-on:pointercancel.window="releaseDragHandle()"
+                                    x-on:dragstart="startDrag($event, { type: 'main', indicatorId: {{ $indicatorId }}, itemId: 0, kra: {{ $kraCategory }} })"
+                                    x-on:dragend="endDrag($event)"
+                                    class="inline-flex items-center justify-center text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors p-1"
+                                    x-bind:style="`cursor: ${dragHandlePressed ? 'grabbing' : 'grab'} !important;`"
+                                    aria-label="{{ __('Drag main target') }}" title="{{ __('Drag main target') }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                                        stroke="currentColor" class="size-5">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18m-18 0l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" />
+                                    </svg>
+                                </div>
+
+                                @if ($hasGroupHistory)
+                                    <button type="button"
+                                        x-on:click="$dispatch('show-semestral-target-edit-history', { itemId: null, indicatorId: {{ $indicatorId }} })"
+                                        class="inline-flex items-center justify-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/60 rounded-md p-1 cursor-pointer transition-colors"
+                                        style="cursor: pointer !important;" aria-label="{{ __('Show Edit History') }}"
+                                        title="{{ __('Show Edit History') }}">
+                                        <flux:icon icon="clock" class="size-6" />
+                                    </button>
+                                @endif
                             </div>
                         @endif
                     </div>
@@ -219,7 +236,7 @@
                 <td data-col-type="kra-action" rowspan="{{ $rowSpan }}"
                     class="border-b border-r border-border px-3 py-3 font-semibold text-foreground align-top"
                     style="{{ $cellStyle }}">
-                    @if ($editing && !$creatingSubTarget)
+                    @if ($editing && !$creatingSubTarget && !($isTargetNewlyAdded ?? false))
                         <textarea data-autosize="true" wire:model="editActivity" rows="1" class="{{ $textareaClass }}"
                             style="resize:none;"></textarea>
                         <div class="mt-2">
@@ -237,7 +254,7 @@
 
             <td data-col-type="sub-target" class="border-b border-r border-border px-3 py-3 align-top"
                 style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget)
+                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.description" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -245,7 +262,7 @@
                 @endif
             </td>
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget)
+                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.quantity" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -253,7 +270,7 @@
                 @endif
             </td>
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget)
+                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.quality" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -261,7 +278,7 @@
                 @endif
             </td>
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget)
+                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.timeliness" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -269,7 +286,7 @@
                 @endif
             </td>
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
-                @if ($editing && !$creatingSubTarget)
+                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.movs" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -277,7 +294,7 @@
                 @endif
             </td>
             <td class="border-b border-l border-border px-3 py-3 align-top text-xs" style="{{ $lastCellStyle }}">
-                @if ($editing && !$creatingSubTarget)
+                @if ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.remarks" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
                 @else
@@ -351,7 +368,8 @@
                 <span>{{ __('Edit Target') }}</span>
             </button>
 
-            <button type="button" x-on:mouseenter="activeSubMenu = null"
+            <button type="button" x-show="Boolean(hasHistoryByItem[contextItemId])"
+                x-on:mouseenter="activeSubMenu = null"
                 x-on:click="const item = contextItemId; const ind = contextIndicatorId; closeContextMenu(); $dispatch('show-semestral-target-edit-history', { itemId: item, indicatorId: ind })"
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800 transition-colors">
                 <flux:icon icon="clock" class="size-4 text-blue-500 dark:text-blue-400" />
@@ -445,7 +463,8 @@
                             {{ __('Cancel') }}
                         </flux:button>
                     </flux:modal.close>
-                    <flux:button variant="primary" type="button" class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700"
+                    <flux:button variant="primary" type="button"
+                        class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700"
                         wire:click="save">
                         {{ __('Submit & Save Changes') }}
                     </flux:button>

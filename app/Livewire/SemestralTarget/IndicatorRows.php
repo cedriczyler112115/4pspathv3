@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class IndicatorRows extends Component
@@ -94,20 +95,60 @@ class IndicatorRows extends Component
             return;
         }
 
+        $itemIds = collect($this->rows)
+            ->pluck('sem_item_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        $createdHistories = DB::table('ipc_sem_target_edit_histories')
+            ->where('field_name', 'created')
+            ->where(function ($q) use ($itemIds) {
+                $q->where('sem_target_id', $this->indicatorId);
+                if (! empty($itemIds)) {
+                    $q->orWhereIn('sem_item_id', $itemIds);
+                }
+            })
+            ->get();
+
+        $createdItemIds = $createdHistories
+            ->pluck('sem_item_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->all();
+
+        $isTargetNewlyAdded = $createdHistories->contains(fn ($r) => (int) $r->sem_target_id === $this->indicatorId && empty($r->sem_item_id));
+
+        $editableRows = [];
+        foreach ($this->rows as $row) {
+            $itemId = (int) ($row['sem_item_id'] ?? 0);
+            $isNewlyAdded = in_array($itemId, $createdItemIds, true);
+
+            if (! $isNewlyAdded) {
+                $editableRows[$itemId] = [
+                    'description' => $this->normalizeTextareaValue($row['description'] ?? ''),
+                    'quantity' => $this->normalizeTextareaValue($row['rg_quantity'] ?? ''),
+                    'quality' => $this->normalizeTextareaValue($row['rg_quality'] ?? ''),
+                    'timeliness' => $this->normalizeTextareaValue($row['rg_timeliness'] ?? ''),
+                    'movs' => $this->normalizeTextareaValue($row['rg_movs'] ?? ''),
+                    'remarks' => $this->normalizeTextareaValue($row['rg_remarks'] ?? ''),
+                ];
+            }
+        }
+
+        if (empty($editableRows)) {
+            Flux::toast(variant: 'warning', text: __('Newly added targets cannot be edited. You can delete and re-add them if changes are needed.'));
+
+            return;
+        }
+
         $this->editing = true;
         $this->creatingSubTarget = false;
         $this->editActivity = $this->normalizeTextareaValue($firstRow['activity'] ?? '');
         $this->editCategory = (string) ($firstRow['kra_category'] ?? '');
-        $this->editRows = collect($this->rows)->mapWithKeys(fn (array $row): array => [
-            (int) $row['sem_item_id'] => [
-                'description' => $this->normalizeTextareaValue($row['description'] ?? ''),
-                'quantity' => $this->normalizeTextareaValue($row['rg_quantity'] ?? ''),
-                'quality' => $this->normalizeTextareaValue($row['rg_quality'] ?? ''),
-                'timeliness' => $this->normalizeTextareaValue($row['rg_timeliness'] ?? ''),
-                'movs' => $this->normalizeTextareaValue($row['rg_movs'] ?? ''),
-                'remarks' => $this->normalizeTextareaValue($row['rg_remarks'] ?? ''),
-            ],
-        ])->all();
+        $this->editRows = $editableRows;
     }
 
     public function cancel(): void
@@ -374,6 +415,34 @@ class IndicatorRows extends Component
         }
     }
 
+    #[On('semestral-target-updated')]
+    public function refreshComponent(): void
+    {
+        $dbRows = DB::table('ipc_sem_targets_indicator as sti')
+            ->join('ipc_sem_targets_indicator_itemlist as stii', 'stii.sem_target_id', '=', 'sti.id')
+            ->where('sti.id', $this->indicatorId)
+            ->select([
+                'sti.id as sem_target_id',
+                'sti.semester_id',
+                'sti.kra_category',
+                'sti.activity',
+                'sti.target_status',
+                'stii.id as sem_item_id',
+                'stii.description',
+                'stii.rg_quantity',
+                'stii.rg_quality',
+                'stii.rg_timeliness',
+                'stii.rg_movs',
+                'stii.rg_remarks',
+                'stii.remarks',
+            ])
+            ->get();
+
+        if ($dbRows->isNotEmpty()) {
+            $this->rows = $dbRows->map(fn ($r) => (array) $r)->all();
+        }
+    }
+
     public function render(): View
     {
         $includeStrategic = \App\Models\ApplicationSetting::boolean('include_strategic_function', true);
@@ -384,8 +453,62 @@ class IndicatorRows extends Component
             (object) ['value' => '3', 'label' => 'Support Function'],
         ])->when(! $includeStrategic, fn ($cats) => $cats->reject(fn ($c) => $c->value === '1')->values());
 
+        $itemIds = collect($this->rows)
+            ->pluck('sem_item_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        $historyRecords = DB::table('ipc_sem_target_edit_histories')
+            ->where(function ($query) use ($itemIds) {
+                $query->where('sem_target_id', $this->indicatorId);
+                if (! empty($itemIds)) {
+                    $query->orWhereIn('sem_item_id', $itemIds);
+                }
+            })
+            ->select(['sem_target_id', 'sem_item_id'])
+            ->get();
+
+        $hasGroupHistory = $historyRecords->isNotEmpty();
+        $hasTargetLevelHistory = $historyRecords->contains(fn ($r) => (int) $r->sem_target_id === $this->indicatorId);
+        $historyItemIds = $historyRecords->pluck('sem_item_id')->filter()->map(fn ($id) => (int) $id)->unique()->all();
+
+        $hasHistoryByItem = [];
+        foreach ($this->rows as $row) {
+            $itemId = (int) ($row['sem_item_id'] ?? 0);
+            if ($itemId > 0) {
+                $hasHistoryByItem[$itemId] = $hasTargetLevelHistory || in_array($itemId, $historyItemIds, true);
+            }
+        }
+
+        $isTargetNewlyAdded = DB::table('ipc_sem_target_edit_histories')
+            ->where('field_name', 'created')
+            ->where('sem_target_id', $this->indicatorId)
+            ->where(function ($q) {
+                $q->whereNull('sem_item_id')->orWhere('sem_item_id', 0);
+            })
+            ->exists();
+
+        $semesterId = (int) ($this->rows[0]['semester_id'] ?? 0);
+        if ($semesterId <= 0) {
+            $semesterId = (int) DB::table('ipc_sem_targets_indicator')
+                ->where('id', $this->indicatorId)
+                ->value('semester_id');
+        }
+
+        $isSemesterLocked = false;
+        if ($semesterId > 0) {
+            $semLock = DB::table('ipc_semester')->where('id', $semesterId)->value('lock');
+            $isSemesterLocked = (int) $semLock === 1;
+        }
+
         return view('livewire.semestral-target.indicator-rows', [
             'categories' => $categories,
+            'hasGroupHistory' => $hasGroupHistory,
+            'hasHistoryByItem' => $hasHistoryByItem,
+            'isTargetNewlyAdded' => $isTargetNewlyAdded,
+            'isSemesterLocked' => $isSemesterLocked,
         ]);
     }
 
