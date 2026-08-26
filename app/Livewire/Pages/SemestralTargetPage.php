@@ -2432,6 +2432,132 @@ class SemestralTargetPage extends Component
         }
     }
 
+    public function computeBackendFunctionScores(): array
+    {
+        if (! $this->semId) {
+            return [
+                'coreScore' => '0.00000',
+                'supportScore' => '0.00000',
+                'strategicScore' => '0.00000',
+                'finalScore' => '0.00000',
+                'adjectival' => 'N/A',
+            ];
+        }
+
+        $items = DB::table('ipc_sem_targets_indicator as sti')
+            ->join('ipc_sem_targets_indicator_itemlist as stii', 'stii.sem_target_id', '=', 'sti.id')
+            ->where('sti.semester_id', $this->semId)
+            ->select([
+                'sti.kra_category',
+                'stii.quantity_score',
+                'stii.quality_score',
+                'stii.timeliness_score',
+                'stii.na_quantity',
+                'stii.na_quality',
+                'stii.na_timeliness',
+                'stii.average',
+            ])
+            ->get();
+
+        $categoryAverages = [
+            1 => [], // Strategic
+            2 => [], // Core
+            3 => [], // Support
+        ];
+
+        foreach ($items as $item) {
+            $cat = (int) ($item->kra_category ?? 2);
+
+            $rowAvg = null;
+            if ($item->average !== null && trim((string) $item->average) !== '' && trim((string) $item->average) !== '-') {
+                $val = (float) $item->average;
+                if ($val > 0) {
+                    $rowAvg = $val;
+                }
+            }
+
+            if ($rowAvg === null) {
+                $scores = [];
+                if ((int) ($item->na_quantity ?? 0) !== 1 && is_numeric($item->quantity_score) && (float) $item->quantity_score > 0) {
+                    $scores[] = (float) $item->quantity_score;
+                }
+                if ((int) ($item->na_quality ?? 0) !== 1 && is_numeric($item->quality_score) && (float) $item->quality_score > 0) {
+                    $scores[] = (float) $item->quality_score;
+                }
+                if ((int) ($item->na_timeliness ?? 0) !== 1 && is_numeric($item->timeliness_score) && (float) $item->timeliness_score > 0) {
+                    $scores[] = (float) $item->timeliness_score;
+                }
+                if (count($scores) > 0) {
+                    $rowAvg = array_sum($scores) / count($scores);
+                }
+            }
+
+            if ($rowAvg !== null && $rowAvg > 0) {
+                $categoryAverages[$cat][] = $rowAvg;
+            }
+        }
+
+        $calcAvg = function (array $values): float {
+            return count($values) > 0 ? (array_sum($values) / count($values)) : 0.0;
+        };
+
+        $strategicVal = $this->includeStrategicFunction ? $calcAvg($categoryAverages[1] ?? []) : 0.0;
+        $coreVal = $calcAvg($categoryAverages[2] ?? []);
+        $supportVal = $calcAvg($categoryAverages[3] ?? []);
+
+        $format5Decimals = function (float $num): string {
+            if ($num <= 0) return '0.00000';
+            $str = (string) $num;
+            $parts = explode('.', $str);
+            $intPart = $parts[0];
+            $decPart = $parts[1] ?? '';
+            if (strlen($decPart) < 5) {
+                $decPart = str_pad($decPart, 5, '0');
+            } else {
+                $decPart = substr($decPart, 0, 5);
+            }
+            return "{$intPart}.{$decPart}";
+        };
+
+        $coreScore = $format5Decimals($coreVal);
+        $supportScore = $format5Decimals($supportVal);
+        $strategicScore = $format5Decimals($strategicVal);
+
+        $rawFinal = 0.0;
+        if ($this->includeStrategicFunction) {
+            $validCategories = 0;
+            $totalSum = 0.0;
+            if ($strategicVal > 0) { $totalSum += $strategicVal; $validCategories++; }
+            if ($coreVal > 0) { $totalSum += $coreVal; $validCategories++; }
+            if ($supportVal > 0) { $totalSum += $supportVal; $validCategories++; }
+            $rawFinal = $validCategories > 0 ? ($totalSum / $validCategories) : 0.0;
+        } else {
+            $validCategories = 0;
+            $totalSum = 0.0;
+            if ($coreVal > 0) { $totalSum += $coreVal; $validCategories++; }
+            if ($supportVal > 0) { $totalSum += $supportVal; $validCategories++; }
+            $rawFinal = $validCategories > 0 ? ($totalSum / $validCategories) : 0.0;
+        }
+
+        $finalScore = $format5Decimals($rawFinal);
+        $calcVal = (float) $finalScore;
+
+        if ($calcVal >= 5.00) $adjectival = __('Outstanding');
+        elseif ($calcVal >= 4.00) $adjectival = __('Very Satisfactory');
+        elseif ($calcVal >= 3.00) $adjectival = __('Satisfactory');
+        elseif ($calcVal >= 2.00) $adjectival = __('Unsatisfactory');
+        elseif ($calcVal > 0) $adjectival = __('Poor');
+        else $adjectival = 'N/A';
+
+        return [
+            'coreScore' => $coreScore,
+            'supportScore' => $supportScore,
+            'strategicScore' => $strategicScore,
+            'finalScore' => $finalScore,
+            'adjectival' => $adjectival,
+        ];
+    }
+
     public function render(): View
     {
         $categories = $this->categories();
@@ -2439,11 +2565,16 @@ class SemestralTargetPage extends Component
             ? $categories
             : $categories->where('value', $this->categoryFilter)->values();
 
+        $scores = $this->computeBackendFunctionScores();
+        $this->finalRating = $scores['finalScore'];
+        $this->adjectivalRating = $scores['adjectival'];
+
         return view('livewire.pages.semestral-target-page', [
             'semestralTargets' => $this->semestralTargets(),
             'categories' => $categories,
             'visibleCategories' => $visibleCategories,
             'semesterHeading' => $this->semesterHeading(),
+            'functionScores' => $scores,
         ]);
     }
 }

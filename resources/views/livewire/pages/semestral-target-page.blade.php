@@ -217,15 +217,15 @@
         <div class="flex items-center gap-2 text-xs" x-data="headerFunctionScores(@js($includeStrategicFunction))" x-init="initHeaderScores()">
             <div class="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1">
                 <span class="text-muted-foreground font-medium">{{ __('Core Function Score:') }}</span>
-                <span class="font-bold text-foreground" x-text="coreScore">0.00000</span>
+                <span class="font-bold text-foreground">{{ $functionScores['coreScore'] ?? '0.00000' }}</span>
                 <span class="text-muted-foreground font-medium ms-1">{{ __('Support Function Score:') }}</span>
-                <span class="font-bold text-foreground" x-text="supportScore">0.00000</span>
+                <span class="font-bold text-foreground">{{ $functionScores['supportScore'] ?? '0.00000' }}</span>
             </div>
             <div class="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1">
                 <span class="text-muted-foreground font-medium">{{ __('Final Rating:') }}</span>
-                <span class="font-bold text-foreground" x-text="finalScore">{{ $finalRating ?: '0.00000' }}</span>
+                <span class="font-bold text-foreground">{{ $functionScores['finalScore'] ?? ($finalRating ?: '0.00000') }}</span>
                 <span class="text-muted-foreground font-medium ms-1">{{ __('Adjectival:') }}</span>
-                <span class="font-bold text-emerald-600 dark:text-emerald-400" x-text="adjectival">{{ $adjectivalRating ?: 'N/A' }}</span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ $functionScores['adjectival'] ?? ($adjectivalRating ?: 'N/A') }}</span>
             </div>
         </div>
     @endif
