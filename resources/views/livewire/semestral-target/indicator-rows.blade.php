@@ -173,7 +173,9 @@
                     style="{{ $cellStyle }}">
                     <div class="space-y-2">
                         <textarea data-autosize="true" data-field="actual_accomp" x-model="accomp"
-                            x-on:change="scheduleSave('actual_accomp')" rows="3" placeholder="Actual accomplishment..."
+                            x-on:input="scheduleSave('actual_accomp')"
+                            x-on:change="saveField('actual_accomp')"
+                            x-on:blur="saveField('actual_accomp')" rows="3" placeholder="Actual accomplishment..."
                             class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
                         <div class="flex items-center justify-between gap-2">
                             <div class="flex flex-col">
@@ -248,7 +250,7 @@
                                         }
                                         q = cleaned;
                                         computeAverage();
-                                    " x-on:change="scheduleSave('quantity')" placeholder="Score (1-5 or N/A)"
+                                    " x-on:change="saveField('quantity')" x-on:blur="saveField('quantity')" placeholder="Score (1-5 or N/A)"
                             class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         <div class="text-[10px] text-muted-foreground italic leading-tight">
                             <span x-show="expanded">{!! nl2br(e($qFull)) !!}</span>
@@ -328,7 +330,7 @@
                                         }
                                         ql = cleaned;
                                         computeAverage();
-                                    " x-on:change="scheduleSave('quality')" placeholder="Score (1-5 or N/A)"
+                                    " x-on:change="saveField('quality')" x-on:blur="saveField('quality')" placeholder="Score (1-5 or N/A)"
                             class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         <div class="text-[10px] text-muted-foreground italic leading-tight">
                             <span x-show="expanded">{!! nl2br(e($qlFull)) !!}</span>
@@ -408,7 +410,7 @@
                                         }
                                         t = cleaned;
                                         computeAverage();
-                                    " x-on:change="scheduleSave('timeliness')" placeholder="Score (1-5 or N/A)"
+                                    " x-on:change="saveField('timeliness')" x-on:blur="saveField('timeliness')" placeholder="Score (1-5 or N/A)"
                             class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         <div class="text-[10px] text-muted-foreground italic leading-tight">
                             <span x-show="expanded">{!! nl2br(e($tFull)) !!}</span>
@@ -443,7 +445,9 @@
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
                 @if ($isRowLocked)
                     <textarea data-autosize="true" data-field="target_movs" x-model="movs"
-                        x-on:change="scheduleSave('target_movs')" rows="3" placeholder="MOVs..."
+                        x-on:input="scheduleSave('target_movs')"
+                        x-on:change="saveField('target_movs')"
+                        x-on:blur="saveField('target_movs')" rows="3" placeholder="MOVs..."
                         class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
                 @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.movs" rows="1"
@@ -455,7 +459,9 @@
             <td class="border-b border-l border-border px-3 py-3 align-top text-xs" style="{{ $lastCellStyle }}">
                 @if ($isRowLocked)
                     <textarea data-autosize="true" data-field="target_remarks" x-model="remarks"
-                        x-on:change="scheduleSave('target_remarks')" rows="3" placeholder="Remarks..."
+                        x-on:input="scheduleSave('target_remarks')"
+                        x-on:change="saveField('target_remarks')"
+                        x-on:blur="saveField('target_remarks')" rows="3" placeholder="Remarks..."
                         class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
                 @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.remarks" rows="1"

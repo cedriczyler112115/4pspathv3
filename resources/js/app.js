@@ -807,7 +807,12 @@ window.semestralScoreRow = (initial) => ({
         clearTimeout(this.saveTimer);
         this.saveTimer = setTimeout(() => this.saveField(), 500);
     },
-    saveField() {
+    saveField(field = '') {
+        if (field) {
+            this.activeSaveField = field;
+        }
+        clearTimeout(this.saveTimer);
+        this.saveLocalDraft();
         const currentPayload = this.payload();
 
         if (this.lastSavedStr === JSON.stringify(currentPayload)) {
