@@ -1,45 +1,276 @@
 @push('header_actions')
     @if ($semId)
-        <div class="flex items-center gap-2 text-xs">
+        <script>
+            window.headerFunctionScores = window.headerFunctionScores || function(includeStrategic) {
+                return {
+                    coreScore: '0.00000',
+                    supportScore: '0.00000',
+                    finalScore: @js($finalRating ?: '0.00000'),
+                    adjectival: @js($adjectivalRating ?: 'N/A'),
+                    hasIncompleteTarget: false,
+                    format5DecimalsWithoutRounding(num) {
+                        const val = parseFloat(num);
+                        if (isNaN(val) || val <= 0) return '0.00000';
+                        const str = val.toString();
+                        const parts = str.split('.');
+                        const integerPart = parts[0];
+                        let decimalPart = parts[1] || '';
+                        if (decimalPart.length < 5) {
+                            decimalPart = decimalPart.padEnd(5, '0');
+                        } else {
+                            decimalPart = decimalPart.substring(0, 5);
+                        }
+                        return `${integerPart}.${decimalPart}`;
+                    },
+                    initHeaderScores() {
+                        const updateAll = () => {
+                            this.calcFunctionScores();
+                            this.checkIncompleteTargets();
+                        };
+                        this.$nextTick(() => updateAll());
+                        setTimeout(() => updateAll(), 100);
+                        setTimeout(() => updateAll(), 300);
+                        setTimeout(() => updateAll(), 1000);
+                        window.addEventListener('recalculate-function-scores', () => updateAll());
+                        window.addEventListener('semestral-target-scores-saved', () => updateAll());
+                        window.addEventListener('semestral-target-updated', () => updateAll());
+                        document.addEventListener('input', () => updateAll(), true);
+                        document.addEventListener('change', () => updateAll(), true);
+                        document.addEventListener('keyup', () => updateAll(), true);
+                        document.addEventListener('paste', () => updateAll(), true);
+
+                        this.$watch('$wire.targetStatusFilter', (val) => {
+                            this.$nextTick(() => updateAll());
+                            setTimeout(() => updateAll(), 100);
+                            setTimeout(() => updateAll(), 300);
+                        });
+
+                        if (window.MutationObserver && !this._targetObserver) {
+                            this._targetObserver = new MutationObserver(() => updateAll());
+                            this._targetObserver.observe(document.body, {
+                                attributes: true,
+                                childList: true,
+                                subtree: true,
+                                attributeFilter: ['data-has-attachments', 'data-na-quantity', 'data-na-quality', 'data-na-timeliness']
+                            });
+                        }
+                    },
+                    checkIncompleteTargets() {
+                        const rows = document.querySelectorAll('tr[data-score-row]');
+                        if (rows.length === 0) {
+                            this.hasIncompleteTarget = false;
+                            this.toggleImReadyButton(false);
+                            return;
+                        }
+
+                        let foundIncomplete = false;
+
+                        rows.forEach((row) => {
+                            if (foundIncomplete) return;
+
+                            const naQ = parseInt(row.dataset.naQuantity || '0', 10);
+                            const naQl = parseInt(row.dataset.naQuality || '0', 10);
+                            const naT = parseInt(row.dataset.naTimeliness || '0', 10);
+
+                            const areAllNa = (naQ === 1 && naQl === 1 && naT === 1);
+
+                            // If all 3 scores are N/A (na_quantity=1, na_quality=1, na_timeliness=1), the target is complete
+                            if (areAllNa) return;
+
+                            let q = '', ql = '', t = '', accomp = '', movs = '';
+
+                            if (row._x_dataStack) {
+                                for (let i = 0; i < row._x_dataStack.length; i++) {
+                                    const stack = row._x_dataStack[i];
+                                    if (stack) {
+                                        if (stack.q !== undefined && stack.q !== null) q = String(stack.q).trim();
+                                        if (stack.ql !== undefined && stack.ql !== null) ql = String(stack.ql).trim();
+                                        if (stack.t !== undefined && stack.t !== null) t = String(stack.t).trim();
+                                        if (stack.accomp !== undefined && stack.accomp !== null) accomp = String(stack.accomp).trim();
+                                        if (stack.movs !== undefined && stack.movs !== null) movs = String(stack.movs).trim();
+                                    }
+                                }
+                            }
+
+                            if (!q) {
+                                const qEl = row.querySelector("input[data-field='quantity']");
+                                if (qEl) q = String(qEl.value || '').trim();
+                            }
+                            if (!ql) {
+                                const qlEl = row.querySelector("input[data-field='quality']");
+                                if (qlEl) ql = String(qlEl.value || '').trim();
+                            }
+                            if (!t) {
+                                const tEl = row.querySelector("input[data-field='timeliness']");
+                                if (tEl) t = String(tEl.value || '').trim();
+                            }
+                            if (!accomp) {
+                                const accEl = row.querySelector("textarea[data-field='actual_accomp']");
+                                if (accEl) accomp = String(accEl.value || '').trim();
+                            }
+                            if (!movs) {
+                                const movEl = row.querySelector("textarea[data-field='target_movs']");
+                                if (movEl) movs = String(movEl.value || '').trim();
+                            }
+
+                            const hasAttach = parseInt(row.dataset.hasAttachments || '0', 10);
+
+                            const qUpper = q.toUpperCase();
+                            const qlUpper = ql.toUpperCase();
+                            const tUpper = t.toUpperCase();
+
+                            const isQValid = (qUpper === 'N/A' || naQ === 1 || (q !== '' && q !== '0' && q !== '0.00' && !isNaN(parseFloat(q)) && parseFloat(q) > 0));
+                            const isQlValid = (qlUpper === 'N/A' || naQl === 1 || (ql !== '' && ql !== '0' && ql !== '0.00' && !isNaN(parseFloat(ql)) && parseFloat(ql) > 0));
+                            const isTValid = (tUpper === 'N/A' || naT === 1 || (t !== '' && t !== '0' && t !== '0.00' && !isNaN(parseFloat(t)) && parseFloat(t) > 0));
+
+                            const isQEmpty = !isQValid;
+                            const isQlEmpty = !isQlValid;
+                            const isTEmpty = !isTValid;
+                            const isAccompEmpty = (accomp === '');
+                            const isMovsEmpty = (movs === '');
+                            const isNoAttach = (hasAttach !== 1);
+
+                            if (isQEmpty || isQlEmpty || isTEmpty || isAccompEmpty || isMovsEmpty || isNoAttach) {
+                                foundIncomplete = true;
+                            }
+                        });
+
+                        this.hasIncompleteTarget = foundIncomplete;
+                        this.toggleImReadyButton(foundIncomplete);
+                    },
+                    toggleImReadyButton(isIncomplete) {
+                        const btn = document.getElementById('im-ready-btn');
+                        if (btn) {
+                            if (isIncomplete) {
+                                btn.style.display = 'none';
+                            } else {
+                                btn.style.display = '';
+                            }
+                        }
+                    },
+                    calcFunctionScores() {
+                        const getRowAvg = (row) => {
+                            if (row._x_dataStack) {
+                                for (let i = 0; i < row._x_dataStack.length; i++) {
+                                    if (row._x_dataStack[i] && row._x_dataStack[i].avg !== undefined && row._x_dataStack[i].avg !== null) {
+                                        return row._x_dataStack[i].avg;
+                                    }
+                                }
+                            }
+                            const input = row.querySelector("input[data-field='average']");
+                            if (input && input.value) return input.value;
+                            if (row.dataset && row.dataset.rowAvg) return row.dataset.rowAvg;
+                            return null;
+                        };
+
+                        const calcRawForCategory = (catId) => {
+                            const rows = document.querySelectorAll("tr[data-kra-category='" + catId + "']");
+                            let totalSum = 0;
+                            let validCount = 0;
+                            rows.forEach((row) => {
+                                const val = getRowAvg(row);
+                                if (val !== null && val !== undefined) {
+                                    const str = String(val).trim().toUpperCase();
+                                    if (str !== '' && str !== 'N/A' && str !== '-') {
+                                        const num = parseFloat(str);
+                                        if (!isNaN(num) && num > 0) {
+                                            totalSum += num;
+                                            validCount++;
+                                        }
+                                    }
+                                }
+                            });
+                            return validCount > 0 ? (totalSum / validCount) : 0;
+                        };
+
+                        const strategicVal = includeStrategic ? calcRawForCategory(1) : 0;
+                        const coreVal = calcRawForCategory(2);
+                        const supportVal = calcRawForCategory(3);
+
+                        this.coreScore = this.format5DecimalsWithoutRounding(coreVal);
+                        this.supportScore = this.format5DecimalsWithoutRounding(supportVal);
+
+                        let rawFinal = 0;
+                        if (includeStrategic) {
+                            rawFinal = (strategicVal + coreVal + supportVal) / 3.0;
+                        } else {
+                            rawFinal = (coreVal + supportVal) / 2.0;
+                        }
+
+                        if (rawFinal > 0) {
+                            this.finalScore = this.format5DecimalsWithoutRounding(rawFinal);
+                            const calcVal = parseFloat(this.finalScore);
+                            if (calcVal >= 5.00) this.adjectival = '{{ __("Outstanding") }}';
+                            else if (calcVal >= 4.00) this.adjectival = '{{ __("Very Satisfactory") }}';
+                            else if (calcVal >= 3.00) this.adjectival = '{{ __("Satisfactory") }}';
+                            else if (calcVal >= 2.00) this.adjectival = '{{ __("Unsatisfactory") }}';
+                            else if (calcVal > 0) this.adjectival = '{{ __("Poor") }}';
+                            else this.adjectival = 'N/A';
+                        } else {
+                            this.finalScore = '0.00000';
+                            this.adjectival = 'N/A';
+                        }
+                    }
+                };
+            };
+        </script>
+        <div class="flex items-center gap-2 text-xs" x-data="headerFunctionScores(@js($includeStrategicFunction))" x-init="initHeaderScores()">
+            <div class="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1">
+                <span class="text-muted-foreground font-medium">{{ __('Core Function Score:') }}</span>
+                <span class="font-bold text-foreground" x-text="coreScore">0.00000</span>
+                <span class="text-muted-foreground font-medium ms-1">{{ __('Support Function Score:') }}</span>
+                <span class="font-bold text-foreground" x-text="supportScore">0.00000</span>
+            </div>
             <div class="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-2.5 py-1">
                 <span class="text-muted-foreground font-medium">{{ __('Final Rating:') }}</span>
-                <span class="font-bold text-foreground">{{ $finalRating ?: '0.00' }}</span>
+                <span class="font-bold text-foreground" x-text="finalScore">{{ $finalRating ?: '0.00000' }}</span>
                 <span class="text-muted-foreground font-medium ms-1">{{ __('Adjectival:') }}</span>
-                <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ $adjectivalRating ?: 'N/A' }}</span>
+                <span class="font-bold text-emerald-600 dark:text-emerald-400" x-text="adjectival">{{ $adjectivalRating ?: 'N/A' }}</span>
             </div>
         </div>
     @endif
 @endpush
 
-<section class="w-full space-y-6" x-data="{
-        saveAllScores() {
-            let payload = [];
-            document.querySelectorAll('[data-score-row]').forEach(row => {
-                let itemId = row.getAttribute('data-score-row');
-                let q = row.querySelector('[data-field=\'quantity\']')?.value || '';
-                let ql = row.querySelector('[data-field=\'quality\']')?.value || '';
-                let t = row.querySelector('[data-field=\'timeliness\']')?.value || '';
-                let avg = row.querySelector('[data-field=\'average\']')?.value || '';
-                let accomp = row.querySelector('[data-field=\'actual_accomp\']')?.value || '';
-                let movs = row.querySelector('[data-field=\'target_movs\']')?.value || '';
-                let remarks = row.querySelector('[data-field=\'target_remarks\']')?.value || '';
+<section class="w-full space-y-6"
+    x-data="{
+        scoreQueue: {},
+        scoreSaveTimer: null,
+        scoreSaveInFlight: false,
+        scoreSaveError: '',
+        scoreSavingField: '',
+        queueScoreSave(item) {
+            this.scoreSaveError = '';
+            this.scoreQueue[item.id] = item;
+            this.scoreSavingField = item.field || this.scoreSavingField || '';
+            clearTimeout(this.scoreSaveTimer);
+            this.scoreSaveTimer = setTimeout(() => this.flushScoreQueue(), 500);
+        },
+        async flushScoreQueue() {
+            if (this.scoreSaveInFlight || Object.keys(this.scoreQueue).length === 0) return;
 
-                payload.push({
-                    id: itemId,
-                    quantity_score: q,
-                    quality_score: ql,
-                    timeliness_score: t,
-                    average: avg,
-                    actual_accomp: accomp,
-                    target_movs: movs,
-                    target_remarks: remarks
-                });
-            });
-            if (payload.length > 0) {
-                $wire.batchSaveScores(payload);
+            const items = Object.values(this.scoreQueue);
+            this.scoreQueue = {};
+            this.scoreSaveInFlight = true;
+
+            try {
+                await $wire.batchSaveScores(items);
+            } catch (error) {
+                this.scoreSaveError = error?.message || @js(__('Unable to save scores. Your previous values were restored.'));
+                window.dispatchEvent(new CustomEvent('semestral-target-scores-failed', {
+                    detail: { items, message: this.scoreSaveError }
+                }));
+            } finally {
+                this.scoreSaveInFlight = false;
+                this.scoreSavingField = '';
+                if (Object.keys(this.scoreQueue).length > 0) {
+                    this.scoreSaveTimer = setTimeout(() => this.flushScoreQueue(), 500);
+                }
             }
         }
-    }" x-on:save-all-scores.window="saveAllScores()"
+    }"
+    x-on:queue-score-save="queueScoreSave($event.detail)"
+    x-on:semestral-target-updated.window="window.requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('semestral-target-swap-reset')))"
+    x-on:semestral-target-reload.window="setTimeout(() => window.location.reload(), 250)"
     x-on:open-new-tab.window="window.open($event.detail.url, '_blank')">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div class="space-y-1">
@@ -147,57 +378,51 @@
                                     </div>
                                 </td>
                                 <td class="px-2 py-1 whitespace-nowrap">
-                                    <x-select2 wire:model.live="categoryFilter" :label="__('Category')"
+                                    <x-select2 wire:model.live.debounce.300ms="categoryFilter" :label="__('Category')"
                                         :placeholder="__('All categories')" :options="$categories" minWidth="160px" />
                                 </td>
-                                <td class="px-2 py-1 whitespace-nowrap align-bottom">
-                                    <div class="flex items-center gap-2 pb-2">
-                                        <flux:checkbox wire:model.live="hasCheckpointTarget"
-                                            :label="__('Has Checkpoint Target')"
-                                            class="cursor-pointer font-medium text-xs text-foreground" />
-                                        <div wire:loading wire:target="hasCheckpointTarget"
-                                            class="flex items-center justify-center">
-                                            <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
-                                                xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                                    stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                                </path>
-                                            </svg>
-                                        </div>
-                                    </div>
+                                <td class="px-2 py-1 whitespace-nowrap">
+                                    <x-select2 wire:model.live.debounce.300ms="targetStatusFilter"
+                                        :label="__('Target Status')" :placeholder="__('All targets')"
+                                        :options="[
+                                            ['value' => 'checkpoint', 'label' => __('Has Checkpoint Target')],
+                                            ['value' => 'incomplete', 'label' => __('Incomplete Target')],
+                                        ]"
+                                        minWidth="190px" :searchable="false" />
                                 </td>
                                 <td class="px-2 py-1 whitespace-nowrap">
-                                    <x-select2 wire:model.live="perPage" :label="__('Records Per Page')"
+                                    <x-select2 wire:model.live.debounce.300ms="perPage" :label="__('Records Per Page')"
                                         :placeholder="__('Select')" :options="$this->perPageOptions()" minWidth="120px"
                                         :searchable="false" />
                                 </td>
-                                <td class="px-1 py-1 whitespace-nowrap align-bottom">
-                                    <div class="flex h-full items-end -ml-1">
-                                        <flux:button variant="primary" type="button" wire:click="resetFilters"
-                                            class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:text-white dark:hover:bg-slate-400">
-                                            {{ __('Reset') }}
-                                        </flux:button>
-                                    </div>
-                                </td>
+                                @unless ($unauthorizedErrorMessage)
+                                    <td class="px-1 py-1 whitespace-nowrap align-bottom">
+                                        <div class="flex h-full items-end -ml-1">
+                                            <flux:button variant="primary" type="button" wire:click="resetFilters"
+                                                class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:text-white dark:hover:bg-slate-400">
+                                                {{ __('Reset') }}
+                                            </flux:button>
+                                        </div>
+                                    </td>
+                                @endunless
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="px-2 py-1 whitespace-nowrap align-bottom flex items-end gap-2">
-                    @if ($this->isSemestralTargetLocked())
-                        <flux:button variant="primary" type="button" icon="check-circle" wire:click="imReady"
-                            class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700 font-semibold cursor-pointer">
-                            {{ __("I'm Ready") }}
-                        </flux:button>
-                    @else
-                        <flux:button variant="primary" type="button" icon="lock-closed" wire:click="openLockConfirmModal"
-                            class="bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:text-white dark:hover:bg-amber-700 font-semibold">
-                            {{ __('Save and Lock Semestral Target') }}
-                        </flux:button>
-                    @endif
+                @unless ($unauthorizedErrorMessage)
+                    <div class="px-2 py-1 whitespace-nowrap align-bottom flex items-end gap-2">
+                        @if ($this->isSemestralTargetLocked())
+                            <flux:button id="im-ready-btn" variant="primary" type="button" icon="check-circle" wire:click="imReady"
+                                class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700 font-semibold cursor-pointer">
+                                {{ __("I'm Ready") }}
+                            </flux:button>
+                        @else
+                            <flux:button variant="primary" type="button" icon="lock-closed" wire:click="openLockConfirmModal"
+                                class="bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-600 dark:text-white dark:hover:bg-amber-700 font-semibold">
+                                {{ __('Save and Lock Semestral Target') }}
+                            </flux:button>
+                        @endif
 
                     <flux:dropdown position="bottom-end">
                         <flux:button variant="primary" icon="adjustments-horizontal" icon-trailing="chevron-down"
@@ -244,8 +469,9 @@
                                 </flux:menu.item>
                             @endif
                         </flux:menu>
-                    </flux:dropdown>
-                </div>
+                        </flux:dropdown>
+                    </div>
+                @endunless
             </div>
         </div>
 
@@ -253,7 +479,31 @@
             $isSemesterLocked = $this->isSemestralTargetLocked();
         @endphp
 
-        <div class="w-full rounded-xl border border-border">
+        <div x-cloak x-show="scoreSaveError" x-transition
+            class="mb-3 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
+            role="alert" x-text="scoreSaveError"></div>
+
+        @include('livewire.semestral-target.pagination', [
+            'paginator' => $semestralTargets,
+            'keyPrefix' => 'top',
+            'paginationClass' => 'mb-4',
+        ])
+
+        <div class="relative w-full rounded-xl border border-border"
+            wire:loading.class="opacity-60"
+            wire:target="search,categoryFilter,targetStatusFilter,perPage,resetFilters,setPage,previousPage,nextPage">
+            <div wire:loading.flex
+                wire:target="search,categoryFilter,targetStatusFilter,perPage,resetFilters,setPage,previousPage,nextPage"
+                class="absolute inset-x-0 top-14 z-20 justify-center pointer-events-none">
+                <div class="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold shadow-md">
+                    <svg class="size-4 animate-spin text-emerald-600" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    {{ __('Loading targets...') }}
+                </div>
+            </div>
             <table class="w-full table-fixed border-separate border-spacing-0 text-sm">
                 @if ($isSemesterLocked)
                     <colgroup>
@@ -273,11 +523,11 @@
                         <col style="width: 5%;">
                         <col style="width: 17%;">
                         <col style="width: 17%;">
-                        <col style="width: 15%;">
-                        <col style="width: 15%;">
-                        <col style="width: 14%;">
-                        <col style="width: 8.5%;">
-                        <col style="width: 8.5%;">
+                        <col style="width: 16%;">
+                        <col style="width: 16%;">
+                        <col style="width: 16%;">
+                        <col style="width: 16%;">
+                        <col style="width: 13%;">
                     </colgroup>
                 @endif
                 <thead
@@ -303,15 +553,15 @@
                         @endif
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                             style="border-right: 1px solid var(--border);">
-                            {{ __('Efficiency') }}
+                            {{ $isSemesterLocked ? __('Efficiency') : __('RG Efficiency') }}
                         </th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                             style="border-right: 1px solid var(--border);">
-                            {{ __('Quality') }}
+                            {{ $isSemesterLocked ? __('Quality') : __('RG Quality') }}
                         </th>
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                             style="border-right: 1px solid var(--border);">
-                            {{ __('Timeliness') }}
+                            {{ $isSemesterLocked ? __('Timeliness') : __('RG Timeliness') }}
                         </th>
                         @if ($isSemesterLocked)
                             <th class="border-b border-r border-border px-2 py-3 text-center whitespace-nowrap"
@@ -321,25 +571,26 @@
                         @endif
                         <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                             style="border-right: 1px solid var(--border);">
-                            {{ __('MOVs') }}
+                            {{ $isSemesterLocked ? __('MOVs') : __('RG MOVs') }}
                         </th>
                         <th class="border-b border-l border-border px-3 py-3 whitespace-nowrap last:rounded-tr-xl"
                             style="border-left: 1px solid var(--border);">
-                            {{ __('Remarks') }}
+                            {{ $isSemesterLocked ? __('Remarks') : __('RG Remarks') }}
                         </th>
                     </tr>
                 </thead>
 
                 @php
                     $isAllCategories = empty($categoryFilter);
-                    $isNotAllPerPage = (int) $perPage !== -1;
+                    $rowsByCategory = collect($semestralTargets->items())
+                        ->groupBy(fn($row) => (int) ($row->kra_category ?? 0))
+                        ->map(fn($rows) => $rows->groupBy(fn($row) => (int) ($row->sem_target_id ?? 0)));
                 @endphp
 
                 @foreach ($visibleCategories as $category)
                     @php
-                        $categoryRows = collect($semestralTargets->items())->filter(fn($row) => (int) ($row->kra_category ?? 0) === (int) $category->value);
-                        $groupedByIndicator = $categoryRows->groupBy(fn($row) => (int) ($row->sem_target_id ?? 0));
-                        $hideIfEmptySlice = $isAllCategories && $isNotAllPerPage && $groupedByIndicator->isEmpty();
+                        $groupedByIndicator = $rowsByCategory->get((int) $category->value, collect());
+                        $hideIfEmptySlice = $isAllCategories && $groupedByIndicator->isEmpty();
                     @endphp
 
                     @if (!$hideIfEmptySlice)
@@ -360,9 +611,9 @@
                             @php
                                 $groupRows = $rows->values();
                             @endphp
-                            <livewire:semestral-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :is-semester-locked="$isSemesterLocked" :key="'semestral-target-indicator-' . $indId . '-' . md5(json_encode($groupRows->all()))" />
+                            <livewire:semestral-target.indicator-rows :indicator-id="(int) $indId" :rows="$groupRows->map(fn($row) => (array) $row)->all()" :is-semester-locked="$isSemesterLocked" :key="'semestral-target-indicator-' . $indId" />
                         @empty
-                            @if (!($isAllCategories && $isNotAllPerPage))
+                            @if (!$isAllCategories)
                                 <tbody wire:key="semestral-target-empty-{{ $category->value }}">
                                     <tr>
                                         <td colspan="{{ $isSemesterLocked ? 10 : 8 }}"
@@ -376,10 +627,10 @@
                     @endif
                 @endforeach
 
-                @if ($semestralTargets->total() === 0)
+                @if ($semestralTargets->isEmpty())
                     <tbody wire:key="semestral-target-empty-total">
                         <tr>
-                            <td colspan="8" class="border-b border-border px-3 py-6 text-center text-muted-foreground">
+                            <td colspan="{{ $isSemesterLocked ? 10 : 8 }}" class="border-b border-border px-3 py-6 text-center text-muted-foreground">
                                 {{ __('No semestral target entries found.') }}
                             </td>
                         </tr>
@@ -388,12 +639,15 @@
             </table>
         </div>
 
-        <div class="mt-4">
-            {{ $semestralTargets->links() }}
-        </div>
+        @include('livewire.semestral-target.pagination', [
+            'paginator' => $semestralTargets,
+            'keyPrefix' => 'bottom',
+            'paginationClass' => 'mt-4',
+        ])
     </div>
 
     <!-- Add Target Modal -->
+    @if ($showAddModal)
     <flux:modal wire:model="showAddModal"
         style="width: min(72rem, calc(100vw - 2rem)); max-width: min(72rem, calc(100vw - 2rem));">
         <div class="space-y-5">
@@ -524,8 +778,10 @@
             </div>
         </div>
     </flux:modal>
+    @endif
 
     <!-- Delete Target Modal -->
+    @if ($showDeleteModal)
     <flux:modal wire:model="showDeleteModal" dismissible>
         <div class="space-y-4">
             <div class="space-y-1">
@@ -556,8 +812,10 @@
             </div>
         </div>
     </flux:modal>
+    @endif
 
     <!-- Recover Deleted Targets Modal -->
+    @if ($showRecoverModal)
     <flux:modal wire:model="showRecoverModal"
         style="width: min(66rem, calc(100vw - 2rem)); max-width: min(66rem, calc(100vw - 2rem));">
         <div class="space-y-5">
@@ -631,8 +889,10 @@
             </div>
         </div>
     </flux:modal>
+    @endif
 
     <!-- Delete Sub-Target Modal -->
+    @if ($showDeleteSubTargetModal)
     <flux:modal wire:model="showDeleteSubTargetModal" dismissible>
         <div class="space-y-4">
             <div class="space-y-1">
@@ -663,6 +923,7 @@
             </div>
         </div>
     </flux:modal>
+    @endif
 
     <!-- Reordering / Sorting Global Loading Overlay -->
     <div wire:loading wire:target="targetDropped"
@@ -679,30 +940,16 @@
         </div>
     </div>
 
-    <!-- Centered 20% Width Loading Overlay Modal for Batch Save -->
-    <div wire:loading.flex wire:target="batchSaveScores"
-        class="fixed inset-0 z-[9999999] items-center justify-center bg-black/40 backdrop-blur-xs"
-        style="position: fixed !important; inset: 0 !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 9999999 !important; background-color: rgba(0, 0, 0, 0.4) !important; backdrop-filter: blur(4px) !important;">
-        <div class="flex flex-col items-center justify-center gap-3 rounded-2xl bg-card p-6 shadow-2xl border border-border text-center"
-            style="width: 20% !important; min-width: 240px !important; max-width: 320px !important; margin: auto !important;">
-            <svg class="animate-spin size-8 text-emerald-600 dark:text-emerald-400" xmlns="http://www.w3.org/2000/svg"
-                fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                </path>
-            </svg>
-            <span class="text-sm font-bold text-foreground leading-tight">{{ __('Saving...') }}</span>
-        </div>
-    </div>
-
     <!-- Copy Target Modal -->
+    @if ($showCopyModal)
     <flux:modal wire:model="showCopyModal" dismissible style="width: 80%; max-width: 80%; height: 90%; max-height: 90%;"
         class="overflow-y-auto">
         @include('livewire.semestral-target.copy-target-modal')
     </flux:modal>
+    @endif
 
     <!-- Confirm Copy All Modal -->
+    @if ($showCopyAllConfirmModal)
     <flux:modal wire:model="showCopyAllConfirmModal" dismissible>
         <div class="space-y-5">
             <div class="space-y-1">
@@ -725,8 +972,10 @@
             </div>
         </div>
     </flux:modal>
+    @endif
 
     <!-- Show Edit History Modal -->
+    @if ($showHistoryModal)
     <flux:modal wire:model="showHistoryModal"
         style="width: min(66rem, calc(100vw - 2rem)); max-width: min(66rem, calc(100vw - 2rem));">
         <div class="space-y-5">
@@ -841,8 +1090,10 @@
             </div>
         </div>
     </flux:modal>
+    @endif
 
     <!-- Save and Lock Confirm Modal -->
+    @if ($showLockConfirmModal)
     <flux:modal wire:model="showLockConfirmModal" dismissible>
         <div class="space-y-4">
             <div class="space-y-1">
@@ -864,8 +1115,10 @@
             </div>
         </div>
     </flux:modal>
+    @endif
 
     <!-- Unlock Confirm Modal -->
+    @if ($showUnlockConfirmModal)
     <flux:modal wire:model="showUnlockConfirmModal" dismissible>
         <div class="space-y-4">
             <div class="space-y-1">
@@ -887,44 +1140,6 @@
             </div>
         </div>
     </flux:modal>
-
-    @php
-        $targetSemId = request()->query('sem_id') ?: $semId;
-        $isSemLocked = false;
-        if ($targetSemId) {
-            $isSemLocked = (int) \Illuminate\Support\Facades\DB::table('ipc_semester')->where('id', $targetSemId)->value('lock') === 1;
-        }
-    @endphp
-
-    @if ($isSemLocked)
-        <div style="position: fixed !important; bottom: 2rem !important; right: 2rem !important; z-index: 999999 !important;"
-            x-data="{ isSaving: false }"
-            x-on:semestral-target-scores-saved.window="isSaving = false"
-            class="flex items-center gap-3">
-            <button type="button" x-on:click="isSaving = true; $dispatch('save-all-scores')" :disabled="isSaving"
-                class="inline-flex items-center justify-center gap-3 rounded-full bg-emerald-600 px-8 py-4 min-h-[58px] text-base font-black text-white shadow-2xl hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 dark:bg-emerald-500 dark:hover:bg-emerald-600 cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95 border-2 border-white/40 ring-4 ring-black/10 disabled:opacity-85 disabled:cursor-not-allowed disabled:transform-none"
-                style="cursor: pointer !important;">
-
-                <template x-if="isSaving">
-                    <svg class="animate-spin size-6 text-white shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none"
-                        viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                        </path>
-                    </svg>
-                </template>
-
-                <template x-if="!isSaving">
-                    <svg class="size-6 text-white shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                    </svg>
-                </template>
-
-                <span x-text="isSaving ? '{{ __('Saving Scores...') }}' : '{{ __('Save Scores') }}'"
-                    class="text-base font-black tracking-wider uppercase"></span>
-            </button>
-        </div>
     @endif
+
 </section>

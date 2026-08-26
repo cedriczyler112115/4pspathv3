@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Renderless;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -34,9 +35,10 @@ class SemestralTargetPage extends Component
 
     public string $search = '';
     public string $categoryFilter = '';
-    public bool $hasCheckpointTarget = false;
-    public int $perPage = 10;
+    public string $targetStatusFilter = '';
+    public int|string $perPage = 10;
     public bool $includeStrategicFunction = true;
+    protected ?LengthAwarePaginator $semestralTargetsMemo = null;
 
     // Add Target Modal
     public bool $showAddModal = false;
@@ -91,9 +93,22 @@ class SemestralTargetPage extends Component
         $this->includeStrategicFunction = ApplicationSetting::boolean('include_strategic_function', true);
 
         $this->categoryFilter = (string) Session::get($this->sessionKey('categoryFilter'), '');
-        $this->hasCheckpointTarget = (bool) Session::get($this->sessionKey('hasCheckpointTarget'), false);
+        $savedTargetStatus = Session::get($this->sessionKey('targetStatusFilter'), '');
+        if ($savedTargetStatus === '' && (bool) Session::get($this->sessionKey('hasCheckpointTarget'), false)) {
+            $savedTargetStatus = 'checkpoint';
+        }
+        $this->targetStatusFilter = in_array($savedTargetStatus, ['checkpoint', 'incomplete'], true)
+            ? $savedTargetStatus
+            : '';
         $this->search = (string) Session::get($this->sessionKey('search'), '');
-        $this->perPage = (int) Session::get($this->sessionKey('perPage'), 10);
+        $this->perPage = Session::get($this->sessionKey('perPage'), 10);
+        if (is_string($this->perPage)) {
+            $this->perPage = strtolower(trim($this->perPage));
+        }
+
+        if (! in_array($this->perPage, [10, 25, 50, 'all'], true)) {
+            $this->perPage = 10;
+        }
 
         if (!$this->includeStrategicFunction && $this->categoryFilter === '1') {
             $this->categoryFilter = '';
@@ -108,6 +123,19 @@ class SemestralTargetPage extends Component
         }
     }
 
+    protected ?object $cachedSemRecord = null;
+
+    protected function getSemesterRecord(): ?object
+    {
+        if (!$this->semId) {
+            return null;
+        }
+        if ($this->cachedSemRecord === null) {
+            $this->cachedSemRecord = DB::table('ipc_semester')->where('id', $this->semId)->first();
+        }
+        return $this->cachedSemRecord;
+    }
+
     public function loadSemesterRatings(): void
     {
         if (!$this->semId) {
@@ -116,11 +144,25 @@ class SemestralTargetPage extends Component
             return;
         }
 
-        $sem = DB::table('ipc_semester')->where('id', $this->semId)->first();
+        $sem = $this->getSemesterRecord();
         if ($sem) {
-            $this->finalRating = filled($sem->final_rating) ? number_format((float) $sem->final_rating, 2, '.', '') : '0.00';
+            $this->finalRating = filled($sem->final_rating) ? $this->format5DecimalsWithoutRounding($sem->final_rating) : '0.00000';
             $this->adjectivalRating = filled($sem->adjectival_rating) ? (string) $sem->adjectival_rating : 'N/A';
         }
+    }
+
+    private function format5DecimalsWithoutRounding(mixed $val): string
+    {
+        $floatVal = (float) $val;
+        if ($floatVal <= 0) {
+            return '0.00000';
+        }
+        $str = (string) $floatVal;
+        if (str_contains($str, '.')) {
+            [$intPart, $decPart] = explode('.', $str, 2);
+            return $intPart . '.' . substr(str_pad($decPart, 5, '0'), 0, 5);
+        }
+        return $str . '.00000';
     }
 
     #[On('semestral-target-updated')]
@@ -130,37 +172,59 @@ class SemestralTargetPage extends Component
             return;
         }
 
-        $avgScore = DB::table('ipc_sem_targets_indicator_itemlist as stil')
-            ->join('ipc_sem_targets_indicator as sti', 'stil.sem_target_id', '=', 'sti.id')
-            ->where('sti.semester_id', $this->semId)
-            ->whereNotNull('stil.average')
-            ->where('stil.average', '!=', '')
-            ->where('stil.average', '>', 0)
-            ->avg('stil.average');
+        $calcCatAvg = function (int $catId): float {
+            $avg = DB::table('ipc_sem_targets_indicator_itemlist as stil')
+                ->join('ipc_sem_targets_indicator as sti', 'stil.sem_target_id', '=', 'sti.id')
+                ->where('sti.semester_id', $this->semId)
+                ->where('sti.kra_category', $catId)
+                ->whereNotNull('stil.average')
+                ->where('stil.average', '!=', '')
+                ->where('stil.average', '>', 0)
+                ->avg('stil.average');
 
-        if ($avgScore !== null) {
-            $calcFinal = round((float) $avgScore, 2);
-            $finalStr = number_format($calcFinal, 2, '.', '');
+            return $avg !== null ? (float) $avg : 0.0;
+        };
+
+        $coreAvg = $calcCatAvg(2);
+        $supportAvg = $calcCatAvg(3);
+
+        if ($this->includeStrategicFunction) {
+            $strategicAvg = $calcCatAvg(1);
+            $finalVal = ($strategicAvg + $coreAvg + $supportAvg) / 3.0;
+        } else {
+            $finalVal = ($coreAvg + $supportAvg) / 2.0;
+        }
+
+        if ($finalVal > 0) {
+            $finalStr = $this->format5DecimalsWithoutRounding($finalVal);
+            $calcFinal = (float) $finalStr;
         } else {
             $calcFinal = 0.0;
-            $finalStr = '0.00';
+            $finalStr = '0.00000';
         }
 
         $adjectival = match (true) {
-            $calcFinal >= 4.50 => 'Outstanding',
-            $calcFinal >= 3.50 => 'Very Satisfactory',
-            $calcFinal >= 2.50 => 'Satisfactory',
-            $calcFinal >= 1.50 => 'Unsatisfactory',
+            $calcFinal >= 5.00 => 'Outstanding',
+            $calcFinal >= 4.00 => 'Very Satisfactory',
+            $calcFinal >= 3.00 => 'Satisfactory',
+            $calcFinal >= 2.00 => 'Unsatisfactory',
             $calcFinal > 0.00 => 'Poor',
             default => 'N/A',
         };
 
-        DB::table('ipc_semester')
-            ->where('id', $this->semId)
-            ->update([
-                'final_rating' => $finalStr,
-                'adjectival_rating' => $adjectival,
-            ]);
+        $sem = $this->getSemesterRecord();
+        $currFinal = $sem ? (string) ($sem->final_rating ?? '') : null;
+        $currAdj = $sem ? (string) ($sem->adjectival_rating ?? '') : null;
+
+        if ($currFinal !== $finalStr || $currAdj !== $adjectival) {
+            DB::table('ipc_semester')
+                ->where('id', $this->semId)
+                ->update([
+                    'final_rating' => $finalStr,
+                    'adjectival_rating' => $adjectival,
+                ]);
+            $this->cachedSemRecord = null;
+        }
 
         $this->finalRating = $finalStr;
         $this->adjectivalRating = $adjectival;
@@ -187,7 +251,7 @@ class SemestralTargetPage extends Component
         $userId = Auth::id();
 
         if ($this->semId !== null && $this->semId > 0 && $userId !== null) {
-            $semRecord = DB::table('ipc_semester')->where('id', $this->semId)->first();
+            $semRecord = $this->getSemesterRecord();
 
             if ($semRecord === null) {
                 $this->unauthorizedErrorMessage = __('The requested semestral target record (ID: :id) does not exist.', ['id' => $this->semId]);
@@ -248,15 +312,24 @@ class SemestralTargetPage extends Component
         Session::put($this->sessionKey('categoryFilter'), $this->categoryFilter);
     }
 
-    public function updatedHasCheckpointTarget(): void
+    public function updatedTargetStatusFilter(): void
     {
+        if (!in_array($this->targetStatusFilter, ['', 'checkpoint', 'incomplete'], true)) {
+            $this->targetStatusFilter = '';
+        }
+
         $this->resetPage();
-        Session::put($this->sessionKey('hasCheckpointTarget'), $this->hasCheckpointTarget);
+        Session::put($this->sessionKey('targetStatusFilter'), $this->targetStatusFilter);
+        Session::forget($this->sessionKey('hasCheckpointTarget'));
     }
 
     public function updatedPerPage(): void
     {
-        if (!in_array((int) $this->perPage, [10, 25, 50, 100, -1], true)) {
+        if (is_string($this->perPage)) {
+            $this->perPage = strtolower(trim($this->perPage));
+        }
+
+        if (!in_array($this->perPage, [10, 25, 50, 'all'], true)) {
             $this->perPage = 10;
         }
         $this->resetPage();
@@ -267,13 +340,13 @@ class SemestralTargetPage extends Component
     {
         $this->search = '';
         $this->categoryFilter = '';
-        $this->hasCheckpointTarget = false;
+        $this->targetStatusFilter = '';
         $this->perPage = 10;
-
         Session::forget([
             $this->sessionKey('search'),
             $this->sessionKey('categoryFilter'),
             $this->sessionKey('hasCheckpointTarget'),
+            $this->sessionKey('targetStatusFilter'),
             $this->sessionKey('perPage'),
         ]);
 
@@ -320,9 +393,35 @@ class SemestralTargetPage extends Component
             (object) ['value' => 10, 'label' => '10'],
             (object) ['value' => 25, 'label' => '25'],
             (object) ['value' => 50, 'label' => '50'],
-            (object) ['value' => 100, 'label' => '100'],
-            (object) ['value' => -1, 'label' => 'All'],
+            (object) ['value' => 'all', 'label' => __('ALL')],
         ];
+    }
+
+    public function isAllPerPage(): bool
+    {
+        return $this->perPage === 'all';
+    }
+
+    /** @return array<int, int|string> */
+    public function paginationElements(LengthAwarePaginator $paginator): array
+    {
+        $lastPage = $paginator->lastPage();
+
+        if ($lastPage <= 7) {
+            return range(1, $lastPage);
+        }
+
+        $currentPage = $paginator->currentPage();
+
+        if ($currentPage <= 4) {
+            return [1, 2, 3, 4, 5, 'end-ellipsis', $lastPage];
+        }
+
+        if ($currentPage >= $lastPage - 3) {
+            return [1, 'start-ellipsis', $lastPage - 4, $lastPage - 3, $lastPage - 2, $lastPage - 1, $lastPage];
+        }
+
+        return [1, 'start-ellipsis', $currentPage - 1, $currentPage, $currentPage + 1, 'end-ellipsis', $lastPage];
     }
 
     public function semesterHeading(): string
@@ -389,6 +488,7 @@ class SemestralTargetPage extends Component
     #[On('semestral-target-updated')]
     public function refreshTargets(): void
     {
+        $this->flushSemestralTargetCaches();
         // Triggers re-render to instantly move targets to their new KRA category sections
     }
 
@@ -1376,6 +1476,7 @@ class SemestralTargetPage extends Component
     {
         $userId = Auth::id();
         if (!is_int($userId)) {
+            $this->dispatch('semestral-target-swap-completed');
             return;
         }
 
@@ -1409,6 +1510,7 @@ class SemestralTargetPage extends Component
                 ]);
             });
 
+            $this->dispatch('semestral-target-swap-completed');
             Flux::toast(variant: 'success', text: __('Target position updated.'));
             return;
         }
@@ -1436,71 +1538,200 @@ class SemestralTargetPage extends Component
                 ]);
             });
 
+            $this->dispatch('semestral-target-swap-completed');
             Flux::toast(variant: 'success', text: __('Sub-target position updated.'));
+            return;
         }
+
+        $this->dispatch('semestral-target-swap-completed');
     }
 
     public function semestralTargets(): LengthAwarePaginator
     {
-        $userId = Auth::id();
-
-        if ($this->unauthorizedErrorMessage !== null) {
-            return new LengthAwarePaginator([], 0, (int) $this->perPage <= 0 ? 10 : (int) $this->perPage, 1);
+        if ($this->semestralTargetsMemo !== null) {
+            return $this->semestralTargetsMemo;
         }
 
+        $userId = Auth::id();
+        $showAll = $this->perPage === 'all';
+        $effectivePerPage = $showAll ? 1 : (in_array((int) $this->perPage, [10, 25, 50], true) ? (int) $this->perPage : 10);
+
+        if ($this->unauthorizedErrorMessage !== null) {
+            return $this->semestralTargetsMemo = new LengthAwarePaginator([], 0, $effectivePerPage, 1);
+        }
+
+        $semesterNumber = $this->semId ? (string) ($this->getSemesterRecord()->semester ?? '') : '';
+        $searchTerm = filled($this->search) ? '%' . trim($this->search) . '%' : null;
+
+        $applyVisibleItems = function ($items) use ($semesterNumber): void {
+            if ($semesterNumber === '1') {
+                $items->where(function ($query): void {
+                    $query->whereNull('new_semester')->orWhereIn('new_semester', [1, 3]);
+                });
+            } elseif ($semesterNumber === '2') {
+                $items->where(function ($query): void {
+                    $query->whereNull('new_semester')->orWhereIn('new_semester', [2, 3]);
+                });
+            }
+        };
+
         $query = DB::table('ipc_sem_targets_indicator as sti')
-            ->join('ipc_sem_targets_indicator_itemlist as stil', 'sti.id', '=', 'stil.sem_target_id')
-            ->leftJoin('ipc_semester as sem', 'sti.semester_id', '=', 'sem.id')
+            ->join('ipc_semester as sem', 'sti.semester_id', '=', 'sem.id')
             ->where('sem.user_id', $userId)
             ->when(!$this->includeStrategicFunction, fn($q) => $q->where('sti.kra_category', '!=', 1));
 
         if ($this->semId !== null && $this->semId > 0) {
             $query->where('sti.semester_id', $this->semId);
-
-            $semNumber = DB::table('ipc_semester')
-                ->where('id', $this->semId)
-                ->value('semester');
-
-            if ((string) $semNumber === '1') {
-                $query->where(function ($q): void {
-                    $q->whereNull('stil.new_semester')
-                        ->orWhereIn('stil.new_semester', [1, 3]);
-                });
-            } elseif ((string) $semNumber === '2') {
-                $query->where(function ($q): void {
-                    $q->whereNull('stil.new_semester')
-                        ->orWhereIn('stil.new_semester', [2, 3]);
-                });
-            }
         }
 
         if (filled($this->categoryFilter)) {
             $query->where('sti.kra_category', $this->categoryFilter);
         }
 
-        if ($this->hasCheckpointTarget) {
-            $checkpointTargetIds = DB::table('ipc_sem_target_edit_histories')
-                ->pluck('sem_target_id')
-                ->unique()
-                ->all();
-
-            $query->whereIn('sti.id', $checkpointTargetIds);
-        }
-
-        if (filled($this->search)) {
-            $searchTerm = '%' . trim($this->search) . '%';
-            $query->where(function ($q) use ($searchTerm): void {
-                $q->where('sti.activity', 'like', $searchTerm)
-                    ->orWhere('stil.description', 'like', $searchTerm)
-                    ->orWhere('stil.rg_quantity', 'like', $searchTerm)
-                    ->orWhere('stil.rg_quality', 'like', $searchTerm)
-                    ->orWhere('stil.rg_timeliness', 'like', $searchTerm)
-                    ->orWhere('stil.rg_movs', 'like', $searchTerm)
-                    ->orWhere('stil.rg_remarks', 'like', $searchTerm);
+        if ($this->targetStatusFilter === 'checkpoint') {
+            $query->whereExists(function ($history): void {
+                $history->selectRaw('1')
+                    ->from('ipc_sem_target_edit_histories as history')
+                    ->whereColumn('history.sem_target_id', 'sti.id');
             });
         }
 
-        $query->select([
+        if ($this->targetStatusFilter === 'incomplete') {
+            $query->whereExists(function ($items) use ($applyVisibleItems): void {
+                $items->selectRaw('1')
+                    ->from('ipc_sem_targets_indicator_itemlist as incomplete_items')
+                    ->whereColumn('incomplete_items.sem_target_id', 'sti.id')
+                    ->where(function ($incomplete): void {
+                        $incomplete->where(function ($notAllNa): void {
+                            $notAllNa->whereNull('incomplete_items.na_quantity')
+                                ->orWhere('incomplete_items.na_quantity', '!=', 1)
+                                ->orWhereNull('incomplete_items.na_quality')
+                                ->orWhere('incomplete_items.na_quality', '!=', 1)
+                                ->orWhereNull('incomplete_items.na_timeliness')
+                                ->orWhere('incomplete_items.na_timeliness', '!=', 1);
+                        })
+                        ->where(function ($missingFields): void {
+                            $missingFields->whereNull('incomplete_items.actual_accomp')
+                                ->orWhereRaw("TRIM(COALESCE(incomplete_items.actual_accomp, '')) = ''")
+                                ->orWhereNull('incomplete_items.has_attachments')
+                                ->orWhere('incomplete_items.has_attachments', 0)
+                                ->orWhereRaw("TRIM(COALESCE(incomplete_items.has_attachments, '')) = ''")
+                                ->orWhereNull('incomplete_items.target_movs')
+                                ->orWhereRaw("TRIM(COALESCE(incomplete_items.target_movs, '')) = ''")
+                                ->orWhere(function ($qEmpty): void {
+                                    $qEmpty->where(function ($qNull): void {
+                                        $qNull->whereNull('incomplete_items.quantity_score')
+                                            ->orWhereRaw("TRIM(COALESCE(incomplete_items.quantity_score, '')) IN ('', '0', '0.00')");
+                                    })->where(function ($qNotNa): void {
+                                        $qNotNa->whereNull('incomplete_items.na_quantity')
+                                            ->orWhere('incomplete_items.na_quantity', '!=', 1);
+                                    });
+                                })
+                                ->orWhere(function ($qlEmpty): void {
+                                    $qlEmpty->where(function ($qlNull): void {
+                                        $qlNull->whereNull('incomplete_items.quality_score')
+                                            ->orWhereRaw("TRIM(COALESCE(incomplete_items.quality_score, '')) IN ('', '0', '0.00')");
+                                    })->where(function ($qlNotNa): void {
+                                        $qlNotNa->whereNull('incomplete_items.na_quality')
+                                            ->orWhere('incomplete_items.na_quality', '!=', 1);
+                                    });
+                                })
+                                ->orWhere(function ($tEmpty): void {
+                                    $tEmpty->where(function ($tNull): void {
+                                        $tNull->whereNull('incomplete_items.timeliness_score')
+                                            ->orWhereRaw("TRIM(COALESCE(incomplete_items.timeliness_score, '')) IN ('', '0', '0.00')");
+                                    })->where(function ($tNotNa): void {
+                                        $tNotNa->whereNull('incomplete_items.na_timeliness')
+                                            ->orWhere('incomplete_items.na_timeliness', '!=', 1);
+                                    });
+                                });
+                        });
+                    });
+                $applyVisibleItems($items);
+            });
+        }
+
+        $query->whereExists(function ($items) use ($applyVisibleItems): void {
+            $items->selectRaw('1')
+                ->from('ipc_sem_targets_indicator_itemlist')
+                ->whereColumn('sem_target_id', 'sti.id');
+            $applyVisibleItems($items);
+        });
+
+        if ($searchTerm !== null) {
+            $query->where(function ($filter) use ($searchTerm, $applyVisibleItems): void {
+                $filter->where('sti.activity', 'like', $searchTerm)
+                    ->orWhereExists(function ($items) use ($searchTerm, $applyVisibleItems): void {
+                        $items->selectRaw('1')
+                            ->from('ipc_sem_targets_indicator_itemlist')
+                            ->whereColumn('sem_target_id', 'sti.id')
+                            ->where(function ($fields) use ($searchTerm): void {
+                                $fields->where('description', 'like', $searchTerm)
+                                    ->orWhere('rg_quantity', 'like', $searchTerm)
+                                    ->orWhere('rg_quality', 'like', $searchTerm)
+                                    ->orWhere('rg_timeliness', 'like', $searchTerm)
+                                    ->orWhere('rg_movs', 'like', $searchTerm)
+                                    ->orWhere('rg_remarks', 'like', $searchTerm);
+                            });
+                        $applyVisibleItems($items);
+                    });
+            });
+        }
+
+        $indicatorQuery = $query
+            ->select('sti.id')
+            ->orderBy('sem.year', 'desc')
+            ->orderBy('sem.semester', 'asc')
+            ->orderBy('sti.kra_category', 'asc')
+            ->orderBy('sti.display_order', 'asc')
+            ->orderBy('sti.id', 'asc');
+
+        if ($showAll) {
+            $indicatorIds = $indicatorQuery->pluck('sti.id')->map(fn ($id): int => (int) $id);
+            $indicatorPage = new LengthAwarePaginator(
+                collect(),
+                $indicatorIds->count(),
+                1,
+                1,
+                [
+                    'path' => LengthAwarePaginator::resolveCurrentPath(),
+                    'pageName' => 'page',
+                ]
+            );
+            $indicatorPage->setCollection($indicatorIds->map(fn (int $id) => (object) ['id' => $id]));
+        } else {
+            $indicatorPage = $indicatorQuery->paginate($effectivePerPage);
+            $indicatorIds = $indicatorPage->getCollection()->pluck('id')->map(fn ($id): int => (int) $id);
+        }
+
+        if ($indicatorIds->isEmpty()) {
+            $indicatorPage->setCollection(collect());
+
+            return $this->semestralTargetsMemo = $indicatorPage;
+        }
+
+        $rows = DB::table('ipc_sem_targets_indicator as sti')
+            ->join('ipc_sem_targets_indicator_itemlist as stil', 'sti.id', '=', 'stil.sem_target_id')
+            ->join('ipc_semester as sem', 'sti.semester_id', '=', 'sem.id')
+            ->whereIn('sti.id', $indicatorIds)
+            ->when($semesterNumber === '1', fn ($items) => $items->where(function ($query): void {
+                $query->whereNull('stil.new_semester')->orWhereIn('stil.new_semester', [1, 3]);
+            }))
+            ->when($semesterNumber === '2', fn ($items) => $items->where(function ($query): void {
+                $query->whereNull('stil.new_semester')->orWhereIn('stil.new_semester', [2, 3]);
+            }))
+            ->when($searchTerm !== null, function ($items) use ($searchTerm): void {
+                $items->where(function ($fields) use ($searchTerm): void {
+                    $fields->where('sti.activity', 'like', $searchTerm)
+                        ->orWhere('stil.description', 'like', $searchTerm)
+                        ->orWhere('stil.rg_quantity', 'like', $searchTerm)
+                        ->orWhere('stil.rg_quality', 'like', $searchTerm)
+                        ->orWhere('stil.rg_timeliness', 'like', $searchTerm)
+                        ->orWhere('stil.rg_movs', 'like', $searchTerm)
+                        ->orWhere('stil.rg_remarks', 'like', $searchTerm);
+                });
+            })
+            ->select([
             'sti.id as sem_target_id',
             'sti.semester_id',
             'sti.kra_category',
@@ -1530,18 +1761,24 @@ class SemestralTargetPage extends Component
             'stil.target_remarks',
             'sem.year',
             'sem.semester',
-        ])
+            ])
             ->orderBy('sem.year', 'desc')
             ->orderBy('sem.semester', 'asc')
             ->orderBy('sti.kra_category', 'asc')
-            ->orderBy('sti.display_order', 'asc')
-            ->orderBy('sti.id', 'asc')
-            ->orderBy('stil.display_order', 'asc')
-            ->orderBy('stil.id', 'asc');
+            ->orderBy('indicator_display_order', 'asc')
+            ->orderBy('sem_target_id', 'asc')
+            ->orderBy('item_display_order', 'asc')
+            ->orderBy('sem_item_id', 'asc')
+            ->get();
 
-        $effectivePerPage = (int) $this->perPage <= 0 ? max(1, (clone $query)->count()) : (int) $this->perPage;
+        $indicatorPage->setCollection($rows);
 
-        return $query->paginate($effectivePerPage);
+        return $this->semestralTargetsMemo = $indicatorPage;
+    }
+
+    protected function flushSemestralTargetCaches(): void
+    {
+        // No-op fallback for non-taggable cache stores.
     }
 
     public function openCopyModal(): void
@@ -1777,16 +2014,12 @@ class SemestralTargetPage extends Component
 
     public function isSemestralTargetLocked(): bool
     {
-        $semId = $this->semId ?: request()->query('sem_id');
-        if (!$semId) {
+        $semRecord = $this->getSemesterRecord();
+        if (!$semRecord) {
             return false;
         }
 
-        $semLock = DB::table('ipc_semester')
-            ->where('id', $semId)
-            ->value('lock');
-
-        return (int) $semLock === 1;
+        return (int) ($semRecord->lock ?? 0) === 1;
     }
 
     public function openLockConfirmModal(): void
@@ -1841,6 +2074,7 @@ class SemestralTargetPage extends Component
 
         $this->cancelLockConfirm();
         $this->dispatch('semestral-target-updated');
+        $this->dispatch('semestral-target-reload');
         Flux::toast(variant: 'success', text: __('Semestral target saved and locked successfully.'));
     }
 
@@ -1892,6 +2126,7 @@ class SemestralTargetPage extends Component
 
         $this->cancelUnlockConfirm();
         $this->dispatch('semestral-target-updated');
+        $this->dispatch('semestral-target-reload');
         Flux::toast(variant: 'success', text: __('Semestral target unlocked successfully.'));
     }
 
@@ -2053,22 +2288,30 @@ class SemestralTargetPage extends Component
         ]);
     }
 
+    #[Renderless]
     public function batchSaveScores(array $items): void
     {
         if (empty($items)) {
             return;
         }
 
+        $items = array_slice($items, 0, 100);
         $nowManila = Carbon::now('Asia/Manila');
-        $userId = Auth::id() ?: 1;
+        $userId = Auth::id();
+
+        abort_if($userId === null, 403);
 
         $ids = array_filter(array_map(fn($i) => (int) ($i['id'] ?? 0), $items));
         if (empty($ids)) {
             return;
         }
 
-        $existingRecords = DB::table('ipc_sem_targets_indicator_itemlist')
-            ->whereIn('id', $ids)
+        $existingRecords = DB::table('ipc_sem_targets_indicator_itemlist as item')
+            ->join('ipc_sem_targets_indicator as target', 'target.id', '=', 'item.sem_target_id')
+            ->join('ipc_semester as semester', 'semester.id', '=', 'target.semester_id')
+            ->where('semester.user_id', $userId)
+            ->whereIn('item.id', $ids)
+            ->select('item.*')
             ->get()
             ->keyBy('id');
 
@@ -2181,13 +2424,6 @@ class SemestralTargetPage extends Component
                     variant: 'success',
                     heading: __('Saved Successfully'),
                     text: __(':count target item(s) updated successfully.', ['count' => $updatedCount]),
-                    position: 'top right'
-                );
-            } else {
-                Flux::toast(
-                    variant: 'info',
-                    heading: __('No Changes'),
-                    text: __('No changes were detected in the target scores or details.'),
                     position: 'top right'
                 );
             }

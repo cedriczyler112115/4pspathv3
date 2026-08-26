@@ -222,7 +222,11 @@
                 @php
                     $categoryRows = collect($annualTargets->items())->filter(fn($row) => (int) ($row->kra_category ?? 0) === (int) $category->value);
                     $groupedByIndicator = $categoryRows->groupBy(fn($row) => (int) ($row->indicator_id ?? $row->ind_id ?? 0));
+                    $hasSupportFunctionRows = $categoryFilter !== ''
+                        || (string) $category->value !== '3'
+                        || $categoryRows->isNotEmpty();
                 @endphp
+                @continue(!$hasSupportFunctionRows)
                 <tbody wire:key="annual-target-category-heading-{{ $category->value }}" x-data
                     x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'"
                     x-on:drop.prevent="const raw = $event.dataTransfer.getData('application/json'); if (raw) { $dispatch('annual-target-target-dropped', { source: JSON.parse(raw), target: { type: 'category', kra: {{ (int) $category->value }}, indicatorId: 0, itemId: 0 } }); }">

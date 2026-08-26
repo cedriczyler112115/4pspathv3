@@ -4,12 +4,30 @@
 ])
 
 @php
-    $branchHasActive = function (\App\Data\SidebarMenuNode $branch) use (&$branchHasActive): bool {
+    $routeMatches = function (?string $routeKey): bool {
+        if (blank($routeKey)) {
+            return false;
+        }
+
+        if (request()->routeIs($routeKey)) {
+            return true;
+        }
+
+        if (\Illuminate\Support\Str::endsWith($routeKey, '.index')) {
+            $routeGroup = \Illuminate\Support\Str::beforeLast($routeKey, '.index');
+
+            return request()->routeIs($routeGroup.'.*');
+        }
+
+        return false;
+    };
+
+    $branchHasActive = function (\App\Data\SidebarMenuNode $branch) use (&$branchHasActive, $routeMatches): bool {
         $branchItem = $branch->item;
         $branchHref = $branchItem->href;
         $branchPath = filled($branchHref) ? (parse_url($branchHref, PHP_URL_PATH) ?: $branchHref) : null;
 
-        if (filled($branchItem->key) && request()->routeIs($branchItem->key)) {
+        if ($routeMatches($branchItem->key)) {
             return true;
         }
 
@@ -45,7 +63,7 @@
 
         $current = false;
         if (filled($item->key)) {
-            $current = request()->routeIs($item->key);
+            $current = $routeMatches($item->key);
         } elseif (filled($path) && ! $isExternal) {
             $current = request()->is(ltrim($path, '/'));
         }
@@ -73,7 +91,7 @@
 
         @php($current = false)
         @if (filled($item->key))
-            @php($current = request()->routeIs($item->key))
+            @php($current = $routeMatches($item->key))
         @elseif (filled($path) && ! $isExternal)
             @php($current = request()->is(ltrim($path, '/')))
         @endif

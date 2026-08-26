@@ -229,6 +229,17 @@ class AnnualTargetPage extends Component
         $this->resetPage();
     }
 
+    public function updated(string $name): void
+    {
+        if (str_starts_with($name, 'copyStaff')) {
+            $this->copyStaffPage = 1;
+        }
+
+        if (str_starts_with($name, 'copyHarmonized')) {
+            $this->copyHarmonizedPage = 1;
+        }
+    }
+
     public function updatedSearch(): void
     {
         Session::put($this->sessionKey('search'), $this->search);
@@ -1058,6 +1069,40 @@ class AnnualTargetPage extends Component
 
     public string $copyHarmonizedStatusFilter = '';
 
+    public int $copyStaffPage = 1;
+
+    public int $copyHarmonizedPage = 1;
+
+    public function goToCopyStaffPage(int $page): void
+    {
+        $this->copyStaffPage = max(1, $page);
+    }
+
+    public function goToCopyHarmonizedPage(int $page): void
+    {
+        $this->copyHarmonizedPage = max(1, $page);
+    }
+
+    public function copyStaffPreviousPage(): void
+    {
+        $this->goToCopyStaffPage($this->copyStaffPage - 1);
+    }
+
+    public function copyStaffNextPage(): void
+    {
+        $this->goToCopyStaffPage($this->copyStaffPage + 1);
+    }
+
+    public function copyHarmonizedPreviousPage(): void
+    {
+        $this->goToCopyHarmonizedPage($this->copyHarmonizedPage - 1);
+    }
+
+    public function copyHarmonizedNextPage(): void
+    {
+        $this->goToCopyHarmonizedPage($this->copyHarmonizedPage + 1);
+    }
+
     public function copyStaffTargetGroups(): Collection
     {
         if ($this->copyStaffUserId === '') {
@@ -1111,6 +1156,11 @@ class AnnualTargetPage extends Component
         return $rows->groupBy('ind_id');
     }
 
+    public function copyStaffTargetGroupsPaginator(): LengthAwarePaginator
+    {
+        return $this->paginateCopyGroups($this->copyStaffTargetGroups(), $this->copyStaffPage);
+    }
+
     public function copyHarmonizedTargetGroups(): Collection
     {
         if ($this->copyHarmonizedPositionId === '') {
@@ -1162,6 +1212,53 @@ class AnnualTargetPage extends Component
             ->get();
 
         return $rows->groupBy('ind_id');
+    }
+
+    public function copyHarmonizedTargetGroupsPaginator(): LengthAwarePaginator
+    {
+        return $this->paginateCopyGroups($this->copyHarmonizedTargetGroups(), $this->copyHarmonizedPage);
+    }
+
+    protected function paginateCopyGroups(Collection $groups, int $currentPage, int $perPage = 10): LengthAwarePaginator
+    {
+        $currentPage = max(1, $currentPage);
+        $perPage = max(1, $perPage);
+        $total = $groups->count();
+        $items = $groups->forPage($currentPage, $perPage)->values();
+
+        return new LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $currentPage,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ],
+        );
+    }
+
+    /**
+     * @return array<int, int|string>
+     */
+    public function paginationElements(LengthAwarePaginator $paginator): array
+    {
+        $lastPage = $paginator->lastPage();
+        $currentPage = $paginator->currentPage();
+
+        if ($lastPage <= 7) {
+            return range(1, $lastPage);
+        }
+
+        if ($currentPage <= 4) {
+            return [1, 2, 3, 4, 5, 'end-ellipsis', $lastPage];
+        }
+
+        if ($currentPage >= $lastPage - 3) {
+            return [1, 'start-ellipsis', $lastPage - 4, $lastPage - 3, $lastPage - 2, $lastPage - 1, $lastPage];
+        }
+
+        return [1, 'start-ellipsis', $currentPage - 1, $currentPage, $currentPage + 1, 'end-ellipsis', $lastPage];
     }
 
     public function copyAllStaffTargetGroups(): void
@@ -1271,8 +1368,27 @@ class AnnualTargetPage extends Component
         }
 
         $sourceItems = DB::table('ipc_targets_indicators_itemlist')->where('ind_id', $indicatorId)->get();
+        $nowManila = now('Asia/Manila');
+        $sourceItems = $sourceItems->isEmpty()
+            ? collect([(object) [
+                'display_order' => 1,
+                'new_semester' => $sourceIndicator->target_sem,
+                'description' => $sourceIndicator->activity,
+                'weight' => null,
+                'quantity' => null,
+                'quality' => null,
+                'timeliness' => null,
+                'remarks' => $sourceIndicator->remarks,
+                'rg_efficiency_' => null,
+                'rg_quality_' => null,
+                'rg_timeliness_' => null,
+                'rg_ratingperiod_' => null,
+                'rg_mov_' => null,
+                'rg_remarks_' => null,
+            ]])
+            : $sourceItems;
 
-        DB::transaction(function () use ($sourceIndicator, $sourceItems, $userId): void {
+        DB::transaction(function () use ($sourceIndicator, $sourceItems, $userId, $nowManila): void {
             $targetYear = ctype_digit($this->yearFilter) ? (string) $this->yearFilter : (string) now()->year;
 
             $maxOrder = (int) DB::table('ipc_targets_indicators')
@@ -1291,7 +1407,7 @@ class AnnualTargetPage extends Component
                 'remarks' => $sourceIndicator->remarks,
                 'target_status' => 1,
                 'created_by' => $userId,
-                'date_created' => now(),
+                'date_created' => $nowManila,
             ]);
 
             foreach ($sourceItems as $item) {
@@ -1308,7 +1424,8 @@ class AnnualTargetPage extends Component
                     'indi_status' => 1,
                     'created_by' => $userId,
                     'modified_by' => $userId,
-                    'date_created' => now(),
+                    'date_created' => $nowManila,
+                    'date_modified' => $nowManila,
                     'rg_efficiency_' => $item->rg_efficiency_,
                     'rg_quality_' => $item->rg_quality_,
                     'rg_timeliness_' => $item->rg_timeliness_,
@@ -1335,8 +1452,27 @@ class AnnualTargetPage extends Component
         }
 
         $sourceItems = DB::table('harmonized_ipc_targets_indicators_itemlist')->where('ind_id', $indicatorId)->get();
+        $nowManila = now('Asia/Manila');
+        $sourceItems = $sourceItems->isEmpty()
+            ? collect([(object) [
+                'display_order' => 1,
+                'new_semester' => $sourceIndicator->target_sem,
+                'description' => $sourceIndicator->activity,
+                'weight' => null,
+                'quantity' => null,
+                'quality' => null,
+                'timeliness' => null,
+                'remarks' => $sourceIndicator->remarks,
+                'rg_efficiency_' => null,
+                'rg_quality_' => null,
+                'rg_timeliness_' => null,
+                'rg_ratingperiod_' => null,
+                'rg_mov_' => null,
+                'rg_remarks_' => null,
+            ]])
+            : $sourceItems;
 
-        DB::transaction(function () use ($sourceIndicator, $sourceItems, $userId): void {
+        DB::transaction(function () use ($sourceIndicator, $sourceItems, $userId, $nowManila): void {
             $targetYear = ctype_digit($this->yearFilter) ? (string) $this->yearFilter : (string) now()->year;
 
             $maxOrder = (int) DB::table('ipc_targets_indicators')
@@ -1355,7 +1491,7 @@ class AnnualTargetPage extends Component
                 'remarks' => $sourceIndicator->remarks,
                 'target_status' => 1,
                 'created_by' => $userId,
-                'date_created' => now(),
+                'date_created' => $nowManila,
             ]);
 
             foreach ($sourceItems as $item) {
@@ -1372,7 +1508,8 @@ class AnnualTargetPage extends Component
                     'indi_status' => 1,
                     'created_by' => $userId,
                     'modified_by' => $userId,
-                    'date_created' => now(),
+                    'date_created' => $nowManila,
+                    'date_modified' => $nowManila,
                     'rg_efficiency_' => $item->rg_efficiency_,
                     'rg_quality_' => $item->rg_quality_,
                     'rg_timeliness_' => $item->rg_timeliness_,

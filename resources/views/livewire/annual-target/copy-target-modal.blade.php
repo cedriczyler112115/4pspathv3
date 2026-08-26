@@ -94,7 +94,8 @@
         <!-- Target Listing Table -->
         <div class="flex-1 min-h-[250px] rounded-xl border border-border bg-card overflow-y-auto" style="max-height: 55vh; overflow-y: auto;">
             @php
-                $staffTargetGroups = $this->copyStaffTargetGroups();
+                $staffPaginator = $this->copyStaffTargetGroupsPaginator();
+                $staffTargetGroups = $staffPaginator->getCollection();
                 $existingActivities = $this->existingActivities;
             @endphp
 
@@ -107,8 +108,33 @@
                     {{ __('No targets found for the selected staff member and year.') }}
                 </div>
             @else
+                <div class="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
+                    <div>
+                        {{ __('Showing :from to :to of :total groups', ['from' => $staffPaginator->firstItem(), 'to' => $staffPaginator->lastItem(), 'total' => $staffPaginator->total()]) }}
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                            wire:click="goToCopyStaffPage(1)" @disabled($staffPaginator->onFirstPage())>{{ __('First') }}</button>
+                        <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                            wire:click="copyStaffPreviousPage" @disabled($staffPaginator->onFirstPage())>{{ __('Previous') }}</button>
+                        @foreach ($this->paginationElements($staffPaginator) as $element)
+                            @if ($element === 'start-ellipsis' || $element === 'end-ellipsis')
+                                <span class="px-2 text-muted-foreground">...</span>
+                            @elseif ($element === $staffPaginator->currentPage())
+                                <span class="rounded-md bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{{ $element }}</span>
+                            @else
+                                <button type="button" class="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-muted"
+                                    wire:click="goToCopyStaffPage({{ $element }})">{{ $element }}</button>
+                            @endif
+                        @endforeach
+                        <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                            wire:click="copyStaffNextPage" @disabled(!$staffPaginator->hasMorePages())>{{ __('Next') }}</button>
+                        <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                            wire:click="goToCopyStaffPage({{ $staffPaginator->lastPage() }})" @disabled($staffPaginator->onLastPage())>{{ __('Last') }}</button>
+                    </div>
+                </div>
                 <table class="w-full text-left text-xs border-collapse">
-                    <thead class="sticky top-0 z-10 bg-card shadow-sm">
+                    <thead class="sticky top-[41px] z-20 bg-card shadow-sm">
                         <tr class="border-b border-border">
                             <th class="px-3 py-2 font-semibold w-36 text-center">{{ __('Action') }}</th>
                             <th class="px-3 py-2 font-semibold w-64">{{ __('Activity / Indicator') }}</th>
@@ -202,6 +228,26 @@
                         @endforeach
                     </tbody>
                 </table>
+                <div class="sticky bottom-0 z-30 flex items-center justify-end gap-1 border-t border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                        wire:click="goToCopyStaffPage(1)" @disabled($staffPaginator->onFirstPage())>{{ __('First') }}</button>
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                        wire:click="copyStaffPreviousPage" @disabled($staffPaginator->onFirstPage())>{{ __('Previous') }}</button>
+                    @foreach ($this->paginationElements($staffPaginator) as $element)
+                        @if ($element === 'start-ellipsis' || $element === 'end-ellipsis')
+                            <span class="px-2 text-muted-foreground">...</span>
+                        @elseif ($element === $staffPaginator->currentPage())
+                            <span class="rounded-md bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{{ $element }}</span>
+                        @else
+                            <button type="button" class="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-muted"
+                                wire:click="goToCopyStaffPage({{ $element }})">{{ $element }}</button>
+                        @endif
+                    @endforeach
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                        wire:click="copyStaffNextPage" @disabled(!$staffPaginator->hasMorePages())>{{ __('Next') }}</button>
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                        wire:click="goToCopyStaffPage({{ $staffPaginator->lastPage() }})" @disabled($staffPaginator->onLastPage())>{{ __('Last') }}</button>
+                </div>
             @endif
         </div>
     </div>
@@ -259,7 +305,8 @@
         <!-- Target Listing Table -->
         <div class="flex-1 min-h-[250px] rounded-xl border border-border bg-card overflow-y-auto" style="max-height: 55vh; overflow-y: auto;">
             @php
-                $harmonizedTargetGroups = $this->copyHarmonizedTargetGroups();
+                $harmonizedPaginator = $this->copyHarmonizedTargetGroupsPaginator();
+                $harmonizedTargetGroups = $harmonizedPaginator->getCollection();
                 $existingActivities = $this->existingActivities;
             @endphp
 
@@ -272,8 +319,33 @@
                     {{ __('No harmonized targets found for the selected position and year.') }}
                 </div>
             @else
+                <div class="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
+                    <div>
+                        {{ __('Showing :from to :to of :total groups', ['from' => $harmonizedPaginator->firstItem(), 'to' => $harmonizedPaginator->lastItem(), 'total' => $harmonizedPaginator->total()]) }}
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                            wire:click="goToCopyHarmonizedPage(1)" @disabled($harmonizedPaginator->onFirstPage())>{{ __('First') }}</button>
+                        <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                            wire:click="copyHarmonizedPreviousPage" @disabled($harmonizedPaginator->onFirstPage())>{{ __('Previous') }}</button>
+                        @foreach ($this->paginationElements($harmonizedPaginator) as $element)
+                            @if ($element === 'start-ellipsis' || $element === 'end-ellipsis')
+                                <span class="px-2 text-muted-foreground">...</span>
+                            @elseif ($element === $harmonizedPaginator->currentPage())
+                                <span class="rounded-md bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{{ $element }}</span>
+                            @else
+                                <button type="button" class="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-muted"
+                                    wire:click="goToCopyHarmonizedPage({{ $element }})">{{ $element }}</button>
+                            @endif
+                        @endforeach
+                        <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                            wire:click="copyHarmonizedNextPage" @disabled(!$harmonizedPaginator->hasMorePages())>{{ __('Next') }}</button>
+                        <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                            wire:click="goToCopyHarmonizedPage({{ $harmonizedPaginator->lastPage() }})" @disabled($harmonizedPaginator->onLastPage())>{{ __('Last') }}</button>
+                    </div>
+                </div>
                 <table class="w-full text-left text-xs border-collapse">
-                    <thead class="sticky top-0 z-10 bg-card shadow-sm">
+                    <thead class="sticky top-[41px] z-20 bg-card shadow-sm">
                         <tr class="border-b border-border">
                             <th class="px-3 py-2 font-semibold w-36 text-center">{{ __('Action') }}</th>
                             <th class="px-3 py-2 font-semibold w-64">{{ __('Activity / Indicator') }}</th>
@@ -367,6 +439,26 @@
                         @endforeach
                     </tbody>
                 </table>
+                <div class="sticky bottom-0 z-30 flex items-center justify-end gap-1 border-t border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-sm">
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                        wire:click="goToCopyHarmonizedPage(1)" @disabled($harmonizedPaginator->onFirstPage())>{{ __('First') }}</button>
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                        wire:click="copyHarmonizedPreviousPage" @disabled($harmonizedPaginator->onFirstPage())>{{ __('Previous') }}</button>
+                    @foreach ($this->paginationElements($harmonizedPaginator) as $element)
+                        @if ($element === 'start-ellipsis' || $element === 'end-ellipsis')
+                            <span class="px-2 text-muted-foreground">...</span>
+                        @elseif ($element === $harmonizedPaginator->currentPage())
+                            <span class="rounded-md bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">{{ $element }}</span>
+                        @else
+                            <button type="button" class="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-muted"
+                                wire:click="goToCopyHarmonizedPage({{ $element }})">{{ $element }}</button>
+                        @endif
+                    @endforeach
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                        wire:click="copyHarmonizedNextPage" @disabled(!$harmonizedPaginator->hasMorePages())>{{ __('Next') }}</button>
+                    <button type="button" class="rounded-md border border-border px-2 py-1 text-xs font-medium disabled:opacity-50"
+                        wire:click="goToCopyHarmonizedPage({{ $harmonizedPaginator->lastPage() }})" @disabled($harmonizedPaginator->onLastPage())>{{ __('Last') }}</button>
+                </div>
             @endif
         </div>
     </div>

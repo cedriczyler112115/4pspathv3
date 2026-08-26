@@ -5,14 +5,20 @@ namespace App\Livewire\SemestralTarget;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
+use Livewire\Features\SupportFileUploads\WithFileUploads;
 use Livewire\Component;
 
 class IndicatorRows extends Component
 {
+    use WithFileUploads;
+
     #[Locked]
     public int $indicatorId;
 
@@ -37,6 +43,20 @@ class IndicatorRows extends Component
 
     public string $justificationText = '';
 
+    public bool $showAttachmentModal = false;
+
+    public ?int $attachmentItemId = null;
+
+    /** @var array<int, \Livewire\Features\SupportFileUploads\TemporaryUploadedFile> */
+    public array $attachmentFiles = [];
+
+    /** @var array<int, array{name:string,path:string,type:string,size:string}> */
+    public array $existingAttachments = [];
+
+    public int $attachmentUploadProgress = 0;
+
+    protected const ATTACHMENT_DIRECTORY = 'uploaded_movs';
+
     /** @var array<int, array{quantity_score:string, quality_score:string, timeliness_score:string, average:string}> */
     public array $scores = [];
 
@@ -47,20 +67,32 @@ class IndicatorRows extends Component
     {
         $this->indicatorId = $indicatorId;
         $this->rows = $rows;
-
-        $semId = request()->query('sem_id');
-        if (!$semId && !empty($rows[0]['semester_id'])) {
-            $semId = (int) $rows[0]['semester_id'];
+        $attachmentCounts = $this->attachmentCountMap();
+        foreach ($this->rows as &$row) {
+            $itemId = (int) ($row['sem_item_id'] ?? 0);
+            $row['attachment_count'] = $attachmentCounts[$itemId] ?? 0;
         }
+        unset($row);
 
-        if ($semId) {
-            $lock = DB::table('ipc_semester')->where('id', $semId)->value('lock');
-            $this->isSemesterLocked = ((int) $lock === 1);
+        if ($isSemesterLocked) {
+            $this->isSemesterLocked = true;
         } else {
-            $this->isSemesterLocked = $isSemesterLocked;
+            $semId = request()->query('sem_id');
+            if (!$semId && !empty($rows[0]['semester_id'])) {
+                $semId = (int) $rows[0]['semester_id'];
+            }
+
+            if ($semId) {
+                if (!array_key_exists($semId, static::$semesterRecordCache)) {
+                    static::$semesterRecordCache[$semId] = DB::table('ipc_semester')->where('id', $semId)->first();
+                }
+                $semRecord = static::$semesterRecordCache[$semId];
+                $this->isSemesterLocked = ((int) ($semRecord->lock ?? 0) === 1);
+            } else {
+                $this->isSemesterLocked = false;
+            }
         }
 
-        $this->initScores();
     }
 
     /** @var array<int, object|null> */
@@ -180,6 +212,263 @@ class IndicatorRows extends Component
         $this->pendingSubTargets = [];
         $this->showJustificationModal = false;
         $this->justificationText = '';
+        $this->cancelAttachmentUpload();
+    }
+
+    public function openAttachmentUpload(int $itemId): void
+    {
+        if ($itemId <= 0) {
+            return;
+        }
+
+        $this->attachmentItemId = $itemId;
+        $this->attachmentFiles = [];
+        $this->attachmentUploadProgress = 0;
+        $this->existingAttachments = $this->attachmentsForItem($itemId);
+        $this->showAttachmentModal = true;
+    }
+
+    public function cancelAttachmentUpload(): void
+    {
+        $this->showAttachmentModal = false;
+        $this->attachmentItemId = null;
+        $this->attachmentFiles = [];
+        $this->existingAttachments = [];
+        $this->attachmentUploadProgress = 0;
+    }
+
+    public function removeQueuedAttachment(int $index): void
+    {
+        if (isset($this->attachmentFiles[$index])) {
+            array_splice($this->attachmentFiles, $index, 1);
+            $this->attachmentFiles = array_values($this->attachmentFiles);
+        }
+    }
+
+    public function saveAttachmentUploads(): void
+    {
+        $userId = Auth::id();
+        $itemId = $this->attachmentItemId;
+
+        if ($userId === null || $itemId === null || $itemId <= 0) {
+            return;
+        }
+
+        $owned = DB::table('ipc_sem_targets_indicator_itemlist as itl')
+            ->join('ipc_sem_targets_indicator as sti', 'sti.id', '=', 'itl.sem_target_id')
+            ->join('ipc_semester as sem', 'sem.id', '=', 'sti.semester_id')
+            ->where('itl.id', $itemId)
+            ->where('sem.user_id', $userId)
+            ->exists();
+
+        if (! $owned) {
+            Flux::toast(variant: 'danger', text: __('Unable to upload attachments for this target.'));
+
+            return;
+        }
+
+        $validated = $this->validate([
+            'attachmentFiles' => ['required', 'array', 'min:1', 'max:20'],
+            'attachmentFiles.*' => ['file', 'mimes:jpg,jpeg,png,pdf,jfif,webp', 'max:10240'],
+        ], [
+            'attachmentFiles.required' => __('Please choose at least one file to upload.'),
+            'attachmentFiles.*.mimes' => __('Only JPG, PNG, WEBP, JFIF, and PDF files are allowed.'),
+            'attachmentFiles.*.max' => __('Each file must be 10MB or smaller.'),
+        ]);
+
+        $files = $validated['attachmentFiles'] ?? [];
+        if (! is_array($files) || empty($files)) {
+            return;
+        }
+
+        $now = Carbon::now('Asia/Manila');
+        $uploadDir = public_path(self::ATTACHMENT_DIRECTORY);
+        File::ensureDirectoryExists($uploadDir);
+
+        $storedPaths = [];
+
+        try {
+            foreach ($files as $index => $file) {
+                if (! $file instanceof UploadedFile) {
+                    continue;
+                }
+
+                $extension = strtolower((string) $file->getClientOriginalExtension());
+                $baseName = pathinfo((string) $file->getClientOriginalName(), PATHINFO_FILENAME);
+                $safeBase = preg_replace('/[^A-Za-z0-9_\-]+/', '_', $baseName) ?: 'mov';
+                $safeBase = trim(substr($safeBase, 0, 80), '_-') ?: 'mov';
+                $fileName = $itemId . '_' . $safeBase . '_' . $now->format('YmdHis') . '_' . ($index + 1) . '.' . $extension;
+                $destinationPath = $uploadDir . DIRECTORY_SEPARATOR . $fileName;
+                $temporaryPath = $file->getRealPath();
+
+                // Copying avoids Windows file-lock failures caused by moving Livewire temp files.
+                if ($temporaryPath === false || ! File::copy($temporaryPath, $destinationPath)) {
+                    throw new \RuntimeException('Unable to copy the uploaded MOV file.');
+                }
+
+                $storedPaths[] = $destinationPath;
+            }
+
+            DB::table('ipc_sem_targets_indicator_itemlist')
+                ->where('id', $itemId)
+                ->update([
+                    'has_attachments' => 1,
+                    'modified_by' => $userId,
+                    'date_modified' => $now,
+                ]);
+        } catch (\Throwable $exception) {
+            foreach ($storedPaths as $storedPath) {
+                File::delete($storedPath);
+            }
+
+            report($exception);
+            Flux::toast(variant: 'danger', text: __('The attachments could not be saved. Please try again.'));
+
+            return;
+        }
+
+        request()->attributes->remove('_semestral_mov_attachment_counts');
+        $attachmentCounts = $this->attachmentCountMap();
+        $this->existingAttachments = $this->attachmentsForItem($itemId);
+        foreach ($this->rows as &$row) {
+            if ((int) ($row['sem_item_id'] ?? 0) !== $itemId) {
+                continue;
+            }
+
+            $row['has_attachments'] = 1;
+            $row['attachment_count'] = $attachmentCounts[$itemId] ?? count($this->existingAttachments);
+        }
+        unset($row);
+
+        $this->attachmentFiles = [];
+        $this->attachmentUploadProgress = 0;
+        $this->dispatch('semestral-target-updated');
+        Flux::toast(variant: 'success', text: __('Attachments uploaded successfully.'));
+    }
+
+    /** @return array<int, int> */
+    protected function attachmentCountMap(): array
+    {
+        $cacheKey = '_semestral_mov_attachment_counts';
+        if (request()->attributes->has($cacheKey)) {
+            return request()->attributes->get($cacheKey);
+        }
+
+        $counts = [];
+        $uploadDir = public_path(self::ATTACHMENT_DIRECTORY);
+        if (File::isDirectory($uploadDir)) {
+            foreach (File::files($uploadDir) as $file) {
+                if (preg_match('/^(\d+)_.*_\d{14}_\d+\.([a-z0-9]+)$/i', $file->getFilename(), $matches) !== 1) {
+                    continue;
+                }
+
+                $itemId = (int) $matches[1];
+                $counts[$itemId] = ($counts[$itemId] ?? 0) + 1;
+            }
+        }
+
+        request()->attributes->set($cacheKey, $counts);
+
+        return $counts;
+    }
+
+    /** @return array<int, array{name:string,path:string,type:string,size:string}> */
+    protected function attachmentsForItem(int $itemId): array
+    {
+        $uploadDir = public_path(self::ATTACHMENT_DIRECTORY);
+        if (! File::isDirectory($uploadDir)) {
+            return [];
+        }
+
+        $pattern = '/^' . preg_quote((string) $itemId, '/') . '_(.+)_(\d{14})_(\d+)\.([a-z0-9]+)$/i';
+
+        return collect(File::files($uploadDir))
+            ->filter(fn ($file): bool => preg_match($pattern, $file->getFilename()) === 1)
+            ->sortByDesc(fn ($file): int => $file->getMTime())
+            ->map(function ($file) use ($pattern): array {
+                $extension = strtolower($file->getExtension());
+                $displayName = $file->getFilename();
+                if (preg_match($pattern, $displayName, $matches) === 1) {
+                    $originalName = trim((string) ($matches[1] ?? ''), '_-');
+                    $displayName = $originalName !== '' ? $originalName . '.' . $extension : $displayName;
+                }
+
+                return [
+                    'name' => $displayName,
+                    'path' => self::ATTACHMENT_DIRECTORY . '/' . $file->getFilename(),
+                    'filename' => $file->getFilename(),
+                    'url' => asset(self::ATTACHMENT_DIRECTORY . '/' . $file->getFilename()),
+                    'type' => $extension === 'pdf' ? 'pdf' : 'image',
+                    'size' => number_format($file->getSize() / 1024 / 1024, 2) . ' MB',
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function deleteAttachment(string $filename): void
+    {
+        $userId = Auth::id();
+        $itemId = $this->attachmentItemId;
+
+        if ($userId === null || $itemId === null || $itemId <= 0 || empty($filename)) {
+            return;
+        }
+
+        $owned = DB::table('ipc_sem_targets_indicator_itemlist as itl')
+            ->join('ipc_sem_targets_indicator as sti', 'sti.id', '=', 'itl.sem_target_id')
+            ->join('ipc_semester as sem', 'sem.id', '=', 'sti.semester_id')
+            ->where('itl.id', $itemId)
+            ->where('sem.user_id', $userId)
+            ->exists();
+
+        if (! $owned) {
+            Flux::toast(variant: 'danger', text: __('Unable to delete attachments for this target.'));
+
+            return;
+        }
+
+        $pattern = '/^' . preg_quote((string) $itemId, '/') . '_(.+)_(\d{14})_(\d+)\.([a-z0-9]+)$/i';
+        if (preg_match($pattern, $filename) !== 1) {
+            Flux::toast(variant: 'danger', text: __('Invalid attachment file specified.'));
+
+            return;
+        }
+
+        $uploadDir = public_path(self::ATTACHMENT_DIRECTORY);
+        $filePath = $uploadDir . DIRECTORY_SEPARATOR . $filename;
+
+        if (File::exists($filePath)) {
+            File::delete($filePath);
+        }
+
+        request()->attributes->remove('_semestral_mov_attachment_counts');
+        $now = Carbon::now('Asia/Manila');
+        $remainingAttachments = $this->attachmentsForItem($itemId);
+        $hasAttachments = count($remainingAttachments) > 0 ? 1 : null;
+
+        DB::table('ipc_sem_targets_indicator_itemlist')
+            ->where('id', $itemId)
+            ->update([
+                'has_attachments' => $hasAttachments,
+                'modified_by' => $userId,
+                'date_modified' => $now,
+            ]);
+
+        $this->existingAttachments = $remainingAttachments;
+
+        foreach ($this->rows as &$row) {
+            if ((int) ($row['sem_item_id'] ?? 0) !== $itemId) {
+                continue;
+            }
+
+            $row['has_attachments'] = $hasAttachments;
+            $row['attachment_count'] = count($remainingAttachments);
+        }
+        unset($row);
+
+        $this->dispatch('semestral-target-updated');
+        Flux::toast(variant: 'success', text: __('Attachment removed successfully.'));
     }
 
     public function save(): void
@@ -460,6 +749,7 @@ class IndicatorRows extends Component
                 'stii.na_quantity',
                 'stii.na_quality',
                 'stii.na_timeliness',
+                'stii.has_attachments',
                 'stii.average',
                 'stii.actual_accomp',
                 'stii.target_movs',
@@ -468,7 +758,14 @@ class IndicatorRows extends Component
             ->get();
 
         if ($dbRows->isNotEmpty()) {
-            $this->rows = $dbRows->map(fn ($r) => (array) $r)->all();
+            $attachmentCounts = $this->attachmentCountMap();
+            $this->rows = $dbRows->map(function ($r) use ($attachmentCounts): array {
+                $arr = (array) $r;
+                $itemId = (int) ($arr['sem_item_id'] ?? 0);
+                $arr['attachment_count'] = $attachmentCounts[$itemId] ?? 0;
+
+                return $arr;
+            })->all();
             $this->scores = [];
             $this->initScores();
         }
@@ -487,24 +784,13 @@ class IndicatorRows extends Component
                 $naT = (int) ($row['na_timeliness'] ?? 0);
                 $ave = $row['average'] ?? null;
                 $acc = $row['actual_accomp'] ?? null;
-                $movs = filled($row['target_movs'] ?? null) ? $row['target_movs'] : ($row['rg_movs'] ?? null);
-                $rem = filled($row['target_remarks'] ?? null) ? $row['target_remarks'] : ($row['rg_remarks'] ?? null);
+                $movs = $row['target_movs'] ?? null;
+                $rem = $row['target_remarks'] ?? null;
 
                 // Fallback to 'N/A' text if na_quantity = 1, na_quality = 1, or na_timeliness = 1
                 $qStr = $naQ === 1 ? 'N/A' : ($q !== null && $q !== '' ? (string) $q : '');
                 $qlStr = $naQl === 1 ? 'N/A' : ($ql !== null && $ql !== '' ? (string) $ql : '');
                 $tStr = $naT === 1 ? 'N/A' : ($t !== null && $t !== '' ? (string) $t : '');
-
-                // Fallback inference if na_* column was not populated previously
-                if ($qStr === '' && $q === null && ($ave !== null || $ql !== null || $t !== null)) {
-                    $qStr = 'N/A';
-                }
-                if ($qlStr === '' && $ql === null && ($ave !== null || $q !== null || $t !== null)) {
-                    $qlStr = 'N/A';
-                }
-                if ($tStr === '' && $t === null && ($ave !== null || $q !== null || $ql !== null)) {
-                    $tStr = 'N/A';
-                }
 
                 $this->scores[$itemId] = [
                     'quantity_score' => $qStr,
@@ -736,15 +1022,34 @@ class IndicatorRows extends Component
             ->values()
             ->all();
 
-        $historyRecords = DB::table('ipc_sem_target_edit_histories')
-            ->where(function ($query) use ($itemIds) {
-                $query->where('sem_target_id', $this->indicatorId);
-                if (! empty($itemIds)) {
-                    $query->orWhereIn('sem_item_id', $itemIds);
-                }
-            })
-            ->select(['sem_target_id', 'sem_item_id'])
-            ->get();
+        $semesterId = (int) ($this->rows[0]['semester_id'] ?? 0);
+        if ($semesterId > 0) {
+            $historyCacheKey = 'semestral_target_history_'.$semesterId;
+            $semesterHistories = request()->attributes->get($historyCacheKey);
+
+            if (! $semesterHistories instanceof Collection) {
+                $semesterHistories = DB::table('ipc_sem_target_edit_histories as history')
+                    ->join('ipc_sem_targets_indicator as target', 'target.id', '=', 'history.sem_target_id')
+                    ->where('target.semester_id', $semesterId)
+                    ->select(['history.sem_target_id', 'history.sem_item_id', 'history.field_name'])
+                    ->get();
+                request()->attributes->set($historyCacheKey, $semesterHistories);
+            }
+
+            $historyRecords = $semesterHistories
+                ->filter(fn ($record): bool => (int) $record->sem_target_id === $this->indicatorId
+                    || in_array((int) $record->sem_item_id, $itemIds, true));
+        } else {
+            $historyRecords = DB::table('ipc_sem_target_edit_histories')
+                ->where(function ($query) use ($itemIds) {
+                    $query->where('sem_target_id', $this->indicatorId);
+                    if (! empty($itemIds)) {
+                        $query->orWhereIn('sem_item_id', $itemIds);
+                    }
+                })
+                ->select(['sem_target_id', 'sem_item_id', 'field_name'])
+                ->get();
+        }
 
         $hasGroupHistory = $historyRecords->isNotEmpty();
         $hasTargetLevelHistory = $historyRecords->contains(fn ($r) => (int) $r->sem_target_id === $this->indicatorId);
@@ -758,33 +1063,16 @@ class IndicatorRows extends Component
             }
         }
 
-        $isTargetNewlyAdded = DB::table('ipc_sem_target_edit_histories')
-            ->where('field_name', 'created')
-            ->where('sem_target_id', $this->indicatorId)
-            ->where(function ($q) {
-                $q->whereNull('sem_item_id')->orWhere('sem_item_id', 0);
-            })
-            ->exists();
-
-        $semesterId = (int) ($this->rows[0]['semester_id'] ?? 0);
-        if ($semesterId <= 0) {
-            $semesterId = (int) DB::table('ipc_sem_targets_indicator')
-                ->where('id', $this->indicatorId)
-                ->value('semester_id');
-        }
-
-        $isSemesterLocked = false;
-        if ($semesterId > 0) {
-            $semLock = DB::table('ipc_semester')->where('id', $semesterId)->value('lock');
-            $isSemesterLocked = (int) $semLock === 1;
-        }
+        $isTargetNewlyAdded = $historyRecords->contains(fn ($record): bool => $record->field_name === 'created'
+            && (int) $record->sem_target_id === $this->indicatorId
+            && empty($record->sem_item_id));
 
         return view('livewire.semestral-target.indicator-rows', [
             'categories' => $categories,
             'hasGroupHistory' => $hasGroupHistory,
             'hasHistoryByItem' => $hasHistoryByItem,
             'isTargetNewlyAdded' => $isTargetNewlyAdded,
-            'isSemesterLocked' => $isSemesterLocked,
+            'isSemesterLocked' => $this->isSemesterLocked,
         ]);
     }
 

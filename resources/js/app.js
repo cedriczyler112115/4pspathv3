@@ -643,7 +643,8 @@ function updateSidebarActiveLinks() {
     ];
 
     document.querySelectorAll('[data-debug-sidebar="desktop"], [data-debug-sidebar="mobile"]').forEach((sidebar) => {
-        sidebar.querySelectorAll('a[wire\\:navigate]').forEach((link) => {
+        const links = Array.from(sidebar.querySelectorAll('a[wire\\:navigate]'));
+        const candidates = links.map((link) => {
             let targetPath = null;
 
             try {
@@ -652,47 +653,344 @@ function updateSidebarActiveLinks() {
                 targetPath = null;
             }
 
-            const isActive = targetPath !== null && targetPath === currentPath;
+            const isExact = targetPath !== null && targetPath === currentPath;
+            const isNested = targetPath !== null
+                && targetPath !== '/'
+                && currentPath.startsWith(`${targetPath}/`);
+
+            return { link, targetPath, isExact, isNested };
+        });
+
+        const activeCandidate = candidates
+            .filter(({ isExact, isNested }) => isExact || isNested)
+            .sort((left, right) => {
+                if (left.isExact !== right.isExact) {
+                    return left.isExact ? -1 : 1;
+                }
+
+                return (right.targetPath?.length ?? 0) - (left.targetPath?.length ?? 0);
+            })[0];
+
+        candidates.forEach(({ link }) => {
+            const isActive = link === activeCandidate?.link;
 
             link.setAttribute('aria-current', isActive ? 'page' : 'false');
             activeClasses.forEach((cls) => link.classList.toggle(cls, isActive));
             inactiveClasses.forEach((cls) => link.classList.toggle(cls, !isActive));
+
+            if (isActive) {
+                link.closest('details')?.setAttribute('open', '');
+            }
         });
     });
 }
 
-function resizeTextarea(textarea) {
-    if (! textarea || textarea.tagName !== 'TEXTAREA') {
+const pendingAutosizeTextareas = new Set();
+let autosizeFrame = null;
+
+function scheduleTextareaResize(textarea) {
+    if (! textarea?.matches?.('textarea[data-autosize="true"]')) {
         return;
     }
 
-    textarea.style.overflow = 'hidden';
-    textarea.style.resize = 'none';
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    pendingAutosizeTextareas.add(textarea);
+
+    if (autosizeFrame !== null) {
+        return;
+    }
+
+    autosizeFrame = requestAnimationFrame(() => {
+        autosizeFrame = null;
+        const textareas = Array.from(pendingAutosizeTextareas).filter((item) => item.isConnected);
+        pendingAutosizeTextareas.clear();
+
+        // Separate writes, reads, then writes to avoid a forced layout per textarea.
+        textareas.forEach((item) => {
+            item.style.overflow = 'hidden';
+            item.style.resize = 'none';
+            item.style.height = 'auto';
+        });
+        const heights = textareas.map((item) => item.scrollHeight);
+        textareas.forEach((item, index) => {
+            item.style.height = `${heights[index]}px`;
+            item.dataset.autosizeReady = 'true';
+        });
+    });
 }
 
 function initAutosizeTextareas(root = document) {
-    root.querySelectorAll('textarea[data-autosize="true"]').forEach((textarea) => {
-        if (textarea.dataset.autosizeBound === 'true') {
-            resizeTextarea(textarea);
+    const textareas = [];
+
+    if (root.matches?.('textarea[data-autosize="true"]')) {
+        textareas.push(root);
+    }
+
+    root.querySelectorAll?.('textarea[data-autosize="true"]').forEach((textarea) => textareas.push(textarea));
+    textareas.forEach(scheduleTextareaResize);
+}
+
+['input', 'focusin', 'change'].forEach((eventName) => {
+    document.addEventListener(eventName, (event) => scheduleTextareaResize(event.target));
+});
+
+window.semestralScoreRow = (initial) => ({
+    ...initial,
+    lastSavedStr: '',
+    saveTimer: null,
+    confirmed: null,
+    activeSaveField: '',
+    initRow() {
+        const storageKey = `sem_target_drafts_${this.semId || 0}`;
+
+        try {
+            const drafts = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            let draft = drafts[this.itemId];
+
+            if (draft && (! draft.cachedAt || Date.now() - draft.cachedAt > 900000)) {
+                delete drafts[this.itemId];
+                localStorage.setItem(storageKey, JSON.stringify(drafts));
+                draft = null;
+            }
+
+            if (draft) {
+                ['q', 'ql', 't', 'accomp', 'movs', 'remarks'].forEach((field) => {
+                    if (draft[field] !== undefined) {
+                        this[field] = draft[field];
+                    }
+                });
+            }
+        } catch {
+            // Storage can be unavailable in private browsing or restricted contexts.
+        }
+
+        this.computeAverage(false);
+        this.lastSavedStr = JSON.stringify(this.payload());
+        this.confirmed = JSON.parse(this.lastSavedStr);
+    },
+    payload() {
+        return {
+            id: this.itemId,
+            quantity_score: String(this.q || '').trim(),
+            quality_score: String(this.ql || '').trim(),
+            timeliness_score: String(this.t || '').trim(),
+            average: String(this.avg || '').trim(),
+            actual_accomp: String(this.accomp || '').trim(),
+            target_movs: String(this.movs || '').trim(),
+            target_remarks: String(this.remarks || '').trim(),
+        };
+    },
+    saveLocalDraft() {
+        const storageKey = `sem_target_drafts_${this.semId || 0}`;
+
+        try {
+            const drafts = JSON.parse(localStorage.getItem(storageKey) || '{}');
+            drafts[this.itemId] = {
+                q: this.q,
+                ql: this.ql,
+                t: this.t,
+                avg: this.avg,
+                accomp: this.accomp,
+                movs: this.movs,
+                remarks: this.remarks,
+                cachedAt: Date.now(),
+            };
+            localStorage.setItem(storageKey, JSON.stringify(drafts));
+        } catch {
+            // Keep optimistic editing available when storage is unavailable.
+        }
+    },
+    scheduleSave(field = '') {
+        if (field) {
+            this.activeSaveField = field;
+        }
+        this.saveLocalDraft();
+        clearTimeout(this.saveTimer);
+        this.saveTimer = setTimeout(() => this.saveField(), 500);
+    },
+    saveField() {
+        const currentPayload = this.payload();
+
+        if (this.lastSavedStr === JSON.stringify(currentPayload)) {
             return;
         }
 
-        const handleInput = () => {
-            requestAnimationFrame(() => resizeTextarea(textarea));
+        if (this.activeSaveField) {
+            currentPayload.field = this.activeSaveField;
+        }
+
+        this.$dispatch('queue-score-save', currentPayload);
+    },
+    computeAverage(shouldSave = true) {
+        const values = [this.q, this.ql, this.t].map((value) => String(value || '').trim().toUpperCase());
+        const numericValues = values.filter((value) => value !== '' && ! Number.isNaN(Number.parseFloat(value)))
+            .map((value) => Number.parseFloat(value));
+
+        if (numericValues.length > 0) {
+            this.avg = (numericValues.reduce((total, value) => total + value, 0) / numericValues.length).toFixed(2);
+        } else {
+            this.avg = values.includes('N/A') ? 'N/A' : '';
+        }
+
+        if (shouldSave) {
+            this.scheduleSave();
+        }
+        window.dispatchEvent(new CustomEvent('recalculate-function-scores'));
+    },
+});
+
+window.semestralTargetGroup = (hasHistoryByItem) => ({
+    hasHistoryByItem,
+    draggingRow: null,
+    dragHandlePressed: false,
+    isSorting: false,
+    showContextMenu: false,
+    contextX: 0,
+    contextY: 0,
+    activeSubMenu: null,
+    subMenuX: 0,
+    subMenuY: 0,
+    deleteSubMenuX: 0,
+    deleteSubMenuY: 0,
+    contextKra: 1,
+    contextIndicatorId: 0,
+    contextItemId: 0,
+    canDeleteTarget: true,
+    canDeleteSubTarget: false,
+    isDraggingMenu: false,
+    menuDragFrame: null,
+    pressDragHandle() {
+        this.dragHandlePressed = true;
+        document.documentElement.classList.add('annual-target-is-dragging');
+        document.body.style.setProperty('cursor', 'grabbing', 'important');
+    },
+    releaseDragHandle() {
+        if (this.draggingRow !== null) return;
+        this.dragHandlePressed = false;
+        document.documentElement.classList.remove('annual-target-is-dragging');
+        document.body.style.removeProperty('cursor');
+    },
+    startDrag(event, target) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('application/json', JSON.stringify(target));
+        this.draggingRow = target.indicatorId;
+        this.pressDragHandle();
+    },
+    endDrag() {
+        this.draggingRow = null;
+        this.dragHandlePressed = false;
+        document.documentElement.classList.remove('annual-target-is-dragging');
+        document.body.style.removeProperty('cursor');
+    },
+    dropOn(event, target) {
+        const raw = event.dataTransfer.getData('application/json');
+
+        if (raw) {
+            this.isSorting = true;
+            this.$dispatch('semestral-target-dropped', { source: JSON.parse(raw), target });
+        }
+    },
+    openContextMenu(event, kra, indicatorId, itemId, subTargetCount, isLocked = false) {
+        event.preventDefault();
+        if (isLocked) return;
+
+        window.dispatchEvent(new CustomEvent('close-all-target-context-menus'));
+        const clickedCell = event.target?.closest('td');
+        const isGroupCell = clickedCell
+            ? clickedCell.getAttribute('data-col-type') === 'kra-action' || clickedCell.hasAttribute('rowspan')
+            : false;
+
+        this.contextKra = kra;
+        this.contextIndicatorId = indicatorId;
+        this.contextItemId = itemId;
+        this.canDeleteTarget = subTargetCount <= 1 || isGroupCell;
+        this.canDeleteSubTarget = subTargetCount > 1 && ! isGroupCell;
+        this.activeSubMenu = null;
+        this.contextX = Math.max(8, Math.min(event.clientX, window.innerWidth - 198));
+        this.contextY = Math.max(8, Math.min(event.clientY, window.innerHeight - 168));
+        this.showContextMenu = true;
+    },
+    closeContextMenu() {
+        this.showContextMenu = false;
+        this.activeSubMenu = null;
+    },
+    positionSubMenu(type) {
+        const isDelete = type === 'delete';
+        let x = this.contextX + 185;
+        let y = this.contextY + (isDelete ? 62 : 28);
+        const width = 180;
+        const height = 100;
+
+        if (x + width > window.innerWidth) x = this.contextX - width + 5;
+        if (y + height > window.innerHeight) y = window.innerHeight - height - 8;
+
+        if (isDelete) {
+            this.deleteSubMenuX = Math.max(8, x);
+            this.deleteSubMenuY = Math.max(8, y);
+        } else {
+            this.subMenuX = Math.max(8, x);
+            this.subMenuY = Math.max(8, y);
+        }
+    },
+    openAddSubMenu() {
+        this.activeSubMenu = 'add';
+        this.positionSubMenu('add');
+    },
+    openDeleteSubMenu() {
+        this.activeSubMenu = 'delete';
+        this.positionSubMenu('delete');
+    },
+    toggleAddSubMenu() {
+        this.activeSubMenu === 'add' ? this.activeSubMenu = null : this.openAddSubMenu();
+    },
+    toggleDeleteSubMenu() {
+        this.activeSubMenu === 'delete' ? this.activeSubMenu = null : this.openDeleteSubMenu();
+    },
+    startMenuDrag(event) {
+        this.isDraggingMenu = true;
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const initialX = this.contextX;
+        const initialY = this.contextY;
+        let latestEvent = event;
+
+        const onPointerMove = (pointerEvent) => {
+            if (! this.isDraggingMenu) return;
+            latestEvent = pointerEvent;
+            if (this.menuDragFrame !== null) return;
+
+            this.menuDragFrame = requestAnimationFrame(() => {
+                this.menuDragFrame = null;
+                this.contextX = Math.max(4, Math.min(window.innerWidth - 230, initialX + latestEvent.clientX - startX));
+                this.contextY = Math.max(4, Math.min(window.innerHeight - 250, initialY + latestEvent.clientY - startY));
+                if (this.activeSubMenu) this.positionSubMenu(this.activeSubMenu);
+            });
+        };
+        const onPointerUp = () => {
+            this.isDraggingMenu = false;
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
         };
 
-        textarea.addEventListener('input', handleInput);
-        textarea.addEventListener('focus', handleInput);
-        textarea.addEventListener('keyup', handleInput);
-        textarea.addEventListener('change', handleInput);
-        textarea.dataset.autosizeBound = 'true';
-        textarea.dataset.autosizeReady = 'true';
-        resizeTextarea(textarea);
-        setTimeout(() => resizeTextarea(textarea), 0);
+        window.addEventListener('pointermove', onPointerMove, { passive: true });
+        window.addEventListener('pointerup', onPointerUp, { once: true });
+    },
+});
+
+let closeTargetMenusFrame = null;
+const closeTargetMenus = () => window.dispatchEvent(new CustomEvent('close-all-target-context-menus'));
+
+window.addEventListener('scroll', () => {
+    if (closeTargetMenusFrame !== null) return;
+
+    closeTargetMenusFrame = requestAnimationFrame(() => {
+        closeTargetMenusFrame = null;
+        closeTargetMenus();
     });
-}
+}, { passive: true });
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeTargetMenus();
+});
 
 ensureThemeAndAppearance();
 updateSidebarActiveLinks();
@@ -730,30 +1028,13 @@ document.addEventListener('livewire:navigated', () => {
     initAutosizeTextareas();
 });
 
-document.addEventListener('livewire:rendered', () => {
-    initAutosizeTextareas();
-});
-
-document.addEventListener('livewire:init', () => {
-    if (window.Livewire?.hook) {
-        window.Livewire.hook('morph.updated', () => {
-            requestAnimationFrame(() => initAutosizeTextareas());
+const autosizeObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                initAutosizeTextareas(node);
+            }
         });
-    }
-});
-
-let autosizeFrame = null;
-
-const autosizeObserver = new MutationObserver(() => {
-    if (autosizeFrame !== null) {
-        return;
-    }
-
-    // A Livewire table replacement can add hundreds of nodes at once. Scan once
-    // after the batch instead of rescanning every nested node independently.
-    autosizeFrame = requestAnimationFrame(() => {
-        autosizeFrame = null;
-        initAutosizeTextareas();
     });
 });
 

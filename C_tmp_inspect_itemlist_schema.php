@@ -1,0 +1,9 @@
+<?php
+
+require __DIR__ . '/vendor/autoload.php';
+
+$app = require __DIR__ . '/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+
+print_r(Illuminate\Support\Facades\Schema::getColumnListing('ipc_targets_indicators_itemlist'));
