@@ -2022,6 +2022,85 @@ class SemestralTargetPage extends Component
         return (int) ($semRecord->lock ?? 0) === 1;
     }
 
+    public function hasIncompleteSemestralTargets(): bool
+    {
+        $semId = $this->semId;
+        if (!$semId) {
+            return true;
+        }
+
+        $totalIndicators = DB::table('ipc_sem_targets_indicator')
+            ->where('semester_id', $semId)
+            ->count();
+
+        if ($totalIndicators === 0) {
+            return true;
+        }
+
+        return DB::table('ipc_sem_targets_indicator as sti')
+            ->where('sti.semester_id', $semId)
+            ->where(function ($q): void {
+                $q->whereNotExists(function ($sub): void {
+                    $sub->selectRaw('1')
+                        ->from('ipc_sem_targets_indicator_itemlist as item')
+                        ->whereColumn('item.sem_target_id', 'sti.id');
+                })
+                ->orWhereExists(function ($items): void {
+                    $items->selectRaw('1')
+                        ->from('ipc_sem_targets_indicator_itemlist as incomplete_items')
+                        ->whereColumn('incomplete_items.sem_target_id', 'sti.id')
+                        ->where(function ($incomplete): void {
+                            $incomplete->where(function ($notAllNa): void {
+                                $notAllNa->whereNull('incomplete_items.na_quantity')
+                                    ->orWhere('incomplete_items.na_quantity', '!=', 1)
+                                    ->orWhereNull('incomplete_items.na_quality')
+                                    ->orWhere('incomplete_items.na_quality', '!=', 1)
+                                    ->orWhereNull('incomplete_items.na_timeliness')
+                                    ->orWhere('incomplete_items.na_timeliness', '!=', 1);
+                            })
+                            ->where(function ($missingFields): void {
+                                $missingFields->whereNull('incomplete_items.actual_accomp')
+                                    ->orWhereRaw("TRIM(COALESCE(incomplete_items.actual_accomp, '')) = ''")
+                                    ->orWhereNull('incomplete_items.has_attachments')
+                                    ->orWhere('incomplete_items.has_attachments', 0)
+                                    ->orWhereRaw("TRIM(COALESCE(incomplete_items.has_attachments, '')) = ''")
+                                    ->orWhereNull('incomplete_items.target_movs')
+                                    ->orWhereRaw("TRIM(COALESCE(incomplete_items.target_movs, '')) = ''")
+                                    ->orWhere(function ($qEmpty): void {
+                                        $qEmpty->where(function ($qNull): void {
+                                            $qNull->whereNull('incomplete_items.quantity_score')
+                                                ->orWhereRaw("TRIM(COALESCE(incomplete_items.quantity_score, '')) IN ('', '0', '0.00')");
+                                        })->where(function ($qNotNa): void {
+                                            $qNotNa->whereNull('incomplete_items.na_quantity')
+                                                ->orWhere('incomplete_items.na_quantity', '!=', 1);
+                                        });
+                                    })
+                                    ->orWhere(function ($qlEmpty): void {
+                                        $qlEmpty->where(function ($qlNull): void {
+                                            $qlNull->whereNull('incomplete_items.quality_score')
+                                                ->orWhereRaw("TRIM(COALESCE(incomplete_items.quality_score, '')) IN ('', '0', '0.00')");
+                                        })->where(function ($qlNotNa): void {
+                                            $qlNotNa->whereNull('incomplete_items.na_quality')
+                                                ->orWhere('incomplete_items.na_quality', '!=', 1);
+                                        });
+                                    })
+                                    ->orWhere(function ($tEmpty): void {
+                                        $tEmpty->where(function ($tNull): void {
+                                            $tNull->whereNull('incomplete_items.timeliness_score')
+                                                ->orWhereRaw("TRIM(COALESCE(incomplete_items.timeliness_score, '')) IN ('', '0', '0.00')");
+                                        })->where(function ($tNotNa): void {
+                                            $tNotNa->whereNull('incomplete_items.na_timeliness')
+                                                ->orWhere('incomplete_items.na_timeliness', '!=', 1);
+                                        });
+                                    });
+                            });
+                        });
+                });
+            })
+            ->exists();
+    }
+
+
     public function openLockConfirmModal(): void
     {
         $this->showLockConfirmModal = true;

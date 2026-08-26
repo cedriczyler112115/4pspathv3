@@ -7,7 +7,7 @@
                     supportScore: '0.00000',
                     finalScore: @js($finalRating ?: '0.00000'),
                     adjectival: @js($adjectivalRating ?: 'N/A'),
-                    hasIncompleteTarget: false,
+                    hasIncompleteTarget: Boolean(@js($this->hasIncompleteSemestralTargets())),
                     format5DecimalsWithoutRounding(num) {
                         const val = parseFloat(num);
                         if (isNaN(val) || val <= 0) return '0.00000';
@@ -39,11 +39,32 @@
                         document.addEventListener('keyup', () => updateAll(), true);
                         document.addEventListener('paste', () => updateAll(), true);
 
-                        this.$watch('$wire.targetStatusFilter', (val) => {
+                        this.$watch('$wire.targetStatusFilter', () => {
                             this.$nextTick(() => updateAll());
                             setTimeout(() => updateAll(), 100);
-                            setTimeout(() => updateAll(), 300);
                         });
+                        this.$watch('$wire.categoryFilter', () => {
+                            this.$nextTick(() => updateAll());
+                            setTimeout(() => updateAll(), 100);
+                        });
+                        this.$watch('$wire.search', () => {
+                            this.$nextTick(() => updateAll());
+                            setTimeout(() => updateAll(), 100);
+                        });
+                        this.$watch('$wire.perPage', () => {
+                            this.$nextTick(() => updateAll());
+                            setTimeout(() => updateAll(), 100);
+                        });
+
+                        if (window.Livewire && !this._livewireHookRegistered) {
+                            this._livewireHookRegistered = true;
+                            window.Livewire.hook('commit', ({ succeed }) => {
+                                succeed(() => {
+                                    this.$nextTick(() => updateAll());
+                                    setTimeout(() => updateAll(), 100);
+                                });
+                            });
+                        }
 
                         if (window.MutationObserver && !this._targetObserver) {
                             this._targetObserver = new MutationObserver(() => updateAll());
@@ -56,14 +77,15 @@
                         }
                     },
                     checkIncompleteTargets() {
+                        const serverIncomplete = Boolean(@js($this->hasIncompleteSemestralTargets()));
                         const rows = document.querySelectorAll('tr[data-score-row]');
                         if (rows.length === 0) {
-                            this.hasIncompleteTarget = false;
-                            this.toggleImReadyButton(false);
+                            this.hasIncompleteTarget = serverIncomplete;
+                            this.toggleImReadyButton(serverIncomplete);
                             return;
                         }
 
-                        let foundIncomplete = false;
+                        let foundIncomplete = serverIncomplete;
 
                         rows.forEach((row) => {
                             if (foundIncomplete) return;
@@ -414,6 +436,7 @@
                     <div class="px-2 py-1 whitespace-nowrap align-bottom flex items-end gap-2">
                         @if ($this->isSemestralTargetLocked())
                             <flux:button id="im-ready-btn" variant="primary" type="button" icon="check-circle" wire:click="imReady"
+                                style="{{ $this->hasIncompleteSemestralTargets() ? 'display: none;' : '' }}"
                                 class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700 font-semibold cursor-pointer">
                                 {{ __("I'm Ready") }}
                             </flux:button>

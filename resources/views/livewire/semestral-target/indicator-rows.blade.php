@@ -201,11 +201,19 @@
                     @php
                         $rawQ = strip_tags($formatValue($row['rg_quantity'] ?? ''));
                         $qFull = $formatValue($row['rg_quantity'] ?? '');
-                        $isLongQ = mb_strlen($rawQ) > 45;
-                        $qShort = $isLongQ ? mb_substr($rawQ, 0, 45) . '...' : $qFull;
+                        $isLongQ = mb_strlen($rawQ) > 200;
+                        $qShort = $isLongQ ? mb_substr($rawQ, 0, 200) . '...' : $qFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="text" data-field="quantity" x-model="q" x-on:keydown.down.prevent="
+                        <input type="text" data-field="quantity" x-model="q" x-on:keydown="
+                                        if ($event.key === 'n' || $event.key === 'N') {
+                                            $event.preventDefault();
+                                            q = 'N/A';
+                                            computeAverage();
+                                            saveField('quantity');
+                                            focusNextInput($el);
+                                        }
+                                    " x-on:keydown.down.prevent="
                                         let valStr = (q || '').toString().trim().toUpperCase();
                                         if (valStr === 'N/A') return;
                                         let num = parseFloat(valStr);
@@ -235,8 +243,10 @@
                                         }
                                         let upper = raw.toUpperCase();
                                         if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                            q = (upper === 'NA' || upper === 'N/A') ? 'N/A' : upper;
+                                            q = 'N/A';
                                             computeAverage();
+                                            saveField('quantity');
+                                            focusNextInput($el);
                                             return;
                                         }
                                         let cleaned = raw.replace(/[^0-9.]/g, '');
@@ -257,7 +267,7 @@
                             <span x-show="!expanded">{!! nl2br(e($qShort)) !!}</span>
                         </div>
                         @if ($isLongQ)
-                            <button type="button" @click="expanded = !expanded"
+                            <button type="button" tabindex="-1" @click="expanded = !expanded"
                                 class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
                                 <span x-text="expanded ? 'Show less' : 'Show more'"></span>
                                 <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,11 +291,19 @@
                     @php
                         $rawQl = strip_tags($formatValue($row['rg_quality'] ?? ''));
                         $qlFull = $formatValue($row['rg_quality'] ?? '');
-                        $isLongQl = mb_strlen($rawQl) > 45;
-                        $qlShort = $isLongQl ? mb_substr($rawQl, 0, 45) . '...' : $qlFull;
+                        $isLongQl = mb_strlen($rawQl) > 200;
+                        $qlShort = $isLongQl ? mb_substr($rawQl, 0, 200) . '...' : $qlFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="text" data-field="quality" x-model="ql" x-on:keydown.down.prevent="
+                        <input type="text" data-field="quality" x-model="ql" x-on:keydown="
+                                        if ($event.key === 'n' || $event.key === 'N') {
+                                            $event.preventDefault();
+                                            ql = 'N/A';
+                                            computeAverage();
+                                            saveField('quality');
+                                            focusNextInput($el);
+                                        }
+                                    " x-on:keydown.down.prevent="
                                         let valStr = (ql || '').toString().trim().toUpperCase();
                                         if (valStr === 'N/A') return;
                                         let num = parseFloat(valStr);
@@ -315,8 +333,10 @@
                                         }
                                         let upper = raw.toUpperCase();
                                         if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                            ql = (upper === 'NA' || upper === 'N/A') ? 'N/A' : upper;
+                                            ql = 'N/A';
                                             computeAverage();
+                                            saveField('quality');
+                                            focusNextInput($el);
                                             return;
                                         }
                                         let cleaned = raw.replace(/[^0-9.]/g, '');
@@ -337,7 +357,7 @@
                             <span x-show="!expanded">{!! nl2br(e($qlShort)) !!}</span>
                         </div>
                         @if ($isLongQl)
-                            <button type="button" @click="expanded = !expanded"
+                            <button type="button" tabindex="-1" @click="expanded = !expanded"
                                 class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
                                 <span x-text="expanded ? 'Show less' : 'Show more'"></span>
                                 <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -361,11 +381,19 @@
                     @php
                         $rawT = strip_tags($formatValue($row['rg_timeliness'] ?? ''));
                         $tFull = $formatValue($row['rg_timeliness'] ?? '');
-                        $isLongT = mb_strlen($rawT) > 45;
-                        $tShort = $isLongT ? mb_substr($rawT, 0, 45) . '...' : $tFull;
+                        $isLongT = mb_strlen($rawT) > 200;
+                        $tShort = $isLongT ? mb_substr($rawT, 0, 200) . '...' : $tFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="text" data-field="timeliness" x-model="t" x-on:keydown.down.prevent="
+                        <input type="text" data-field="timeliness" x-model="t" x-on:keydown="
+                                        if ($event.key === 'n' || $event.key === 'N') {
+                                            $event.preventDefault();
+                                            t = 'N/A';
+                                            computeAverage();
+                                            saveField('timeliness');
+                                            focusNextInput($el);
+                                        }
+                                    " x-on:keydown.down.prevent="
                                         let valStr = (t || '').toString().trim().toUpperCase();
                                         if (valStr === 'N/A') return;
                                         let num = parseFloat(valStr);
@@ -395,8 +423,10 @@
                                         }
                                         let upper = raw.toUpperCase();
                                         if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                            t = (upper === 'NA' || upper === 'N/A') ? 'N/A' : upper;
+                                            t = 'N/A';
                                             computeAverage();
+                                            saveField('timeliness');
+                                            focusNextInput($el);
                                             return;
                                         }
                                         let cleaned = raw.replace(/[^0-9.]/g, '');
@@ -417,7 +447,7 @@
                             <span x-show="!expanded">{!! nl2br(e($tShort)) !!}</span>
                         </div>
                         @if ($isLongT)
-                            <button type="button" @click="expanded = !expanded"
+                            <button type="button" tabindex="-1" @click="expanded = !expanded"
                                 class="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none">
                                 <span x-text="expanded ? 'Show less' : 'Show more'"></span>
                                 <svg x-show="!expanded" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

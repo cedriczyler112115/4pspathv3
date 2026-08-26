@@ -841,6 +841,19 @@ window.semestralScoreRow = (initial) => ({
         }
         window.dispatchEvent(new CustomEvent('recalculate-function-scores'));
     },
+    focusNextInput(el) {
+        setTimeout(() => {
+            const focusables = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([disabled]):not([tabindex="-1"]), textarea:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), button:not([disabled]):not([tabindex="-1"])'));
+            const idx = focusables.indexOf(el);
+            if (idx > -1 && idx + 1 < focusables.length) {
+                const next = focusables[idx + 1];
+                next.focus();
+                if (typeof next.select === 'function') {
+                    next.select();
+                }
+            }
+        }, 10);
+    },
 });
 
 window.semestralTargetGroup = (hasHistoryByItem) => ({
