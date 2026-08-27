@@ -152,7 +152,7 @@
                             </td>
                             <td class="px-1 py-1 whitespace-nowrap align-bottom">
                                 <div class="flex h-full items-end -ml-1">
-                                    <flux:button variant="primary" type="button" wire:click="resetFilters"
+                                    <flux:button variant="primary" type="button" icon="arrow-path" wire:click="resetFilters"
                                         class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:text-white dark:hover:bg-slate-400">
                                         {{ __('Reset') }}
                                     </flux:button>

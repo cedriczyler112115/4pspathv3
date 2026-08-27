@@ -307,9 +307,9 @@ class PrintCheckpointController extends Controller
                 }
 
                 if ($totalSubItems > 1) {
-                    $itemLabel = '#'.$itemCounter.($isSubItemCreated ? ' (Newly Added)' : '');
+                    $itemLabel = '#'.$itemCounter.($isSubItemCreated ? ' (Newly Added Sub-Target)' : '');
                 } else {
-                    $itemLabel = $isSubItemCreated ? '(Newly Added)' : '';
+                    $itemLabel = $isSubItemCreated ? '(Newly Added Sub-Target)' : '';
                 }
 
                 $itemGroups[] = (object) [

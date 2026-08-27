@@ -228,9 +228,9 @@ class MyRatingsPage extends Component
             return;
         }
 
-        if ((int) ($rating->is_ready ?? 0) === 1 || filled($rating->date_verified)) {
+        if ((int) ($rating->is_ready ?? 0) === 1 || filled($rating->date_verified) || (int) ($rating->lock ?? 0) === 2) {
             $this->cancelDelete();
-            \Flux::toast(variant: 'danger', text: __('Cannot remove rating record because it is verified or marked as ready.'));
+            \Flux::toast(variant: 'danger', text: __('Cannot remove rating record because it is waiting for verification or verified.'));
 
             return;
         }

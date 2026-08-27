@@ -50,7 +50,7 @@
                 <tbody>
                     <tr class="align-top">
                         <td class="px-2 py-1 whitespace-nowrap" style="width:350px">
-                            <x-select2 wire:model.live="copyStaffUserId" :label="__('Staff Name')" :placeholder="__('Select Staff Name')" :options="$this->copyStaffUsers()->map(fn($u) => ['value' => (string)$u->id, 'label' => $u->full_name, 'sublabel' => $u->position ?? ''])->values()" minWidth="320px" />
+                            <x-select2 wire:model.live="copyStaffUserId" :label="__('Staff Name')" :options="$this->copyStaffUsers()->map(fn($u) => ['value' => (string)$u->id, 'label' => $u->full_name, 'sublabel' => $u->position ?? ''])->values()" minWidth="320px" />
                         </td>
                         <td class="px-2 py-1 whitespace-nowrap w-36" style="width:150px">
                             <x-select2 wire:model.live="copyStaffYear" :label="__('Year')" :placeholder="__('Select Year')" :options="$this->copyStaffYears()" minWidth="120px" />

@@ -87,7 +87,7 @@
                             </td>
                             <td class="px-1 py-1 whitespace-nowrap align-bottom">
                                 <div class="flex h-full items-end -ml-1">
-                                    <flux:button variant="primary" type="button" wire:click="resetFilters"
+                                    <flux:button variant="primary" type="button" icon="arrow-path" wire:click="resetFilters"
                                         class="bg-slate-600 text-white hover:bg-slate-700 dark:bg-slate-500 dark:text-white dark:hover:bg-slate-400">
                                         {{ __('Reset') }}
                                     </flux:button>
@@ -144,16 +144,33 @@
                             </td>
                             <td class="border-b border-r border-border px-4 py-3 align-middle whitespace-nowrap">
                                 @if (!empty($rating->date_verified))
-                                    <div class="flex items-center gap-2 ml-[10px]">
-                                        <svg class="size-5 text-emerald-600 dark:text-emerald-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                    <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                        <svg class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                                             <path fill-rule="evenodd" d="M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.352-.272-2.64-.765-3.815a.75.75 0 00-.722-.516l-.143.001a11.209 11.209 0 01-7.59-3.25zm-2.486 11.41l-2.03-2.03a.75.75 0 00-1.06 1.06l2.56 2.56a.75.75 0 001.06 0l5.56-5.56a.75.75 0 00-1.06-1.06l-5.03 5.03z" clip-rule="evenodd" />
                                         </svg>
-                                        <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                                            {{ \Illuminate\Support\Carbon::parse($rating->date_verified)->format('M d, Y h:i A') }}
-                                        </span>
+                                        <span>{{ \Illuminate\Support\Carbon::parse($rating->date_verified)->format('M d, Y h:i A') }}</span>
+                                    </div>
+                                @elseif ((int) ($rating->lock ?? 0) === 2)
+                                    <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                        <svg class="size-4 text-amber-600 dark:text-amber-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                        <span>{{ __('Waiting for Verification') }}</span>
+                                    </div>
+                                @elseif ((int) ($rating->lock ?? 0) === 1)
+                                    <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400">
+                                        <svg class="size-4 text-sky-600 dark:text-sky-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                        </svg>
+                                        <span>{{ __('On-going for Self-Rating') }}</span>
                                     </div>
                                 @else
-                                    <div class="text-center text-muted-foreground">-</div>
+                                    <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                        <svg class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a.48.48 0 0 0 .365-.47V3.535a.48.48 0 0 0-.584-.47l-3.082.725a9 9 0 0 1-6.086-.71l-.108-.054a9 9 0 0 0-6.207-.682L3 3.75M3 15V3.75" />
+                                        </svg>
+                                        <span>{{ __('On-going for Checkpoint') }}</span>
+                                    </div>
                                 @endif
                             </td>
                             <td class="border-b border-r border-border px-3 py-3 text-xs text-muted-foreground align-middle">
@@ -166,7 +183,7 @@
                                         wire:navigate
                                         title="{{ __('View') }}"
                                         class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700" />
-                                    @if ((int) ($rating->is_ready ?? 0) !== 1 && empty($rating->date_verified))
+                                    @if ((int) ($rating->lock ?? 0) !== 2 && empty($rating->date_verified))
                                         <flux:button size="sm" variant="danger" icon="trash" square
                                             title="{{ __('Remove') }}"
                                             class="bg-red-600 text-white hover:bg-red-700 dark:bg-red-600 dark:text-white dark:hover:bg-red-700"
@@ -248,16 +265,33 @@
                         <span class="text-muted-foreground">{{ __('Status') }}:</span>
                         <div>
                             @if (!empty($viewingRating->date_verified))
-                                <div class="inline-flex items-center gap-1.5">
-                                    <svg class="size-6 text-emerald-600 dark:text-emerald-500 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                    <svg class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                                         <path fill-rule="evenodd" d="M12.516 2.17a.75.75 0 00-1.032 0 11.209 11.209 0 01-7.877 3.08.75.75 0 00-.722.515A12.74 12.74 0 002.25 9.75c0 5.942 4.064 10.933 9.563 12.348a.749.749 0 00.374 0c5.499-1.415 9.563-6.406 9.563-12.348 0-1.352-.272-2.64-.765-3.815a.75.75 0 00-.722-.516l-.143.001a11.209 11.209 0 01-7.59-3.25zm-2.486 11.41l-2.03-2.03a.75.75 0 00-1.06 1.06l2.56 2.56a.75.75 0 001.06 0l5.56-5.56a.75.75 0 00-1.06-1.06l-5.03 5.03z" clip-rule="evenodd" />
                                     </svg>
-                                    <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
-                                        {{ \Illuminate\Support\Carbon::parse($viewingRating->date_verified)->format('M d, Y h:i A') }}
-                                    </span>
+                                    <span>{{ \Illuminate\Support\Carbon::parse($viewingRating->date_verified)->format('M d, Y h:i A') }}</span>
+                                </div>
+                            @elseif ((int) ($viewingRating->lock ?? 0) === 2)
+                                <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                    <svg class="size-4 text-amber-600 dark:text-amber-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                    <span>{{ __('Waiting for Verification') }}</span>
+                                </div>
+                            @elseif ((int) ($viewingRating->lock ?? 0) === 1)
+                                <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400">
+                                    <svg class="size-4 text-sky-600 dark:text-sky-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                                    </svg>
+                                    <span>{{ __('On-going for Self-Rating') }}</span>
                                 </div>
                             @else
-                                <span class="text-muted-foreground">-</span>
+                                <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                    <svg class="size-4 text-emerald-600 dark:text-emerald-400 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a.48.48 0 0 0 .365-.47V3.535a.48.48 0 0 0-.584-.47l-3.082.725a9 9 0 0 1-6.086-.71l-.108-.054a9 9 0 0 0-6.207-.682L3 3.75M3 15V3.75" />
+                                    </svg>
+                                    <span>{{ __('On-going for Checkpoint') }}</span>
+                                </div>
                             @endif
                         </div>
                     </div>

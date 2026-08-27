@@ -907,7 +907,7 @@ window.semestralTargetGroup = (hasHistoryByItem) => ({
             this.$dispatch('semestral-target-dropped', { source: JSON.parse(raw), target });
         }
     },
-    openContextMenu(event, kra, indicatorId, itemId, subTargetCount, isLocked = false) {
+    openContextMenu(event, kra, indicatorId, itemId, subTargetCount, isMainRow = false, isLocked = false) {
         event.preventDefault();
         if (isLocked) return;
 
@@ -920,8 +920,8 @@ window.semestralTargetGroup = (hasHistoryByItem) => ({
         this.contextKra = kra;
         this.contextIndicatorId = indicatorId;
         this.contextItemId = itemId;
-        this.canDeleteTarget = subTargetCount <= 1 || isGroupCell;
-        this.canDeleteSubTarget = subTargetCount > 1 && ! isGroupCell;
+        this.canDeleteTarget = true;
+        this.canDeleteSubTarget = subTargetCount > 1 && !isMainRow;
         this.activeSubMenu = null;
         this.contextX = Math.max(8, Math.min(event.clientX, window.innerWidth - 198));
         this.contextY = Math.max(8, Math.min(event.clientY, window.innerHeight - 168));
@@ -930,6 +930,12 @@ window.semestralTargetGroup = (hasHistoryByItem) => ({
     closeContextMenu() {
         this.showContextMenu = false;
         this.activeSubMenu = null;
+    },
+    runWireAction(method, ...args) {
+        const request = this.$wire.$call(method, ...args);
+        this.closeContextMenu();
+
+        return request;
     },
     positionSubMenu(type) {
         const isDelete = type === 'delete';

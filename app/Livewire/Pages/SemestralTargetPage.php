@@ -9,7 +9,9 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\On;
@@ -17,11 +19,13 @@ use Livewire\Attributes\Renderless;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 #[Title('Semestral Target')]
 class SemestralTargetPage extends Component
 {
+    use WithFileUploads;
     use WithPagination;
 
     public string $fullName = '';
@@ -62,10 +66,30 @@ class SemestralTargetPage extends Component
     // Recover Modal
     public bool $showRecoverModal = false;
     public array $deletedTargetsList = [];
+    public string $deletedTargetSearch = '';
+    public int $deletedTargetPage = 1;
+    public int $deletedTargetPerPage = 8;
 
     // Lock/Unlock Confirm Modals
     public bool $showLockConfirmModal = false;
     public bool $showUnlockConfirmModal = false;
+    public bool $showImReadyConfirmModal = false;
+    public bool $showWaitingVerificationModal = false;
+
+    // Areas of Improvement CRUD
+    public bool $showAreasImprovementModal = false;
+    public ?int $editingAreasImprovementId = null;
+    public string $areasImprovement = '';
+    public string $developmentActivities = '';
+    public string $supportResources = '';
+    public string $progressIntervention = '';
+
+    // Documentation uploads
+    /** @var array<int, UploadedFile> */
+    public array $documentationUploads = [];
+    public array $documentationFiles = [];
+    public bool $showDocumentationPreviewModal = false;
+    public ?array $previewDocumentationFile = null;
 
     // Show Edit History Modal
     public bool $showHistoryModal = false;
@@ -117,6 +141,7 @@ class SemestralTargetPage extends Component
         $this->validateSemId();
         $this->loadUserProfile();
         $this->calculateFinalRating(silent: true);
+        $this->loadDocumentationFiles();
 
         if ($this->unauthorizedErrorMessage !== null) {
             Flux::toast(variant: 'danger', text: $this->unauthorizedErrorMessage);
@@ -237,13 +262,558 @@ class SemestralTargetPage extends Component
         }
     }
 
-    public function imReady(): void
+    public function getSemLockStatus(): int
+    {
+        $semRecord = $this->getSemesterRecord();
+        return (int) ($semRecord->lock ?? 0);
+    }
+
+    public function openImReadyModal(): void
     {
         if (!$this->semId) {
             return;
         }
 
-        Flux::toast(variant: 'success', text: __("You have indicated that you are ready!"));
+        if ($this->hasIncompleteSemestralTargets()) {
+            Flux::toast(variant: 'warning', text: __('Please complete all targets, scores, accomplishments, and MOVs before indicating ready.'));
+            return;
+        }
+
+        $this->showImReadyConfirmModal = true;
+    }
+
+    public function cancelImReadyConfirm(): void
+    {
+        $this->showImReadyConfirmModal = false;
+    }
+
+    public function confirmImReady(): void
+    {
+        $this->showImReadyConfirmModal = false;
+
+        if (!$this->semId) {
+            return;
+        }
+
+        DB::table('ipc_semester')
+            ->where('id', $this->semId)
+            ->update([
+                'lock' => 2,
+                'is_ready' => 1,
+                'date_ready' => Carbon::now('Asia/Manila'),
+            ]);
+
+        $this->cachedSemRecord = null;
+        $this->dispatch('semestral-target-updated');
+        $this->dispatch('semestral-target-reload');
+
+        Flux::toast(
+            variant: 'success',
+            text: __("You have indicated that you are ready! Your semestral targets are now locked from further editing.")
+        );
+    }
+
+    public function openWaitingVerificationModal(): void
+    {
+        if (!$this->semId) {
+            return;
+        }
+
+        $this->showWaitingVerificationModal = true;
+    }
+
+    public function cancelWaitingVerificationConfirm(): void
+    {
+        $this->showWaitingVerificationModal = false;
+    }
+
+    public function confirmWaitingVerification(): void
+    {
+        $this->showWaitingVerificationModal = false;
+
+        if (!$this->semId) {
+            return;
+        }
+
+        DB::table('ipc_semester')
+            ->where('id', $this->semId)
+            ->update([
+                'lock' => 1,
+            ]);
+
+        $this->cachedSemRecord = null;
+        $this->dispatch('semestral-target-updated');
+        $this->dispatch('semestral-target-reload');
+
+        Flux::toast(
+            variant: 'success',
+            text: __("Semestral target unlocked for editing. Status reverted back to rating mode.")
+        );
+    }
+
+    public function areasImprovementItems(): Collection
+    {
+        if (!$this->semId) {
+            return collect();
+        }
+
+        return DB::table('ipc_areas_improvement as ai')
+            ->leftJoin('users as u', 'u.id', '=', 'ai.encoded_by')
+            ->where('ai.semester_id', $this->semId)
+            ->orderByDesc('ai.date_encoded')
+            ->orderByDesc('ai.id')
+            ->get([
+                'ai.id',
+                'ai.areas_improvement',
+                'ai.development_activities',
+                'ai.support_resources',
+                'ai.progress_intervention',
+                'ai.date_encoded',
+                'ai.encoded_by',
+                DB::raw('COALESCE(u.name, \'\') as encoded_by_name'),
+            ]);
+    }
+
+    /**
+     * @return array{activeRows: Collection<int, object>, deletedRows: Collection<int, object>}
+     */
+    public function checkpointChangeRows(): array
+    {
+        if (!$this->semId) {
+            return [
+                'activeRows' => collect(),
+                'deletedRows' => collect(),
+            ];
+        }
+
+        $activeTargetIds = DB::table('ipc_sem_targets_indicator')
+            ->where('semester_id', $this->semId)
+            ->pluck('id')
+            ->all();
+
+        $allTargetIds = DB::table('ipc_sem_target_edit_histories as h')
+            ->leftJoin('ipc_sem_targets_indicator as sti', 'h.sem_target_id', '=', 'sti.id')
+            ->where(function ($q) use ($activeTargetIds) {
+                if (!empty($activeTargetIds)) {
+                    $q->whereIn('h.sem_target_id', $activeTargetIds);
+                }
+                $q->orWhere('sti.semester_id', $this->semId);
+                $q->orWhere('h.field_name', 'deleted');
+            })
+            ->pluck('h.sem_target_id')
+            ->unique()
+            ->all();
+
+        $histories = DB::table('ipc_sem_target_edit_histories as h')
+            ->leftJoin('ipc_sem_targets_indicator as sti', 'h.sem_target_id', '=', 'sti.id')
+            ->leftJoin('ipc_sem_targets_indicator_itemlist as stil', 'h.sem_item_id', '=', 'stil.id')
+            ->whereIn('h.sem_target_id', $allTargetIds)
+            ->select([
+                'h.id',
+                'h.sem_target_id',
+                'h.sem_item_id',
+                'h.field_name',
+                'h.original_value',
+                'h.old_value',
+                'h.new_value',
+                'h.justification',
+                'h.date_created',
+                'sti.kra_category as current_kra_category',
+                'sti.activity as current_activity',
+                'stil.description as current_description',
+                'stil.rg_quantity as current_quantity',
+                'stil.rg_quality as current_quality',
+                'stil.rg_timeliness as current_timeliness',
+                'stil.rg_movs as current_movs',
+                'stil.rg_remarks as current_remarks',
+            ])
+            ->orderBy('h.id', 'asc')
+            ->get();
+
+        $fieldLabels = [
+            'activity' => 'Key Result Area',
+            'description' => 'Success Indicator (Measure + Target)',
+            'rg_quantity' => 'Efficiency',
+            'rg_quality' => 'Quality',
+            'rg_timeliness' => 'Timeliness',
+            'rg_movs' => 'MOVs',
+            'rg_remarks' => 'Remarks',
+            'kra_category' => 'KRA Category',
+            'created' => 'Target Creation',
+            'deleted' => 'Target Deletion',
+        ];
+
+        $fieldOrder = [
+            'activity' => 1,
+            'description' => 2,
+            'rg_quantity' => 3,
+            'rg_quality' => 4,
+            'rg_timeliness' => 5,
+            'rg_movs' => 6,
+            'rg_remarks' => 7,
+            'kra_category' => 8,
+            'created' => 9,
+            'deleted' => 10,
+        ];
+
+        $checkpointRows = collect();
+        foreach ($histories->groupBy('sem_target_id') as $semTargetId => $targetRecords) {
+            $justifications = [];
+            foreach ($targetRecords as $h) {
+                if (filled($h->justification)) {
+                    $justifications[] = $h->justification;
+                }
+            }
+
+            $isDeletedTarget = $targetRecords->contains(fn ($r) => $r->field_name === 'deleted');
+            $isNewlyAdded = $targetRecords->contains(fn ($r) => $r->field_name === 'created' && (empty($r->sem_item_id) || $r->sem_item_id == 0));
+            $firstRec = $targetRecords->first();
+            $actRec = $targetRecords->firstWhere('field_name', 'activity');
+            $activityTitle = (string) ($firstRec->current_activity ?: ($actRec ? ($actRec->old_value ?: ($actRec->original_value ?: 'Target Entry')) : 'Target Entry'));
+
+            $targetLevelRecords = $targetRecords->filter(fn ($r) => empty($r->sem_item_id) || $r->sem_item_id == 0);
+            $targetFields = [];
+            foreach ($targetLevelRecords as $h) {
+                $fieldName = (string) $h->field_name;
+                if ($fieldName === 'deleted') {
+                    continue;
+                }
+                $label = $fieldLabels[$fieldName] ?? ucwords(str_replace('_', ' ', $fieldName));
+                $orderRank = $fieldOrder[$fieldName] ?? 99;
+                $oldVal = $h->old_value ?: ($h->original_value ?: '-');
+                $newVal = $isDeletedTarget ? 'For Deletion' : ($h->new_value ?: '-');
+                if ($fieldName === 'kra_category') {
+                    $oldVal = is_numeric($oldVal) ? KraCategory::label((int) $oldVal) : $oldVal;
+                    $newVal = $isDeletedTarget ? 'For Deletion' : (is_numeric($newVal) ? KraCategory::label((int) $newVal) : $newVal);
+                }
+                $targetFields[] = (object) [
+                    'field_name' => $fieldName,
+                    'field_label' => $label,
+                    'order_rank' => $orderRank,
+                    'old_value' => $oldVal,
+                    'new_value' => $newVal,
+                ];
+            }
+
+            $hasActivity = collect($targetFields)->contains(fn ($f) => $f->field_name === 'activity');
+            if (! $hasActivity && filled($activityTitle)) {
+                array_unshift($targetFields, (object) [
+                    'field_name' => 'activity',
+                    'field_label' => 'Key Result Area',
+                    'order_rank' => 1,
+                    'old_value' => $activityTitle,
+                    'new_value' => $isDeletedTarget ? 'For Deletion' : '-',
+                ]);
+            }
+            usort($targetFields, fn ($a, $b) => $a->order_rank <=> $b->order_rank);
+            if ($isDeletedTarget) {
+                $targetFields = array_values(array_filter($targetFields, fn ($f) => in_array($f->field_name, ['kra_category', 'activity'], true)));
+            }
+
+            $itemLevelRecords = $targetRecords->filter(fn ($r) => !empty($r->sem_item_id) && $r->sem_item_id > 0);
+            $itemGroupsRaw = $itemLevelRecords->groupBy(fn ($r) => (int) $r->sem_item_id);
+            $itemGroups = [];
+            $itemCounter = 1;
+            $totalSubItems = count($itemGroupsRaw);
+            foreach ($itemGroupsRaw as $itemId => $iRecords) {
+                $iFirstRec = $iRecords->first();
+                $isSubItemCreated = $iRecords->contains(fn ($r) => $r->field_name === 'created');
+                $iFields = [];
+                if ($isSubItemCreated) {
+                    $desc = $iFirstRec->current_description;
+                    $createdRec = $iRecords->firstWhere('field_name', 'created');
+                    if ($createdRec && filled($createdRec->new_value) && $createdRec->new_value !== 'Sub-target Added' && $createdRec->new_value !== 'Newly Added Target') {
+                        $desc = $desc ?: $createdRec->new_value;
+                    }
+                    if (filled($desc)) {
+                        $iFields[] = (object) [
+                            'field_name' => 'description',
+                            'field_label' => 'Success Indicator (Measure + Target)',
+                            'order_rank' => 2,
+                            'old_value' => '-',
+                            'new_value' => $desc,
+                        ];
+                    }
+                    foreach (['quantity' => 'rg_quantity', 'quality' => 'rg_quality', 'timeliness' => 'rg_timeliness', 'movs' => 'rg_movs', 'remarks' => 'rg_remarks'] as $prop => $fieldName) {
+                        $current = $iFirstRec->{'current_'.$prop} ?? null;
+                        if (! $isDeletedTarget && filled($current)) {
+                            $iFields[] = (object) [
+                                'field_name' => $fieldName,
+                                'field_label' => $fieldLabels[$fieldName] ?? ucwords(str_replace('_', ' ', $fieldName)),
+                                'order_rank' => $fieldOrder[$fieldName] ?? 99,
+                                'old_value' => '-',
+                                'new_value' => $current,
+                            ];
+                        }
+                    }
+                } else {
+                    foreach ($iRecords as $h) {
+                        $fieldName = (string) $h->field_name;
+                        if ($isDeletedTarget && $fieldName !== 'description') {
+                            continue;
+                        }
+                        $label = $fieldLabels[$fieldName] ?? ucwords(str_replace('_', ' ', $fieldName));
+                        $orderRank = $fieldOrder[$fieldName] ?? 99;
+                        $oldVal = $h->old_value ?: ($h->original_value ?: '-');
+                        $newVal = $isDeletedTarget ? 'For Deletion' : ($h->new_value ?: '-');
+                        $iFields[] = (object) [
+                            'field_name' => $fieldName,
+                            'field_label' => $label,
+                            'order_rank' => $orderRank,
+                            'old_value' => $oldVal,
+                            'new_value' => $newVal,
+                        ];
+                    }
+                    usort($iFields, fn ($a, $b) => $a->order_rank <=> $b->order_rank);
+                }
+
+                if ($isDeletedTarget) {
+                    $iFields = array_values(array_filter($iFields, fn ($f) => $f->field_name === 'description'));
+                }
+
+                $itemLabel = $totalSubItems > 1 ? '#'.$itemCounter.($isSubItemCreated ? ' (Newly Added Sub-Target)' : '') : ($isSubItemCreated ? '(Newly Added Sub-Target)' : '');
+                $itemGroups[] = (object) [
+                    'item_id' => $itemId,
+                    'item_label' => $itemLabel,
+                    'is_created' => $isSubItemCreated,
+                    'fields' => $iFields,
+                ];
+                $itemCounter++;
+            }
+
+            $checkpointRows->push((object) [
+                'sem_target_id' => $semTargetId,
+                'activity_title' => $activityTitle,
+                'is_new_target' => $isNewlyAdded && ! $isDeletedTarget,
+                'is_deleted' => $isDeletedTarget,
+                'target_fields' => $targetFields,
+                'item_groups' => $itemGroups,
+                'justification' => collect($justifications)->unique()->filter(fn ($j) => filled($j) && $j !== '-')->join('; ') ?: ($isDeletedTarget ? __('Target Deleted') : __('Target Entry / Update')),
+            ]);
+        }
+
+        return [
+            'activeRows' => $checkpointRows->filter(fn ($r) => !($r->is_deleted ?? false))->values(),
+            'deletedRows' => $checkpointRows->filter(fn ($r) => ($r->is_deleted ?? false))->values(),
+        ];
+    }
+
+    public function openAreasImprovementModal(?int $id = null): void
+    {
+        if (!$this->semId) {
+            return;
+        }
+
+        $this->resetAreasImprovementForm();
+        $this->editingAreasImprovementId = $id;
+
+        if ($id !== null) {
+            $item = DB::table('ipc_areas_improvement')->where('id', $id)->where('semester_id', $this->semId)->first();
+            if ($item === null) {
+                return;
+            }
+
+            $this->areasImprovement = (string) ($item->areas_improvement ?? '');
+            $this->developmentActivities = (string) ($item->development_activities ?? '');
+            $this->supportResources = (string) ($item->support_resources ?? '');
+            $this->progressIntervention = (string) ($item->progress_intervention ?? '');
+        }
+
+        $this->showAreasImprovementModal = true;
+    }
+
+    public function cancelAreasImprovement(): void
+    {
+        $this->showAreasImprovementModal = false;
+        $this->resetAreasImprovementForm();
+    }
+
+    protected function resetAreasImprovementForm(): void
+    {
+        $this->editingAreasImprovementId = null;
+        $this->areasImprovement = '';
+        $this->developmentActivities = '';
+        $this->supportResources = '';
+        $this->progressIntervention = '';
+    }
+
+    public function saveAreasImprovement(): void
+    {
+        if (!$this->semId) {
+            return;
+        }
+
+        $validated = $this->validate([
+            'areasImprovement' => ['required', 'string'],
+            'developmentActivities' => ['required', 'string'],
+            'supportResources' => ['nullable', 'string'],
+            'progressIntervention' => ['nullable', 'string'],
+        ]);
+
+        $payload = [
+            'semester_id' => $this->semId,
+            'areas_improvement' => $validated['areasImprovement'],
+            'development_activities' => $validated['developmentActivities'],
+            'support_resources' => $validated['supportResources'] ?? null,
+            'progress_intervention' => $validated['progressIntervention'] ?? null,
+            'date_encoded' => Carbon::now('Asia/Manila'),
+            'encoded_by' => (int) Auth::id(),
+        ];
+
+        if ($this->editingAreasImprovementId !== null) {
+            DB::table('ipc_areas_improvement')
+                ->where('id', $this->editingAreasImprovementId)
+                ->where('semester_id', $this->semId)
+                ->update($payload);
+            Flux::toast(variant: 'success', text: __('Areas of improvement updated successfully.'));
+        } else {
+            DB::table('ipc_areas_improvement')->insert($payload);
+            Flux::toast(variant: 'success', text: __('Areas of improvement saved successfully.'));
+        }
+
+        $this->cancelAreasImprovement();
+        $this->dispatch('semestral-target-updated');
+    }
+
+    public function deleteAreasImprovement(int $id): void
+    {
+        if (!$this->semId) {
+            return;
+        }
+
+        DB::table('ipc_areas_improvement')
+            ->where('id', $id)
+            ->where('semester_id', $this->semId)
+            ->delete();
+
+        Flux::toast(variant: 'success', text: __('Areas of improvement deleted successfully.'));
+        $this->dispatch('semestral-target-updated');
+    }
+
+    public function imReady(): void
+    {
+        $this->openImReadyModal();
+    }
+
+    #[On('semestral-target-updated')]
+    public function handleSemestralTargetUpdated(): void
+    {
+        // Re-renders page component when child components update semestral targets or attachments
+    }
+
+    public function loadDocumentationFiles(): void
+    {
+        $directory = public_path('documentation');
+        File::ensureDirectoryExists($directory);
+
+        $this->documentationFiles = collect(File::files($directory))
+            ->sortByDesc(fn ($file) => $file->getMTime())
+            ->map(function ($file) use ($directory) {
+                $relativePath = 'documentation/' . $file->getFilename();
+                $mime = File::mimeType($file->getPathname()) ?: 'application/octet-stream';
+                $isImage = str_starts_with($mime, 'image/');
+                $isPdf = $mime === 'application/pdf';
+                $isVideo = str_starts_with($mime, 'video/');
+                $isPresentation = in_array($mime, [
+                    'application/vnd.ms-powerpoint',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+                ], true);
+                $isWord = in_array($mime, [
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                ], true);
+
+                return [
+                    'name' => $file->getFilename(),
+                    'path' => $relativePath,
+                    'url' => asset($relativePath),
+                    'mime' => $mime,
+                    'size' => $file->getSize(),
+                    'modified_at' => Carbon::createFromTimestamp($file->getMTime())->setTimezone('Asia/Manila')->format('M d, Y h:i A'),
+                    'type' => $isImage ? 'image' : ($isPdf ? 'pdf' : ($isVideo ? 'video' : ($isPresentation ? 'presentation' : ($isWord ? 'word' : 'other')))),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function updatedDocumentationUploads(): void
+    {
+        $this->validate([
+            'documentationUploads' => ['required', 'array'],
+            'documentationUploads.*' => [
+                'file',
+                'mimes:pdf,jpg,jpeg,png,gif,webp,bmp,svg,mp4,mov,avi,mkv,wmv,webm,m4v,ppt,pptx,doc,docx',
+            ],
+        ]);
+
+        $destination = public_path('documentation');
+        File::ensureDirectoryExists($destination);
+
+        foreach ($this->documentationUploads as $upload) {
+            if (!$upload instanceof UploadedFile) {
+                continue;
+            }
+
+            $originalName = pathinfo($upload->getClientOriginalName(), PATHINFO_FILENAME);
+            $safeBaseName = preg_replace('/[^A-Za-z0-9_\-]+/', '_', $originalName) ?: 'document';
+            $extension = strtolower($upload->getClientOriginalExtension());
+            $fileName = $safeBaseName . '_' . Carbon::now('Asia/Manila')->format('YmdHis') . '_' . uniqid() . '.' . $extension;
+
+            $sourcePath = $upload->getRealPath();
+            if ($sourcePath === false || !is_file($sourcePath)) {
+                continue;
+            }
+
+            File::copy($sourcePath, $destination . DIRECTORY_SEPARATOR . $fileName);
+        }
+
+        $this->documentationUploads = [];
+        $this->loadDocumentationFiles();
+        Flux::toast(variant: 'success', text: __('Documentation files uploaded successfully.'));
+    }
+
+    public function openDocumentationPreview(string $fileName): void
+    {
+        $file = collect($this->documentationFiles)->firstWhere('name', $fileName);
+        if (!$file) {
+            return;
+        }
+
+        $this->previewDocumentationFile = $file;
+        $this->showDocumentationPreviewModal = true;
+    }
+
+    public function closeDocumentationPreview(): void
+    {
+        $this->showDocumentationPreviewModal = false;
+        $this->previewDocumentationFile = null;
+    }
+
+    public function deleteDocumentationFile(): void
+    {
+        if (!$this->previewDocumentationFile) {
+            return;
+        }
+
+        $relativePath = (string) ($this->previewDocumentationFile['path'] ?? '');
+        $absolutePath = public_path($relativePath);
+
+        if ($relativePath !== '' && File::exists($absolutePath)) {
+            File::delete($absolutePath);
+        }
+
+        $deletedName = (string) ($this->previewDocumentationFile['name'] ?? '');
+
+        $this->closeDocumentationPreview();
+        $this->loadDocumentationFiles();
+
+        Flux::toast(variant: 'success', text: __('Documentation file deleted successfully.'));
+
+        if ($deletedName !== '') {
+            $this->dispatch('documentation-file-deleted', name: $deletedName);
+        }
     }
 
     protected function validateSemId(): void
@@ -355,7 +925,13 @@ class SemestralTargetPage extends Component
 
     public function printIpcrf(): void
     {
-        Flux::toast(variant: 'info', text: __('Preparing IPCR-F document for print...'));
+        if (! $this->semId) {
+            Flux::toast(variant: 'danger', text: __('No semestral target record selected.'));
+            return;
+        }
+
+        $url = route('myratings.semestral-target.print-ipcrf', ['sem_id' => $this->semId]);
+        $this->dispatch('open-new-tab', url: $url);
     }
 
     public function printCheckpoint(): void
@@ -544,6 +1120,10 @@ class SemestralTargetPage extends Component
 
     public function openAddTargetModal(int $kraCategory): void
     {
+        if (! $this->canModifyActiveSemester()) {
+            return;
+        }
+
         $this->resetValidation();
         $this->addingKraCategory = $kraCategory;
         $this->addActivity = '';
@@ -579,6 +1159,12 @@ class SemestralTargetPage extends Component
 
         if (!$ipcSemesterId || !$userId || !$this->addingKraCategory) {
             Flux::toast(variant: 'danger', text: __('Unable to add target. Semester not found.'));
+            return;
+        }
+
+        if (! $this->canModifyActiveSemester()) {
+            $this->cancelAdd();
+
             return;
         }
 
@@ -688,18 +1274,11 @@ class SemestralTargetPage extends Component
     #[On('semestral-target-delete-requested')]
     public function requestDeleteTarget(int $semTargetId): void
     {
-        $this->resetValidation();
-
-        // Toast notification first if target has existing history and cannot be deleted
-        $hasHistory = DB::table('ipc_sem_target_edit_histories')
-            ->where('sem_target_id', $semTargetId)
-            ->exists();
-
-        if ($hasHistory) {
-            Flux::toast(variant: 'danger', text: __('Cannot delete target because it has existing edit history.'));
+        if (! $this->canModifyActiveSemester($semTargetId)) {
             return;
         }
 
+        $this->resetValidation();
         $this->deletingSemTargetId = $semTargetId;
         $this->deleteJustification = '';
         $this->showDeleteModal = true;
@@ -720,6 +1299,13 @@ class SemestralTargetPage extends Component
         }
 
         $semTargetId = $this->deletingSemTargetId;
+
+        if (! $this->canModifyActiveSemester($semTargetId)) {
+            $this->cancelDeleteTarget();
+
+            return;
+        }
+
         $is2026Sem2 = $this->is2026SecondSemesterOrBeyond();
 
         if ($is2026Sem2) {
@@ -732,15 +1318,6 @@ class SemestralTargetPage extends Component
         $target = DB::table('ipc_sem_targets_indicator')->where('id', $semTargetId)->first();
         if (!$target) {
             $this->cancelDeleteTarget();
-            return;
-        }
-
-        $hasHistory = DB::table('ipc_sem_target_edit_histories')->where('sem_target_id', $semTargetId)->exists();
-
-        // Rule: Prevent delete if target has existing edit history
-        if ($hasHistory) {
-            $this->cancelDeleteTarget();
-            Flux::toast(variant: 'danger', text: __('Cannot delete target because it has existing edit history.'));
             return;
         }
 
@@ -795,27 +1372,45 @@ class SemestralTargetPage extends Component
 
     public function openRecoverModal(): void
     {
+        $this->deletedTargetsList = $this->deletedTargetsData()->items();
+        $this->showRecoverModal = true;
+    }
+
+    public function updatedDeletedTargetSearch(): void
+    {
+        $this->deletedTargetPage = 1;
+    }
+
+    public function setDeletedTargetPage(int $page): void
+    {
+        $this->deletedTargetPage = max(1, $page);
+    }
+
+    public function nextDeletedTargetPage(): void
+    {
+        $this->deletedTargetPage++;
+    }
+
+    public function previousDeletedTargetPage(): void
+    {
+        $this->deletedTargetPage = max(1, $this->deletedTargetPage - 1);
+    }
+
+    public function deletedTargetsData(): LengthAwarePaginator
+    {
         $semId = $this->activeSemesterId();
-        if (!$semId) {
-            $this->deletedTargetsList = [];
-            $this->showRecoverModal = true;
-            return;
+        if (! $semId) {
+            return new LengthAwarePaginator([], 0, $this->deletedTargetPerPage, $this->deletedTargetPage, [
+                'pageName' => 'deletedTargetPage',
+            ]);
         }
 
-        $activeTargetIds = DB::table('ipc_sem_targets_indicator')
-            ->where('semester_id', $semId)
-            ->pluck('id')
-            ->map(fn($id) => (int) $id)
-            ->all();
+        $search = trim($this->deletedTargetSearch);
 
-        $activeItemIds = DB::table('ipc_sem_targets_indicator_itemlist')
-            ->pluck('id')
-            ->map(fn($id) => (int) $id)
-            ->all();
-
-        $deletedHistoryRecords = DB::table('ipc_sem_target_edit_histories as h')
+        $query = DB::table('ipc_sem_target_edit_histories as h')
             ->leftJoin('users as u', 'h.user_id', '=', 'u.id')
             ->where('h.field_name', 'deleted')
+            ->where('h.sem_target_id', '>', 0)
             ->select([
                 'h.id',
                 'h.sem_target_id',
@@ -829,18 +1424,38 @@ class SemestralTargetPage extends Component
                 'u.first_name',
                 'u.last_name',
             ])
-            ->orderBy('h.id', 'desc')
-            ->get();
+            ->when($search !== '', function ($q) use ($search): void {
+                $like = '%' . $search . '%';
+                $q->where(function ($sub) use ($like): void {
+                    $sub->where('h.original_value', 'like', $like)
+                        ->orWhere('h.old_value', 'like', $like)
+                        ->orWhere('h.justification', 'like', $like)
+                        ->orWhere('u.first_name', 'like', $like)
+                        ->orWhere('u.last_name', 'like', $like);
+                });
+            })
+            ->orderByDesc('h.id');
+
+        $rows = $query->get();
+        $activeTargetIds = DB::table('ipc_sem_targets_indicator')
+            ->where('semester_id', $semId)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $activeItemIds = DB::table('ipc_sem_targets_indicator_itemlist')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
         $deletedList = [];
 
-        foreach ($deletedHistoryRecords as $delEvent) {
+        foreach ($rows as $delEvent) {
             $targetId = (int) $delEvent->sem_target_id;
             $itemId = (int) $delEvent->sem_item_id;
 
             $isTargetActive = in_array($targetId, $activeTargetIds, true);
             $isItemActive = $itemId > 0 && in_array($itemId, $activeItemIds, true);
-
             if ($isTargetActive && ($itemId === 0 || $isItemActive)) {
                 continue;
             }
@@ -860,30 +1475,30 @@ class SemestralTargetPage extends Component
             $kraCategory = $kraRec ? (int) ($kraRec->old_value ?: ($kraRec->original_value ?: 1)) : 1;
             $description = $descRec ? ($descRec->old_value ?: ($descRec->original_value ?: '')) : '';
 
-            $userName = '-';
-            if ($delEvent->user_id) {
-                $userObj = DB::table('users')->where('id', $delEvent->user_id)->select('first_name', 'last_name')->first();
-                if ($userObj) {
-                    $userName = trim(($userObj->first_name ?? '') . ' ' . ($userObj->last_name ?? ''));
-                }
-            }
-
-            $dateFormatted = $delEvent->date_created ? \Illuminate\Support\Carbon::parse($delEvent->date_created)->format('M d, Y h:i A') : '-';
+            $userName = trim(($delEvent->first_name ?? '') . ' ' . ($delEvent->last_name ?? ''));
+            $dateFormatted = $delEvent->date_created ? Carbon::parse($delEvent->date_created)->format('M d, Y h:i A') : '-';
 
             $deletedList[] = [
-                'sem_target_id' => (int) $targetId,
+                'sem_target_id' => $targetId,
                 'kra_category' => $kraCategory,
                 'kra_category_label' => KraCategory::label($kraCategory),
                 'activity' => $activity,
                 'description' => $description,
                 'justification' => $delEvent->justification ?: '-',
                 'deleted_at' => $dateFormatted,
-                'user_name' => $userName ?: 'System',
+                'user_name' => $userName !== '' ? $userName : 'System',
             ];
         }
 
-        $this->deletedTargetsList = collect($deletedList)->unique('sem_target_id')->values()->all();
-        $this->showRecoverModal = true;
+        $deletedList = collect($deletedList)->unique('sem_target_id')->values();
+
+        return new LengthAwarePaginator(
+            $deletedList->forPage($this->deletedTargetPage, $this->deletedTargetPerPage)->values(),
+            $deletedList->count(),
+            $this->deletedTargetPerPage,
+            $this->deletedTargetPage,
+            ['pageName' => 'deletedTargetPage']
+        );
     }
 
     public function recoverTarget(int $semTargetId): void
@@ -983,12 +1598,7 @@ class SemestralTargetPage extends Component
     #[On('semestral-target-subtarget-delete-requested')]
     public function requestDeleteSubTarget(int $semItemId): void
     {
-        $hasHistory = DB::table('ipc_sem_target_edit_histories')
-            ->where('sem_item_id', $semItemId)
-            ->exists();
-
-        if ($hasHistory) {
-            Flux::toast(variant: 'danger', text: __('Cannot delete sub-target because it has existing edit history.'));
+        if (! $this->canModifyActiveSemester(null, $semItemId)) {
             return;
         }
 
@@ -1009,6 +1619,12 @@ class SemestralTargetPage extends Component
     public function confirmDeleteSubTarget(): void
     {
         if ($this->deletingSemItemId === null) {
+            return;
+        }
+
+        if (! $this->canModifyActiveSemester(null, $this->deletingSemItemId)) {
+            $this->cancelDeleteSubTarget();
+
             return;
         }
 
@@ -2019,7 +2635,43 @@ class SemestralTargetPage extends Component
             return false;
         }
 
-        return (int) ($semRecord->lock ?? 0) === 1;
+        return in_array((int) ($semRecord->lock ?? 0), [1, 2], true);
+    }
+
+    protected function canModifyActiveSemester(?int $semTargetId = null, ?int $semItemId = null): bool
+    {
+        $query = DB::table('ipc_semester as semester')
+            ->where('semester.id', $this->semId)
+            ->where('semester.user_id', Auth::id())
+            ->where('semester.lock', 0);
+
+        if ($semTargetId !== null) {
+            $query->whereExists(function ($target) use ($semTargetId): void {
+                $target->selectRaw('1')
+                    ->from('ipc_sem_targets_indicator as editable_target')
+                    ->whereColumn('editable_target.semester_id', 'semester.id')
+                    ->where('editable_target.id', $semTargetId);
+            });
+        }
+
+        if ($semItemId !== null) {
+            $query->whereExists(function ($item) use ($semItemId): void {
+                $item->selectRaw('1')
+                    ->from('ipc_sem_targets_indicator_itemlist as editable_item')
+                    ->join('ipc_sem_targets_indicator as item_target', 'item_target.id', '=', 'editable_item.sem_target_id')
+                    ->whereColumn('item_target.semester_id', 'semester.id')
+                    ->where('editable_item.id', $semItemId);
+            });
+        }
+
+        if ($query->exists()) {
+            return true;
+        }
+
+        $this->cachedSemRecord = null;
+        Flux::toast(variant: 'danger', text: __('This semester is locked or unavailable. Target changes are no longer allowed.'));
+
+        return false;
     }
 
     public function hasIncompleteSemestralTargets(): bool
@@ -2389,6 +3041,7 @@ class SemestralTargetPage extends Component
             ->join('ipc_sem_targets_indicator as target', 'target.id', '=', 'item.sem_target_id')
             ->join('ipc_semester as semester', 'semester.id', '=', 'target.semester_id')
             ->where('semester.user_id', $userId)
+            ->whereIn('semester.lock', [0, 1])
             ->whereIn('item.id', $ids)
             ->select('item.*')
             ->get()
@@ -2444,7 +3097,7 @@ class SemestralTargetPage extends Component
                 $naQl = $isQlNa ? 1 : null;
                 $naT = $isTNa ? 1 : null;
 
-                $dbAverage = is_numeric($avgRaw) ? round((float) $avgRaw, 2) : null;
+                $dbAverage = is_numeric($avgRaw) ? round((float) $avgRaw, 5) : null;
                 $actualAccomp = isset($item['actual_accomp']) ? (string) $item['actual_accomp'] : null;
                 $targetMovs = isset($item['target_movs']) ? (string) $item['target_movs'] : null;
                 $targetRemarks = isset($item['target_remarks']) ? (string) $item['target_remarks'] : null;
@@ -2486,7 +3139,7 @@ class SemestralTargetPage extends Component
                     'quantity_score' => $isQNa ? 'N/A' : ($dbQ !== null ? (string) $dbQ : ''),
                     'quality_score' => $isQlNa ? 'N/A' : ($dbQl !== null ? (string) $dbQl : ''),
                     'timeliness_score' => $isTNa ? 'N/A' : ($dbT !== null ? (string) $dbT : ''),
-                    'average' => $dbAverage !== null ? number_format($dbAverage, 2, '.', '') : (($isQNa || $isQlNa || $isTNa) && $dbAverage === null ? 'N/A' : ''),
+                    'average' => $dbAverage !== null ? number_format($dbAverage, 5, '.', '') : (($isQNa || $isQlNa || $isTNa) && $dbAverage === null ? 'N/A' : ''),
                     'actual_accomp' => $actualAccomp ?? '',
                     'target_movs' => $targetMovs ?? '',
                     'target_remarks' => $targetRemarks ?? '',

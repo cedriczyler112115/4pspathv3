@@ -5,6 +5,16 @@
 
         return str_replace(["\r\n", "\r"], "\n", $text ?? '-');
     };
+    $formatScore5Php = static function (mixed $val): string {
+        if ($val === null || trim((string) $val) === '')
+            return '-';
+        $str = strtoupper(trim((string) $val));
+        if ($str === 'N/A')
+            return 'N/A';
+        if (!is_numeric($str))
+            return $str;
+        return number_format((float) $str, 5, '.', '');
+    };
     $textareaClass = 'w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-background';
     $groupRows = collect($rows)->values();
     $rowSpan = count($groupRows) + count($pendingSubTargets);
@@ -14,73 +24,78 @@
     $editingHighlightClass = $isEditingGroup ? 'bg-amber-100/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-100 font-medium' : '';
     $cellStyle = 'vertical-align: top !important; border-right: 1px solid var(--border);';
     $lastCellStyle = 'vertical-align: top !important; border-left: 1px solid var(--border);';
+    $showVerifiedBadge = filled($dateVerified ?? null);
 @endphp
 
 <tbody wire:key="semestral-target-indicator-group-{{ $indicatorId }}"
     x-on:semestral-target-updated.window="isSorting = false; draggingRow = null; releaseDragHandle()"
     x-on:semestral-target-swap-reset.window="isSorting = false; draggingRow = null; releaseDragHandle()"
     x-on:semestral-target-swap-completed.window="isSorting = false; draggingRow = null; releaseDragHandle()"
+    x-on:request-add-semestral-sub-target.window="if (Number($event.detail?.indicatorId) === {{ $indicatorId }}) $wire.requestAddSubTarget()"
+    x-on:request-edit-semestral-target.window="if (Number($event.detail?.indicatorId) === {{ $indicatorId }}) $wire.edit()"
+    x-on:request-delete-semestral-target.window="if (Number($event.detail?.indicatorId) === {{ $indicatorId }}) $wire.requestDelete()"
     x-data="semestralTargetGroup(@js($hasHistoryByItem))">
     @foreach ($groupRows as $index => $row)
         @php
             $semItemId = (int) ($row['sem_item_id'] ?? 0);
-            $isRowLocked = $isSemesterLocked ?? false;
+            $isRowLocked = (int) ($semLock ?? 0) !== 0;
         @endphp
         <tr wire:key="sem-row-{{ $semItemId }}-{{ $editing ? 'edit' : 'view' }}" data-score-row="{{ $semItemId }}"
             data-kra-category="{{ (int) ($row['kra_category'] ?? $kraCategory) }}"
             data-row-avg="{{ $scores[$semItemId]['average'] ?? '' }}"
-            data-has-attachments="{{ (!empty($row['has_attachments']) || ($row['attachment_count'] ?? 0) > 0) ? 1 : 0 }}"
+            data-has-attachments="{{ (($row['attachment_count'] ?? 0) > 0) ? 1 : 0 }}"
             data-na-quantity="{{ (int) ($row['na_quantity'] ?? 0) }}"
             data-na-quality="{{ (int) ($row['na_quality'] ?? 0) }}"
             data-na-timeliness="{{ (int) ($row['na_timeliness'] ?? 0) }}"
             x-data="semestralScoreRow({
-                                                                                                                                    q: @js($scores[$semItemId]['quantity_score'] ?? ''),
-                                                                                                                                    ql: @js($scores[$semItemId]['quality_score'] ?? ''),
-                                                                                                                                    t: @js($scores[$semItemId]['timeliness_score'] ?? ''),
-                                                                                                                                    avg: @js($scores[$semItemId]['average'] ?? ''),
-                                                                                                                                    accomp: @js($scores[$semItemId]['actual_accomp'] ?? ''),
-                                                                                                                                    movs: @js($scores[$semItemId]['target_movs'] ?? ''),
-                                                                                                                                    remarks: @js($scores[$semItemId]['target_remarks'] ?? ''),
-                                                                                                                                    itemId: {{ $semItemId }},
-                                                                                                                                    semId: @js($row['semester_id'] ?? request()->query('sem_id') ?? 0)
-                                                                                                                                })" x-init="initRow()"
+                                                                                                                                                                            q: @js($scores[$semItemId]['quantity_score'] ?? ''),
+                                                                                                                                                                            ql: @js($scores[$semItemId]['quality_score'] ?? ''),
+                                                                                                                                                                            t: @js($scores[$semItemId]['timeliness_score'] ?? ''),
+                                                                                                                                                                            avg: @js($scores[$semItemId]['average'] ?? ''),
+                                                                                                                                                                            accomp: @js($scores[$semItemId]['actual_accomp'] ?? ''),
+                                                                                                                                                                            movs: @js($scores[$semItemId]['target_movs'] ?? ''),
+                                                                                                                                                                            remarks: @js($scores[$semItemId]['target_remarks'] ?? ''),
+                                                                                                                                                                            itemId: {{ $semItemId }},
+                                                                                                                                                                            semId: @js($row['semester_id'] ?? request()->query('sem_id') ?? 0)
+                                                                                                                                                                        })"
+            x-init="initRow()"
             x-on:semestral-target-scores-saved.window="
-                                                                                                                                    let savedItems = $event.detail?.savedItems || {};
-                                                                                                                                    let saved = savedItems[itemId] || savedItems[String(itemId)];
-                                                                                                                                    if (!saved) return;
-                                                                                                                                    confirmed = { id: itemId, ...saved };
-                                                                                                                                    lastSavedStr = JSON.stringify(confirmed);
-                                                                                                                                    isSaving = false;
-                                                                                                                                    savingField = '';
-                                                                                                                                    let storageKey = 'sem_target_drafts_' + (semId || '0');
-                                                                                                                                    try {
-                                                                                                                                        let drafts = JSON.parse(localStorage.getItem(storageKey) || '{}');
-                                                                                                                                        if (drafts[itemId]) {
-                                                                                                                                            delete drafts[itemId];
-                                                                                                                                            if (Object.keys(drafts).length === 0) {
-                                                                                                                                                localStorage.removeItem(storageKey);
-                                                                                                                                            } else {
-                                                                                                                                                localStorage.setItem(storageKey, JSON.stringify(drafts));
-                                                                                                                                            }
-                                                                                                                                        }
-                                                                                                                                    } catch(e) {}
-                                                                                                                                "
+                                                                                                                                                                            let savedItems = $event.detail?.savedItems || {};
+                                                                                                                                                                            let saved = savedItems[itemId] || savedItems[String(itemId)];
+                                                                                                                                                                            if (!saved) return;
+                                                                                                                                                                            confirmed = { id: itemId, ...saved };
+                                                                                                                                                                            lastSavedStr = JSON.stringify(confirmed);
+                                                                                                                                                                            isSaving = false;
+                                                                                                                                                                            savingField = '';
+                                                                                                                                                                            let storageKey = 'sem_target_drafts_' + (semId || '0');
+                                                                                                                                                                            try {
+                                                                                                                                                                                let drafts = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                                                                                                                                                                                if (drafts[itemId]) {
+                                                                                                                                                                                    delete drafts[itemId];
+                                                                                                                                                                                    if (Object.keys(drafts).length === 0) {
+                                                                                                                                                                                        localStorage.removeItem(storageKey);
+                                                                                                                                                                                    } else {
+                                                                                                                                                                                        localStorage.setItem(storageKey, JSON.stringify(drafts));
+                                                                                                                                                                                    }
+                                                                                                                                                                                }
+                                                                                                                                                                            } catch(e) {}
+                                                                                                                                                                        "
             x-on:semestral-target-scores-failed.window="
-                                                                                                                                    let failed = ($event.detail?.items || []).some(item => Number(item.id) === Number(itemId));
-                                                                                                                                    if (!failed || !confirmed) return;
-                                                                                                                                    isSaving = false;
-                                                                                                                                    savingField = '';
-                                                                                                                                    q = confirmed.quantity_score || '';
-                                                                                                                                    ql = confirmed.quality_score || '';
-                                                                                                                                    t = confirmed.timeliness_score || '';
-                                                                                                                                    avg = confirmed.average || '';
-                                                                                                                                    accomp = confirmed.actual_accomp || '';
-                                                                                                                                    movs = confirmed.target_movs || '';
-                                                                                                                                    remarks = confirmed.target_remarks || '';
-                                                                                                                                    lastSavedStr = JSON.stringify(confirmed);
-                                                                                                                                    saveLocalDraft();
-                                                                                                                                "
-            x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($row['kra_category'] ?? $kraCategory) }}, {{ $indicatorId }}, {{ $semItemId }}, {{ count($groupRows) }}, {{ $isRowLocked ? 'true' : 'false' }})"
+                                                                                                                                                                            let failed = ($event.detail?.items || []).some(item => Number(item.id) === Number(itemId));
+                                                                                                                                                                            if (!failed || !confirmed) return;
+                                                                                                                                                                            isSaving = false;
+                                                                                                                                                                            savingField = '';
+                                                                                                                                                                            q = confirmed.quantity_score || '';
+                                                                                                                                                                            ql = confirmed.quality_score || '';
+                                                                                                                                                                            t = confirmed.timeliness_score || '';
+                                                                                                                                                                            avg = confirmed.average || '';
+                                                                                                                                                                            accomp = confirmed.actual_accomp || '';
+                                                                                                                                                                            movs = confirmed.target_movs || '';
+                                                                                                                                                                            remarks = confirmed.target_remarks || '';
+                                                                                                                                                                            lastSavedStr = JSON.stringify(confirmed);
+                                                                                                                                                                            saveLocalDraft();
+                                                                                                                                                                        "
+            x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($row['kra_category'] ?? $kraCategory) }}, {{ $indicatorId }}, {{ $semItemId }}, {{ count($groupRows) }}, {{ $index === 0 ? 'true' : 'false' }}, {{ $isRowLocked ? 'true' : 'false' }})"
             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'" x-on:dragend="endDrag()"
             x-on:drop.prevent="dropOn($event, { type: '{{ $index === 0 ? 'main' : 'sub' }}', indicatorId: {{ $indicatorId }}, itemId: {{ $semItemId }}, kra: {{ $kraCategory }} })"
             :class="showContextMenu && contextItemId === {{ $semItemId }} ? '!bg-sky-100 dark:!bg-sky-950/80 text-sky-950 dark:text-sky-100 relative z-10' : (draggingRow === {{ $indicatorId }} ? 'shadow-lg shadow-slate-400/40 ring-1 ring-slate-300 bg-white dark:bg-zinc-800 scale-[1.01] relative z-10 cursor-grabbing' : '')"
@@ -114,6 +129,11 @@
                                                 d="M12 3v18m0-18l-3 3m3-3l3 3m-3 15l-3-3m3 3l3-3M3 12h18m-18 0l3-3m-3 3l3 3m15-3l-3-3m3 3l-3 3" />
                                         </svg>
                                     </div>
+                                    @if ($showVerifiedBadge)
+                                        <div class="absolute left-1/2 top-full mt-1 flex -translate-x-1/2 items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                            <flux:icon icon="check-circle" class="size-6" />
+                                        </div>
+                                    @endif
                                     <div x-show="isSorting" class="absolute -right-2 -top-1 flex items-center justify-center"
                                         x-cloak x-transition.opacity>
                                         <svg class="animate-spin size-4 text-emerald-600 dark:text-emerald-400"
@@ -169,29 +189,54 @@
                 @endif
             </td>
             @if ($isRowLocked)
-                <td data-col-type="actual-accomp" class="border-b border-r border-border px-3 py-3 align-top text-xs"
+            <td data-col-type="actual-accomp" class="border-b border-r border-border px-3 py-3 align-top text-xs"
                     style="{{ $cellStyle }}">
-                    <div class="space-y-2">
-                        <textarea data-autosize="true" data-field="actual_accomp" x-model="accomp"
-                            x-on:input="scheduleSave('actual_accomp')"
-                            x-on:change="saveField('actual_accomp')"
-                            x-on:blur="saveField('actual_accomp')" rows="3" placeholder="Actual accomplishment..."
-                            class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex flex-col">
+                    <div class="flex h-full min-h-[180px] flex-col">
+                        <div class="min-h-[60px] space-y-2">
+                        @if ($semLock === 2)
+                            <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[60px]"
+                                x-text="accomp || '-'">
+                                {!! nl2br(e($formatValue($scores[$semItemId]['actual_accomp'] ?? $row['actual_accomp'] ?? ''))) !!}
+                            </div>
+                        @else
+                            <textarea data-autosize="true" data-field="actual_accomp" x-model="accomp"
+                                x-on:input="scheduleSave('actual_accomp')" x-on:change="saveField('actual_accomp')"
+                                x-on:blur="saveField('actual_accomp')" rows="3" placeholder="Actual accomplishment..."
+                                class="{{ $textareaClass }} min-h-[60px]" style="resize:none; min-height: 60px;"></textarea>
+                        @endif
+                        </div>
+                        <div class="flex items-center justify-between gap-3 border-t border-border/60 pt-2">
+                            <div class="flex flex-col leading-none">
                                 <span class="text-[10px] text-muted-foreground">
                                     {{ trans_choice(':count file uploaded|:count files uploaded', (int) ($row['attachment_count'] ?? 0), ['count' => (int) ($row['attachment_count'] ?? 0)]) }}
                                 </span>
-                                <span class="text-[10px] text-muted-foreground">
+                                <span class="text-[10px] font-semibold italic text-muted-foreground">
                                     <strong><em>{{ $semItemId }}</em></strong>
                                 </span>
                             </div>
-                            <flux:button size="xs" type="button" variant="primary"
-                                class="bg-emerald-600 text-white hover:bg-emerald-700"
-                                wire:click="openAttachmentUpload({{ $semItemId }})" wire:loading.attr="disabled"
-                                wire:target="openAttachmentUpload({{ $semItemId }})">
-                                {{ __('Upload MOVs') }}
-                            </flux:button>
+                            @if ((int) ($semLock ?? 0) === 2)
+                                <a href="#"
+                                    class="inline-flex shrink-0 items-center gap-1 px-1 py-1 text-xs font-semibold text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/90"
+                                    wire:click.prevent="openAttachmentUpload({{ $semItemId }})"
+                                    wire:loading.attr="aria-disabled"
+                                    wire:target="openAttachmentUpload({{ $semItemId }})">
+                                    <span class="inline-flex items-center gap-1">
+                                        <flux:icon icon="eye" class="size-3.5" />
+                                        {{ __('Show MOVs') }}
+                                    </span>
+                                </a>
+                            @else
+                                <a href="#"
+                                    class="inline-flex shrink-0 items-center gap-1 px-1 py-1 text-xs font-semibold text-primary underline decoration-primary/30 underline-offset-2 hover:text-primary/80 hover:decoration-primary/60 dark:text-primary dark:decoration-primary/40 dark:hover:text-primary/90"
+                                    wire:click.prevent="openAttachmentUpload({{ $semItemId }})"
+                                    wire:loading.attr="aria-disabled"
+                                    wire:target="openAttachmentUpload({{ $semItemId }})">
+                                    <span class="inline-flex items-center gap-1">
+                                        <flux:icon icon="arrow-up-tray" class="size-3.5" />
+                                        {{ __('Upload MOVs') }}
+                                    </span>
+                                </a>
+                            @endif
                         </div>
                     </div>
                 </td>
@@ -205,64 +250,76 @@
                         $qShort = $isLongQ ? mb_substr($rawQ, 0, 200) . '...' : $qFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="text" data-field="quantity" x-model="q" x-on:keydown="
-                                        if ($event.key === 'n' || $event.key === 'N') {
-                                            $event.preventDefault();
-                                            q = 'N/A';
-                                            computeAverage();
-                                            saveField('quantity');
-                                            focusNextInput($el);
-                                        }
-                                    " x-on:keydown.down.prevent="
-                                        let valStr = (q || '').toString().trim().toUpperCase();
-                                        if (valStr === 'N/A') return;
-                                        let num = parseFloat(valStr);
-                                        if (!isNaN(num) && num > 1) {
-                                            q = (num - 1).toFixed(2);
-                                        }
-                                        computeAverage();
-                                    " x-on:keydown.up.prevent="
-                                        let valStr = (q || '').toString().trim().toUpperCase();
-                                        if (valStr === 'N/A') {
-                                            q = '1';
-                                        } else {
-                                            let num = parseFloat(valStr);
-                                            if (isNaN(num)) {
-                                                q = '1';
-                                            } else if (num < 5) {
-                                                q = Math.min(5, num + 1).toFixed(2);
-                                            }
-                                        }
-                                        computeAverage();
-                                    " x-on:input="
-                                        let raw = ($el.value || '').trim();
-                                        if (raw === '') {
-                                            q = '';
-                                            computeAverage();
-                                            return;
-                                        }
-                                        let upper = raw.toUpperCase();
-                                        if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                            q = 'N/A';
-                                            computeAverage();
-                                            saveField('quantity');
-                                            focusNextInput($el);
-                                            return;
-                                        }
-                                        let cleaned = raw.replace(/[^0-9.]/g, '');
-                                        let parts = cleaned.split('.');
-                                        if (parts.length > 2) {
-                                            cleaned = parts[0] + '.' + parts.slice(1).join('');
-                                        }
-                                        let num = parseFloat(cleaned);
-                                        if (!isNaN(num) && num > 5) {
-                                            cleaned = '5';
-                                        }
-                                        q = cleaned;
-                                        computeAverage();
-                                    " x-on:change="saveField('quantity')" x-on:blur="saveField('quantity')" placeholder="Score (1-5 or N/A)"
-                            class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
-                        <div class="text-[10px] text-muted-foreground italic leading-tight">
+                        @if ($semLock === 2)
+                            <div class="w-full text-center text-xs font-bold text-foreground py-1 mb-1 rounded-md bg-muted/30 border border-border/50"
+                                x-text="formatScore5(q)">
+                                {{ $formatScore5Php($scores[$semItemId]['quantity_score'] ?? $row['quantity_score'] ?? 'N/A') }}
+                            </div>
+                        @else
+                            <input type="text" data-field="quantity" x-model="q"
+                                x-on:keydown="
+                                                                                                                                                if ($event.key === 'n' || $event.key === 'N') {
+                                                                                                                                                    $event.preventDefault();
+                                                                                                                                                    q = 'N/A';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    saveField('quantity');
+                                                                                                                                                    focusNextInput($el);
+                                                                                                                                                }
+                                                                                                                                            "
+                                x-on:keydown.down.prevent="
+                                                                                                                                                let valStr = (q || '').toString().trim().toUpperCase();
+                                                                                                                                                if (valStr === 'N/A') return;
+                                                                                                                                                let num = parseFloat(valStr);
+                                                                                                                                                if (!isNaN(num) && num > 1) {
+                                                                                                                                                    q = (num - 1).toFixed(2);
+                                                                                                                                                }
+                                                                                                                                                computeAverage();
+                                                                                                                                            "
+                                x-on:keydown.up.prevent="
+                                                                                                                                                let valStr = (q || '').toString().trim().toUpperCase();
+                                                                                                                                                if (valStr === 'N/A') {
+                                                                                                                                                    q = '1';
+                                                                                                                                                } else {
+                                                                                                                                                    let num = parseFloat(valStr);
+                                                                                                                                                    if (isNaN(num)) {
+                                                                                                                                                        q = '1';
+                                                                                                                                                    } else if (num < 5) {
+                                                                                                                                                        q = Math.min(5, num + 1).toFixed(2);
+                                                                                                                                                    }
+                                                                                                                                                }
+                                                                                                                                                computeAverage();
+                                                                                                                                            "
+                                x-on:input="
+                                                                                                                                                let raw = ($el.value || '').trim();
+                                                                                                                                                if (raw === '') {
+                                                                                                                                                    q = '';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    return;
+                                                                                                                                                }
+                                                                                                                                                let upper = raw.toUpperCase();
+                                                                                                                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                                                                                                                    q = 'N/A';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    saveField('quantity');
+                                                                                                                                                    focusNextInput($el);
+                                                                                                                                                    return;
+                                                                                                                                                }
+                                                                                                                                                let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                                                                                                                let parts = cleaned.split('.');
+                                                                                                                                                if (parts.length > 2) {
+                                                                                                                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                                                                                                                }
+                                                                                                                                                let num = parseFloat(cleaned);
+                                                                                                                                                if (!isNaN(num) && num > 5) {
+                                                                                                                                                    cleaned = '5';
+                                                                                                                                                }
+                                                                                                                                                q = cleaned;
+                                                                                                                                                computeAverage();
+                                                                                                                                            " x-on:change="saveField('quantity')"
+                                x-on:blur="saveField('quantity')" placeholder="Score (1-5 or N/A)"
+                                class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
+                        @endif
+                        <div class="text-[10px] text-muted-foreground leading-tight">
                             <span x-show="expanded">{!! nl2br(e($qFull)) !!}</span>
                             <span x-show="!expanded">{!! nl2br(e($qShort)) !!}</span>
                         </div>
@@ -295,64 +352,76 @@
                         $qlShort = $isLongQl ? mb_substr($rawQl, 0, 200) . '...' : $qlFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="text" data-field="quality" x-model="ql" x-on:keydown="
-                                        if ($event.key === 'n' || $event.key === 'N') {
-                                            $event.preventDefault();
-                                            ql = 'N/A';
-                                            computeAverage();
-                                            saveField('quality');
-                                            focusNextInput($el);
-                                        }
-                                    " x-on:keydown.down.prevent="
-                                        let valStr = (ql || '').toString().trim().toUpperCase();
-                                        if (valStr === 'N/A') return;
-                                        let num = parseFloat(valStr);
-                                        if (!isNaN(num) && num > 1) {
-                                            ql = (num - 1).toFixed(2);
-                                        }
-                                        computeAverage();
-                                    " x-on:keydown.up.prevent="
-                                        let valStr = (ql || '').toString().trim().toUpperCase();
-                                        if (valStr === 'N/A') {
-                                            ql = '1';
-                                        } else {
-                                            let num = parseFloat(valStr);
-                                            if (isNaN(num)) {
-                                                ql = '1';
-                                            } else if (num < 5) {
-                                                ql = Math.min(5, num + 1).toFixed(2);
-                                            }
-                                        }
-                                        computeAverage();
-                                    " x-on:input="
-                                        let raw = ($el.value || '').trim();
-                                        if (raw === '') {
-                                            ql = '';
-                                            computeAverage();
-                                            return;
-                                        }
-                                        let upper = raw.toUpperCase();
-                                        if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                            ql = 'N/A';
-                                            computeAverage();
-                                            saveField('quality');
-                                            focusNextInput($el);
-                                            return;
-                                        }
-                                        let cleaned = raw.replace(/[^0-9.]/g, '');
-                                        let parts = cleaned.split('.');
-                                        if (parts.length > 2) {
-                                            cleaned = parts[0] + '.' + parts.slice(1).join('');
-                                        }
-                                        let num = parseFloat(cleaned);
-                                        if (!isNaN(num) && num > 5) {
-                                            cleaned = '5';
-                                        }
-                                        ql = cleaned;
-                                        computeAverage();
-                                    " x-on:change="saveField('quality')" x-on:blur="saveField('quality')" placeholder="Score (1-5 or N/A)"
-                            class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
-                        <div class="text-[10px] text-muted-foreground italic leading-tight">
+                        @if ($semLock === 2)
+                            <div class="w-full text-center text-xs font-bold text-foreground py-1 mb-1 rounded-md bg-muted/30 border border-border/50"
+                                x-text="formatScore5(ql)">
+                                {{ $formatScore5Php($scores[$semItemId]['quality_score'] ?? $row['quality_score'] ?? 'N/A') }}
+                            </div>
+                        @else
+                            <input type="text" data-field="quality" x-model="ql"
+                                x-on:keydown="
+                                                                                                                                                if ($event.key === 'n' || $event.key === 'N') {
+                                                                                                                                                    $event.preventDefault();
+                                                                                                                                                    ql = 'N/A';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    saveField('quality');
+                                                                                                                                                    focusNextInput($el);
+                                                                                                                                                }
+                                                                                                                                            "
+                                x-on:keydown.down.prevent="
+                                                                                                                                                let valStr = (ql || '').toString().trim().toUpperCase();
+                                                                                                                                                if (valStr === 'N/A') return;
+                                                                                                                                                let num = parseFloat(valStr);
+                                                                                                                                                if (!isNaN(num) && num > 1) {
+                                                                                                                                                    ql = (num - 1).toFixed(2);
+                                                                                                                                                }
+                                                                                                                                                computeAverage();
+                                                                                                                                            "
+                                x-on:keydown.up.prevent="
+                                                                                                                                                let valStr = (ql || '').toString().trim().toUpperCase();
+                                                                                                                                                if (valStr === 'N/A') {
+                                                                                                                                                    ql = '1';
+                                                                                                                                                } else {
+                                                                                                                                                    let num = parseFloat(valStr);
+                                                                                                                                                    if (isNaN(num)) {
+                                                                                                                                                        ql = '1';
+                                                                                                                                                    } else if (num < 5) {
+                                                                                                                                                        ql = Math.min(5, num + 1).toFixed(2);
+                                                                                                                                                    }
+                                                                                                                                                }
+                                                                                                                                                computeAverage();
+                                                                                                                                            "
+                                x-on:input="
+                                                                                                                                                let raw = ($el.value || '').trim();
+                                                                                                                                                if (raw === '') {
+                                                                                                                                                    ql = '';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    return;
+                                                                                                                                                }
+                                                                                                                                                let upper = raw.toUpperCase();
+                                                                                                                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                                                                                                                    ql = 'N/A';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    saveField('quality');
+                                                                                                                                                    focusNextInput($el);
+                                                                                                                                                    return;
+                                                                                                                                                }
+                                                                                                                                                let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                                                                                                                let parts = cleaned.split('.');
+                                                                                                                                                if (parts.length > 2) {
+                                                                                                                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                                                                                                                }
+                                                                                                                                                let num = parseFloat(cleaned);
+                                                                                                                                                if (!isNaN(num) && num > 5) {
+                                                                                                                                                    cleaned = '5';
+                                                                                                                                                }
+                                                                                                                                                ql = cleaned;
+                                                                                                                                                computeAverage();
+                                                                                                                                            " x-on:change="saveField('quality')"
+                                x-on:blur="saveField('quality')" placeholder="Score (1-5 or N/A)"
+                                class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
+                        @endif
+                        <div class="text-[10px] text-muted-foreground leading-tight">
                             <span x-show="expanded">{!! nl2br(e($qlFull)) !!}</span>
                             <span x-show="!expanded">{!! nl2br(e($qlShort)) !!}</span>
                         </div>
@@ -385,64 +454,76 @@
                         $tShort = $isLongT ? mb_substr($rawT, 0, 200) . '...' : $tFull;
                     @endphp
                     <div x-data="{ expanded: false }" class="space-y-1">
-                        <input type="text" data-field="timeliness" x-model="t" x-on:keydown="
-                                        if ($event.key === 'n' || $event.key === 'N') {
-                                            $event.preventDefault();
-                                            t = 'N/A';
-                                            computeAverage();
-                                            saveField('timeliness');
-                                            focusNextInput($el);
-                                        }
-                                    " x-on:keydown.down.prevent="
-                                        let valStr = (t || '').toString().trim().toUpperCase();
-                                        if (valStr === 'N/A') return;
-                                        let num = parseFloat(valStr);
-                                        if (!isNaN(num) && num > 1) {
-                                            t = (num - 1).toFixed(2);
-                                        }
-                                        computeAverage();
-                                    " x-on:keydown.up.prevent="
-                                        let valStr = (t || '').toString().trim().toUpperCase();
-                                        if (valStr === 'N/A') {
-                                            t = '1';
-                                        } else {
-                                            let num = parseFloat(valStr);
-                                            if (isNaN(num)) {
-                                                t = '1';
-                                            } else if (num < 5) {
-                                                t = Math.min(5, num + 1).toFixed(2);
-                                            }
-                                        }
-                                        computeAverage();
-                                    " x-on:input="
-                                        let raw = ($el.value || '').trim();
-                                        if (raw === '') {
-                                            t = '';
-                                            computeAverage();
-                                            return;
-                                        }
-                                        let upper = raw.toUpperCase();
-                                        if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                            t = 'N/A';
-                                            computeAverage();
-                                            saveField('timeliness');
-                                            focusNextInput($el);
-                                            return;
-                                        }
-                                        let cleaned = raw.replace(/[^0-9.]/g, '');
-                                        let parts = cleaned.split('.');
-                                        if (parts.length > 2) {
-                                            cleaned = parts[0] + '.' + parts.slice(1).join('');
-                                        }
-                                        let num = parseFloat(cleaned);
-                                        if (!isNaN(num) && num > 5) {
-                                            cleaned = '5';
-                                        }
-                                        t = cleaned;
-                                        computeAverage();
-                                    " x-on:change="saveField('timeliness')" x-on:blur="saveField('timeliness')" placeholder="Score (1-5 or N/A)"
-                            class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
-                        <div class="text-[10px] text-muted-foreground italic leading-tight">
+                        @if ($semLock === 2)
+                            <div class="w-full text-center text-xs font-bold text-foreground py-1 mb-1 rounded-md bg-muted/30 border border-border/50"
+                                x-text="formatScore5(t)">
+                                {{ $formatScore5Php($scores[$semItemId]['timeliness_score'] ?? $row['timeliness_score'] ?? 'N/A') }}
+                            </div>
+                        @else
+                            <input type="text" data-field="timeliness" x-model="t"
+                                x-on:keydown="
+                                                                                                                                                if ($event.key === 'n' || $event.key === 'N') {
+                                                                                                                                                    $event.preventDefault();
+                                                                                                                                                    t = 'N/A';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    saveField('timeliness');
+                                                                                                                                                    focusNextInput($el);
+                                                                                                                                                }
+                                                                                                                                            "
+                                x-on:keydown.down.prevent="
+                                                                                                                                                let valStr = (t || '').toString().trim().toUpperCase();
+                                                                                                                                                if (valStr === 'N/A') return;
+                                                                                                                                                let num = parseFloat(valStr);
+                                                                                                                                                if (!isNaN(num) && num > 1) {
+                                                                                                                                                    t = (num - 1).toFixed(2);
+                                                                                                                                                }
+                                                                                                                                                computeAverage();
+                                                                                                                                            "
+                                x-on:keydown.up.prevent="
+                                                                                                                                                let valStr = (t || '').toString().trim().toUpperCase();
+                                                                                                                                                if (valStr === 'N/A') {
+                                                                                                                                                    t = '1';
+                                                                                                                                                } else {
+                                                                                                                                                    let num = parseFloat(valStr);
+                                                                                                                                                    if (isNaN(num)) {
+                                                                                                                                                        t = '1';
+                                                                                                                                                    } else if (num < 5) {
+                                                                                                                                                        t = Math.min(5, num + 1).toFixed(2);
+                                                                                                                                                    }
+                                                                                                                                                }
+                                                                                                                                                computeAverage();
+                                                                                                                                            "
+                                x-on:input="
+                                                                                                                                                let raw = ($el.value || '').trim();
+                                                                                                                                                if (raw === '') {
+                                                                                                                                                    t = '';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    return;
+                                                                                                                                                }
+                                                                                                                                                let upper = raw.toUpperCase();
+                                                                                                                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                                                                                                                    t = 'N/A';
+                                                                                                                                                    computeAverage();
+                                                                                                                                                    saveField('timeliness');
+                                                                                                                                                    focusNextInput($el);
+                                                                                                                                                    return;
+                                                                                                                                                }
+                                                                                                                                                let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                                                                                                                let parts = cleaned.split('.');
+                                                                                                                                                if (parts.length > 2) {
+                                                                                                                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                                                                                                                }
+                                                                                                                                                let num = parseFloat(cleaned);
+                                                                                                                                                if (!isNaN(num) && num > 5) {
+                                                                                                                                                    cleaned = '5';
+                                                                                                                                                }
+                                                                                                                                                t = cleaned;
+                                                                                                                                                computeAverage();
+                                                                                                                                            " x-on:change="saveField('timeliness')"
+                                x-on:blur="saveField('timeliness')" placeholder="Score (1-5 or N/A)"
+                                class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
+                        @endif
+                        <div class="text-[10px] text-muted-foreground leading-tight">
                             <span x-show="expanded">{!! nl2br(e($tFull)) !!}</span>
                             <span x-show="!expanded">{!! nl2br(e($tShort)) !!}</span>
                         </div>
@@ -469,16 +550,24 @@
             @if ($isRowLocked)
                 <td class="border-b border-r border-border px-2 py-3 align-top text-center text-xs" style="{{ $cellStyle }}">
                     <input type="hidden" data-field="average" x-model="avg">
-                    <div class="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs" x-text="avg || '-'"></div>
+                    <div class="font-extrabold text-emerald-600 dark:text-emerald-400 text-xs"
+                        x-text="formatScore5(avg) || '-'">
+                        {{ $formatScore5Php($scores[$semItemId]['average'] ?? $row['average'] ?? '-') }}
+                    </div>
                 </td>
             @endif
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
                 @if ($isRowLocked)
-                    <textarea data-autosize="true" data-field="target_movs" x-model="movs"
-                        x-on:input="scheduleSave('target_movs')"
-                        x-on:change="saveField('target_movs')"
-                        x-on:blur="saveField('target_movs')" rows="3" placeholder="MOVs..."
-                        class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
+                    @if ($semLock === 2)
+                        <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[60px]" x-text="movs || '-'">
+                            {!! nl2br(e($formatValue($scores[$semItemId]['target_movs'] ?? $row['target_movs'] ?? ''))) !!}
+                        </div>
+                    @else
+                        <textarea data-autosize="true" data-field="target_movs" x-model="movs"
+                            x-on:input="scheduleSave('target_movs')" x-on:change="saveField('target_movs')"
+                            x-on:blur="saveField('target_movs')" rows="3" placeholder="MOVs..."
+                            class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
+                    @endif
                 @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.movs" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
@@ -488,11 +577,17 @@
             </td>
             <td class="border-b border-l border-border px-3 py-3 align-top text-xs" style="{{ $lastCellStyle }}">
                 @if ($isRowLocked)
-                    <textarea data-autosize="true" data-field="target_remarks" x-model="remarks"
-                        x-on:input="scheduleSave('target_remarks')"
-                        x-on:change="saveField('target_remarks')"
-                        x-on:blur="saveField('target_remarks')" rows="3" placeholder="Remarks..."
-                        class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
+                    @if ($semLock === 2)
+                        <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[60px]"
+                            x-text="remarks || '-'">
+                            {!! nl2br(e($formatValue($scores[$semItemId]['target_remarks'] ?? $row['target_remarks'] ?? ''))) !!}
+                        </div>
+                    @else
+                        <textarea data-autosize="true" data-field="target_remarks" x-model="remarks"
+                            x-on:input="scheduleSave('target_remarks')" x-on:change="saveField('target_remarks')"
+                            x-on:blur="saveField('target_remarks')" rows="3" placeholder="Remarks..."
+                            class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
+                    @endif
                 @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.remarks" rows="1"
                         class="{{ $textareaClass }}" style="resize:none;"></textarea>
@@ -562,7 +657,7 @@
                 </button>
 
                 <button type="button" x-on:mouseenter="activeSubMenu = null"
-                    x-on:click="closeContextMenu(); $wire.edit()"
+                    x-on:click="window.dispatchEvent(new CustomEvent('request-edit-semestral-target', { detail: { indicatorId: contextIndicatorId } })); closeContextMenu()"
                     class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800 transition-colors">
                     <flux:icon icon="pencil-square" class="size-4 text-amber-500 dark:text-amber-400" />
                     <span>{{ __('Edit Target') }}</span>
@@ -605,7 +700,8 @@
                     <span>{{ __('Add new target') }}</span>
                 </button>
 
-                <button type="button" x-on:click="closeContextMenu(); $wire.requestAddSubTarget()"
+                <button type="button"
+                    x-on:click="window.dispatchEvent(new CustomEvent('request-add-semestral-sub-target', { detail: { indicatorId: contextIndicatorId } })); closeContextMenu()"
                     class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-accent hover:text-accent-foreground dark:hover:bg-zinc-800 transition-colors">
                     <flux:icon icon="document-plus" class="size-4 text-slate-700 dark:text-slate-300" />
                     <span>{{ __('Add sub-target') }}</span>
@@ -621,7 +717,7 @@
                 class="fixed min-w-[17rem] rounded-xl border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 p-1.5 text-xs font-medium opacity-100 shadow-2xl animate-in fade-in-50 zoom-in-95">
 
                 <button type="button" :disabled="!canDeleteTarget"
-                    x-on:click="if (canDeleteTarget) { closeContextMenu(); $wire.requestDelete(); }"
+                    x-on:click="if (canDeleteTarget) { window.dispatchEvent(new CustomEvent('request-delete-semestral-target', { detail: { indicatorId: contextIndicatorId } })); closeContextMenu(); }"
                     class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
                     :class="!canDeleteTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'">
                     <flux:icon icon="trash" class="size-4"
@@ -630,7 +726,7 @@
                 </button>
 
                 <button type="button" :disabled="!canDeleteSubTarget"
-                    x-on:click="if (canDeleteSubTarget) { const targetId = contextItemId; closeContextMenu(); $wire.requestDeleteSubTarget(targetId); }"
+                    x-on:click="if (canDeleteSubTarget) runWireAction('requestDeleteSubTarget', contextItemId)"
                     class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
                     :class="!canDeleteSubTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'">
                     <flux:icon icon="minus-circle" class="size-4"
@@ -641,22 +737,26 @@
         </template>
     </template>
 
-    <!-- Justification Modal for 2026 2nd Semester Edit -->
+    <!-- Justification Modal -->
     @if ($showJustificationModal)
         <template x-teleport="body">
             <flux:modal wire:model="showJustificationModal" dismissible class="max-w-lg">
                 <div class="space-y-5">
                     <div class="space-y-1">
-                        <flux:heading size="lg">{{ __('Edit Justification Required') }}</flux:heading>
+                        <flux:heading size="lg">
+                            {{ $creatingSubTarget ? __('Add Sub-Target Justification Required') : __('Edit Justification Required') }}
+                        </flux:heading>
                         <flux:subheading>
-                            {{ __('Please provide a reason/justification for modifying this semestral target.') }}
+                            {{ $creatingSubTarget
+            ? __('Please provide a justification before adding this sub-target.')
+            : __('Please provide a reason/justification for modifying this semestral target.') }}
                         </flux:subheading>
                     </div>
 
                     <div class="grid gap-2">
                         <flux:label>{{ __('Justification Remarks') }} <span class="text-red-500">*</span></flux:label>
                         <textarea wire:model="justificationText" rows="3"
-                            placeholder="{{ __('Enter the reason for updating this target...') }}"
+                            placeholder="{{ $creatingSubTarget ? __('Enter justification for adding this sub-target...') : __('Enter the reason for updating this target...') }}"
                             class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm leading-5 text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"></textarea>
                     </div>
 
@@ -669,7 +769,7 @@
                         <flux:button variant="primary" type="button"
                             class="bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-700"
                             wire:click="save">
-                            {{ __('Submit & Save Changes') }}
+                            {{ $creatingSubTarget ? __('Submit & Add Sub-Target') : __('Submit & Save Changes') }}
                         </flux:button>
                     </div>
                 </div>
@@ -714,64 +814,64 @@
                 style="width: 45vw !important; max-width: 45vw !important; height: 85vh !important; max-height: 85vh !important;"
                 @close="cancelAttachmentUpload; queuedAttachments = []; activeIndex = -1;">
                 <div class="relative flex h-full w-full flex-col overflow-hidden" x-data="{
-                                    progress: 0,
-                                    uploading: false,
-                                    attachments: @js($galleryAttachments),
-                                    serverPreviews: @js($serverPreviewFiles),
-                                    queuedAttachments: [],
-                                    activeIndex: -1,
-                                    currentAttachment() {
-                                    return this.activeIndex >= 0 && this.activeIndex < this.attachments.length
-                                    ? this.attachments[this.activeIndex]
-                                    : null;
-                                    },
-                                    openAttachment(index) {
-                                    this.attachments = @js($galleryAttachments);
-                                    if (index < 0 || index >= this.attachments.length) return;
-                                    this.activeIndex = index;
-                                    },
-                                    previousAttachment() {
-                                    this.attachments = @js($galleryAttachments);
-                                    if (!this.attachments.length) return;
-                                    this.activeIndex = (this.activeIndex - 1 + this.attachments.length) % this.attachments.length;
-                                    },
-                                    nextAttachment() {
-                                    this.attachments = @js($galleryAttachments);
-                                    if (!this.attachments.length) return;
-                                    this.activeIndex = (this.activeIndex + 1) % this.attachments.length;
-                                    },
-                                    closeViewer() { this.activeIndex = -1 },
-                                    queueSelectedFiles(event) {
-                                    this.queuedAttachments.forEach((file) => {
-                                    if (file?.url) {
-                                        URL.revokeObjectURL(file.url);
-                                    }
-                                    });
-                                    const files = Array.from(event.target.files || []);
-                                    this.queuedAttachments = files.map((file) => ({
-                                    name: file.name,
-                                    url: file.type === 'application/pdf' ? '' : URL.createObjectURL(file),
-                                    type: file.type === 'application/pdf' ? 'pdf' : 'image',
-                                    size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-                                    }));
-                                    },
-                                    removeQueuedFile(index) {
-                                    if (index < 0) return;
-                                    if (this.queuedAttachments.length > 0 && index < this.queuedAttachments.length) {
-                                    const removed = this.queuedAttachments.splice(index, 1);
-                                    if (removed[0]?.url) {
-                                        URL.revokeObjectURL(removed[0].url);
-                                    }
-                                    }
-                                    if (this.serverPreviews && index < this.serverPreviews.length) {
-                                    this.serverPreviews.splice(index, 1);
-                                    }
-                                    $wire.removeQueuedAttachment(index);
-                                    },
-                                    displayPreviews() {
-                                    return this.queuedAttachments.length > 0 ? this.queuedAttachments : this.serverPreviews;
-                                    }
-                                    }" x-on:keydown.escape.window="closeViewer()"
+                                                                            progress: 0,
+                                                                            uploading: false,
+                                                                            attachments: @js($galleryAttachments),
+                                                                            serverPreviews: @js($serverPreviewFiles),
+                                                                            queuedAttachments: [],
+                                                                            activeIndex: -1,
+                                                                            currentAttachment() {
+                                                                            return this.activeIndex >= 0 && this.activeIndex < this.attachments.length
+                                                                            ? this.attachments[this.activeIndex]
+                                                                            : null;
+                                                                            },
+                                                                            openAttachment(index) {
+                                                                            this.attachments = @js($galleryAttachments);
+                                                                            if (index < 0 || index >= this.attachments.length) return;
+                                                                            this.activeIndex = index;
+                                                                            },
+                                                                            previousAttachment() {
+                                                                            this.attachments = @js($galleryAttachments);
+                                                                            if (!this.attachments.length) return;
+                                                                            this.activeIndex = (this.activeIndex - 1 + this.attachments.length) % this.attachments.length;
+                                                                            },
+                                                                            nextAttachment() {
+                                                                            this.attachments = @js($galleryAttachments);
+                                                                            if (!this.attachments.length) return;
+                                                                            this.activeIndex = (this.activeIndex + 1) % this.attachments.length;
+                                                                            },
+                                                                            closeViewer() { this.activeIndex = -1 },
+                                                                            queueSelectedFiles(event) {
+                                                                            this.queuedAttachments.forEach((file) => {
+                                                                            if (file?.url) {
+                                                                                URL.revokeObjectURL(file.url);
+                                                                            }
+                                                                            });
+                                                                            const files = Array.from(event.target.files || []);
+                                                                            this.queuedAttachments = files.map((file) => ({
+                                                                            name: file.name,
+                                                                            url: file.type === 'application/pdf' ? '' : URL.createObjectURL(file),
+                                                                            type: file.type === 'application/pdf' ? 'pdf' : 'image',
+                                                                            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                                                                            }));
+                                                                            },
+                                                                            removeQueuedFile(index) {
+                                                                            if (index < 0) return;
+                                                                            if (this.queuedAttachments.length > 0 && index < this.queuedAttachments.length) {
+                                                                            const removed = this.queuedAttachments.splice(index, 1);
+                                                                            if (removed[0]?.url) {
+                                                                                URL.revokeObjectURL(removed[0].url);
+                                                                            }
+                                                                            }
+                                                                            if (this.serverPreviews && index < this.serverPreviews.length) {
+                                                                            this.serverPreviews.splice(index, 1);
+                                                                            }
+                                                                            $wire.removeQueuedAttachment(index);
+                                                                            },
+                                                                            displayPreviews() {
+                                                                            return this.queuedAttachments.length > 0 ? this.queuedAttachments : this.serverPreviews;
+                                                                            }
+                                                                            }" x-on:keydown.escape.window="closeViewer()"
                     x-on:keydown.left.window="if (activeIndex >= 0 && attachments.length > 1) previousAttachment()"
                     x-on:keydown.right.window="if (activeIndex >= 0 && attachments.length > 1) nextAttachment()"
                     x-on:livewire-upload-start="uploading = true; progress = 0"
@@ -833,14 +933,16 @@
                                                 </div>
                                             </div>
                                         </button>
-                                        <button type="button" wire:click.stop="deleteAttachment('{{ $attachment['filename'] }}')"
-                                            wire:confirm="{{ __('Are you sure you want to delete this attachment?') }}"
-                                            class="absolute top-1 right-1 z-20 flex items-center justify-center rounded-full p-1 text-white shadow-md transition hover:scale-110 focus:outline-none"
-                                            style="background-color: #dc2626 !important; color: #ffffff !important;"
-                                            title="{{ __('Delete attachment') }}" aria-label="{{ __('Delete attachment') }}">
-                                            <flux:icon icon="trash" class="size-3"
-                                                style="width: 0.75rem !important; height: 0.75rem !important; color: #ffffff !important;" />
-                                        </button>
+                                        @unless ($semLock === 2)
+                                            <button type="button" wire:click.stop="deleteAttachment('{{ $attachment['filename'] }}')"
+                                                wire:confirm="{{ __('Are you sure you want to delete this attachment?') }}"
+                                                class="absolute top-1 right-1 z-20 flex items-center justify-center rounded-full p-1 text-white shadow-md transition hover:scale-110 focus:outline-none"
+                                                style="background-color: #dc2626 !important; color: #ffffff !important;"
+                                                title="{{ __('Delete attachment') }}" aria-label="{{ __('Delete attachment') }}">
+                                                <flux:icon icon="trash" class="size-3"
+                                                    style="width: 0.75rem !important; height: 0.75rem !important; color: #ffffff !important;" />
+                                            </button>
+                                        @endunless
                                     </div>
                                 @endforeach
                             </div>
@@ -853,101 +955,135 @@
                     </div>
 
                     <!-- Fixed Bottom Footer (Add Attachments + Previews + Actions) -->
-                    <div class="shrink-0 border-t border-border pt-3 mt-2 space-y-3 bg-background">
-                        <div>
-                            <div class="mb-1.5 text-xs font-medium text-foreground">{{ __('Add Attachments') }}</div>
-                            <input type="file" multiple
-                                accept=".jpg,.jpeg,.png,.pdf,.jfif,.webp,image/jpeg,image/png,image/webp,application/pdf"
-                                wire:model="attachmentFiles" x-on:change="queueSelectedFiles($event)"
-                                class="block w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground shadow-sm" />
-                        </div>
-
-                        <div class="max-h-[140px] overflow-y-auto space-y-1.5" x-show="displayPreviews().length > 0"
-                            x-cloak>
-                            <div class="flex items-center justify-between">
-                                <flux:heading size="sm">{{ __('Selected File Preview') }}</flux:heading>
-                                <span class="text-xs text-muted-foreground"
-                                    x-text="displayPreviews().length + ' files'"></span>
+                    @unless ($semLock === 2)
+                        <div class="shrink-0 border-t border-border pt-3 mt-2 space-y-3 bg-background">
+                            <div>
+                                <div class="mb-1.5 text-xs font-medium text-foreground">{{ __('Add Attachments') }}</div>
+                                <input type="file" multiple
+                                    accept=".jpg,.jpeg,.png,.pdf,.jfif,.webp,image/jpeg,image/png,image/webp,application/pdf"
+                                    wire:model="attachmentFiles" x-on:change="queueSelectedFiles($event)"
+                                    class="block w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground shadow-sm" />
                             </div>
 
-                            <div class="!grid !grid-cols-5 !gap-1.5"
-                                style="display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 0.375rem !important; width: 100% !important;">
-                                <template x-for="(file, index) in displayPreviews()" :key="file.name + '-' + index">
-                                    <div
-                                        class="group relative w-full min-w-0 overflow-hidden rounded-md border border-dashed border-emerald-400/70 bg-emerald-50/50 text-left shadow-sm">
-                                        <div class="aspect-square w-full overflow-hidden bg-white"
-                                            style="aspect-ratio: 1 / 1 !important;">
-                                            <template x-if="file.type === 'pdf'">
-                                                <div
-                                                    class="flex h-full flex-col items-center justify-center gap-1 bg-red-50 text-red-700">
-                                                    <flux:icon icon="document-text" class="size-4"
-                                                        style="width: 1rem !important; height: 1rem !important;" />
-                                                    <span
-                                                        class="rounded bg-red-600 px-1 py-0.5 text-[7px] font-bold text-white"
-                                                        style="font-size: 7px !important;">PDF</span>
-                                                </div>
-                                            </template>
-                                            <template x-if="file.type !== 'pdf'">
-                                                <template x-if="file.url">
-                                                    <img :src="file.url" :alt="file.name" loading="lazy" decoding="async"
-                                                        class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-                                                </template>
-                                                <template x-if="!file.url">
+                            <div class="max-h-[140px] overflow-y-auto space-y-1.5" x-show="displayPreviews().length > 0"
+                                x-cloak>
+                                <div class="flex items-center justify-between">
+                                    <flux:heading size="sm">{{ __('Selected File Preview') }}</flux:heading>
+                                    <span class="text-xs text-muted-foreground"
+                                        x-text="displayPreviews().length + ' files'"></span>
+                                </div>
+
+                                <div class="!grid !grid-cols-5 !gap-1.5"
+                                    style="display: grid !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; gap: 0.375rem !important; width: 100% !important;">
+                                    <template x-for="(file, index) in displayPreviews()" :key="file.name + '-' + index">
+                                        <div
+                                            class="group relative w-full min-w-0 overflow-hidden rounded-md border border-dashed border-emerald-400/70 bg-emerald-50/50 text-left shadow-sm">
+                                            <div class="aspect-square w-full overflow-hidden bg-white"
+                                                style="aspect-ratio: 1 / 1 !important;">
+                                                <template x-if="file.type === 'pdf'">
                                                     <div
-                                                        class="flex h-full flex-col items-center justify-center gap-1 bg-muted p-1 text-center text-muted-foreground">
-                                                        <flux:icon icon="document" class="size-4"
+                                                        class="flex h-full flex-col items-center justify-center gap-1 bg-red-50 text-red-700">
+                                                        <flux:icon icon="document-text" class="size-4"
                                                             style="width: 1rem !important; height: 1rem !important;" />
-                                                        <span class="text-[7px] uppercase font-semibold"
-                                                            style="font-size: 7px !important;"
-                                                            x-text="file.name.split('.').pop()"></span>
+                                                        <span
+                                                            class="rounded bg-red-600 px-1 py-0.5 text-[7px] font-bold text-white"
+                                                            style="font-size: 7px !important;">PDF</span>
                                                     </div>
                                                 </template>
-                                            </template>
+                                                <template x-if="file.type !== 'pdf'">
+                                                    <template x-if="file.url">
+                                                        <img :src="file.url" :alt="file.name" loading="lazy" decoding="async"
+                                                            class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+                                                    </template>
+                                                    <template x-if="!file.url">
+                                                        <div
+                                                            class="flex h-full flex-col items-center justify-center gap-1 bg-muted p-1 text-center text-muted-foreground">
+                                                            <flux:icon icon="document" class="size-4"
+                                                                style="width: 1rem !important; height: 1rem !important;" />
+                                                            <span class="text-[7px] uppercase font-semibold"
+                                                                style="font-size: 7px !important;"
+                                                                x-text="file.name.split('.').pop()"></span>
+                                                        </div>
+                                                    </template>
+                                                </template>
+                                            </div>
+                                            <div class="p-1 space-y-0">
+                                                <div class="truncate text-[8px] font-medium leading-tight text-foreground"
+                                                    style="font-size: 8px !important; line-height: 10px !important;"
+                                                    :title="file.name" x-text="file.name"></div>
+                                                <div class="text-[7px] leading-none text-muted-foreground mt-0.5"
+                                                    style="font-size: 7px !important; line-height: 8px !important;"
+                                                    x-text="file.size"></div>
+                                            </div>
+                                            <button type="button" x-on:click.stop.prevent="removeQueuedFile(index)"
+                                                class="absolute top-1 right-1 z-30 flex items-center justify-center rounded-full p-1 text-white shadow-lg transition hover:scale-110 focus:outline-none"
+                                                style="background-color: #dc2626 !important; color: #ffffff !important; width: 1.25rem !important; height: 1.25rem !important;"
+                                                title="{{ __('Remove selected file') }}"
+                                                aria-label="{{ __('Remove selected file') }}">
+                                                <svg class="h-3 w-3 text-white pointer-events-none" fill="none"
+                                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
                                         </div>
-                                        <div class="p-1 space-y-0">
-                                            <div class="truncate text-[8px] font-medium leading-tight text-foreground"
-                                                style="font-size: 8px !important; line-height: 10px !important;"
-                                                :title="file.name" x-text="file.name"></div>
-                                            <div class="text-[7px] leading-none text-muted-foreground mt-0.5"
-                                                style="font-size: 7px !important; line-height: 8px !important;"
-                                                x-text="file.size"></div>
-                                        </div>
-                                        <button type="button" x-on:click.stop.prevent="removeQueuedFile(index)"
-                                            class="absolute top-1 right-1 z-30 flex items-center justify-center rounded-full p-1 text-white shadow-lg transition hover:scale-110 focus:outline-none"
-                                            style="background-color: #dc2626 !important; color: #ffffff !important; width: 1.25rem !important; height: 1.25rem !important;"
-                                            title="{{ __('Remove selected file') }}"
-                                            aria-label="{{ __('Remove selected file') }}">
-                                            <svg class="h-3 w-3 text-white pointer-events-none" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </template>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div class="py-0.5" x-show="uploading && progress > 0" x-cloak>
+                                <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                    <div class="h-full rounded-full bg-emerald-600 transition-all duration-150"
+                                        :style="`width: ${progress}%`"></div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between gap-2 pt-1">
+                                @if ((int) ($semLock ?? 0) === 2)
+                                    <flux:button type="button" variant="outline"
+                                        class="border border-border bg-background text-foreground hover:bg-muted"
+                                        wire:click="openMovTransferModal({{ $semItemId }})" wire:loading.attr="disabled"
+                                        wire:target="openMovTransferModal({{ $semItemId }})">
+                                        <span class="inline-flex items-center gap-1.5">
+                                            <flux:icon icon="eye" class="size-4" />
+                                            {{ __('Show MOVs') }}
+                                        </span>
+                                    </flux:button>
+                                @else
+                                    <flux:button type="button" variant="outline"
+                                        class="border border-border bg-background text-foreground hover:bg-muted"
+                                        wire:click="openMovTransferModal({{ $semItemId }})" wire:loading.attr="disabled"
+                                        wire:target="openMovTransferModal({{ $semItemId }})">
+                                        <span class="inline-flex items-center gap-1.5">
+                                            <flux:icon icon="arrow-up-tray" class="size-4" />
+                                            {{ __('Get MOVs From Staff') }}
+                                        </span>
+                                    </flux:button>
+                                @endif
+                                <div class="flex items-center gap-2">
+                                    <flux:button type="button" variant="primary"
+                                        class="bg-emerald-600 text-white hover:bg-emerald-700"
+                                        wire:click="saveAttachmentUploads" wire:loading.attr="disabled"
+                                        wire:target="saveAttachmentUploads,attachmentFiles">
+                                        {{ __('Upload Files') }}
+                                    </flux:button>
+                                    <flux:modal.close>
+                                        <flux:button type="button" variant="ghost">
+                                            {{ __('Close') }}
+                                        </flux:button>
+                                    </flux:modal.close>
+                                </div>
                             </div>
                         </div>
-
-                        <div class="py-0.5" x-show="uploading && progress > 0" x-cloak>
-                            <div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                                <div class="h-full rounded-full bg-emerald-600 transition-all duration-150"
-                                    :style="`width: ${progress}%`"></div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-end gap-2 pt-1">
-                            <flux:button type="button" variant="primary"
-                                class="bg-emerald-600 text-white hover:bg-emerald-700" wire:click="saveAttachmentUploads"
-                                wire:loading.attr="disabled" wire:target="saveAttachmentUploads,attachmentFiles">
-                                {{ __('Upload Files') }}
-                            </flux:button>
+                    @else
+                        <div class="shrink-0 border-t border-border pt-3 mt-2 flex items-center justify-end bg-background">
                             <flux:modal.close>
                                 <flux:button type="button" variant="ghost">
                                     {{ __('Close') }}
                                 </flux:button>
                             </flux:modal.close>
                         </div>
-                    </div>
+                    @endunless
 
                     <div x-show="activeIndex >= 0" x-cloak
                         class="absolute inset-0 z-50 flex items-center justify-center overflow-hidden rounded-2xl bg-slate-950/80 backdrop-blur-md p-4 transition-all"
@@ -965,14 +1101,16 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" x-show="currentAttachment() && currentAttachment().filename"
-                                        x-on:click="if (confirm('{{ __('Are you sure you want to delete this attachment?') }}')) { $wire.deleteAttachment(currentAttachment().filename); closeViewer(); }"
-                                        class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:opacity-90 focus:outline-none"
-                                        style="background-color: #dc2626 !important; color: #ffffff !important;"
-                                        title="{{ __('Delete attachment') }}">
-                                        <flux:icon icon="trash" class="size-3.5" style="color: #ffffff !important;" />
-                                        <span>{{ __('Delete') }}</span>
-                                    </button>
+                                    @unless ($semLock === 2)
+                                        <button type="button" x-show="currentAttachment() && currentAttachment().filename"
+                                            x-on:click="if (confirm('{{ __('Are you sure you want to delete this attachment?') }}')) { $wire.deleteAttachment(currentAttachment().filename); closeViewer(); }"
+                                            class="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:opacity-90 focus:outline-none"
+                                            style="background-color: #dc2626 !important; color: #ffffff !important;"
+                                            title="{{ __('Delete attachment') }}">
+                                            <flux:icon icon="trash" class="size-3.5" style="color: #ffffff !important;" />
+                                            <span>{{ __('Delete') }}</span>
+                                        </button>
+                                    @endunless
                                     <button type="button" x-on:click="closeViewer()"
                                         class="rounded-full bg-slate-800/60 p-1.5 text-slate-300 transition hover:bg-red-600 hover:text-white focus:outline-none"
                                         aria-label="{{ __('Close attachment viewer') }}">
@@ -1014,4 +1152,122 @@
             </flux:modal>
         </template>
     @endif
+
+    @if ($showMovTransferModal)
+        <template x-teleport="body">
+            <flux:modal wire:model="showMovTransferModal" dismissible
+                class="!w-[52vw] !max-w-[52vw] !h-[78vh] !max-h-[78vh] p-6"
+                style="width: 52vw !important; max-width: 52vw !important; height: 78vh !important; max-height: 78vh !important;">
+                <div class="flex h-full min-h-0 flex-col space-y-5 overflow-hidden">
+                        <div
+                            class="rounded-2xl border border-emerald-200/70 bg-gradient-to-r from-emerald-50 via-white to-slate-50 px-4 py-3 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/35 dark:via-zinc-900 dark:to-zinc-950">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="space-y-1">
+                                <flux:heading size="lg">{{ __('Get MOVs From Staff') }}</flux:heading>
+                                <flux:subheading>
+                                    {{ __('Browse MOVs uploaded by other staff and copy them into the currently selected target.') }}
+                                </flux:subheading>
+                            </div>
+
+                            <div
+                                class="flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-medium text-emerald-800 shadow-sm dark:border-emerald-900/60 dark:bg-zinc-950 dark:text-emerald-300">
+                                <span class="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                                    {{ __('Context') }}
+                                </span>
+                                <span>{{ __('Year') }}: {{ $movTransferContextYear ?: '-' }}</span>
+                                <span class="text-emerald-300 dark:text-emerald-600">|</span>
+                                <span>{{ __('Semester') }}:
+                                    {{ $movTransferContextSemester === '1' ? __('1st') : __('2nd') }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="w-full table-fixed border-collapse">
+                        <tbody>
+                            <tr class="align-bottom">
+                                <td class="px-0 py-0 pr-3 whitespace-nowrap align-bottom" style="width: 58%;">
+                                    <x-select2 wire:model.live="movTransferUserId" :label="__('Staff Name')"
+                                        :placeholder="__('All staff')" :options="$this->movTransferUsers()->map(fn($u) => ['value' => (string) $u->id, 'label' => $u->full_name, 'sublabel' => $u->position ?? ''])->values()" minWidth="100%" />
+                                </td>
+                                <td class="px-0 py-0 whitespace-nowrap align-bottom" style="width: 42%;">
+                                    <flux:label>{{ __('Search') }}</flux:label>
+                                    <flux:input wire:model.live="movTransferSearch"
+                                        :placeholder="__('Search activity or description...')" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="min-h-0 flex-1 overflow-y-auto rounded-xl border border-border bg-card">
+                        @php
+                            $movSources = $this->staffMovSources();
+                        @endphp
+
+                        @if ($movSources->isEmpty())
+                            <div
+                                class="flex min-h-[16rem] items-center justify-center p-8 text-center text-sm text-muted-foreground">
+                                {{ __('Use the filters above to display MOVs from other staff.') }}
+                            </div>
+                        @else
+                                    <div class="space-y-4 p-4">
+                                @foreach ($movSources as $sourceTargetId => $items)
+                                    @php
+                                        $firstSource = $items->first();
+                                    @endphp
+                                    <div class="rounded-xl border border-border/70 bg-muted/10 p-3">
+                                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <div class="text-sm font-semibold text-foreground">
+                                                    {{ mb_strtoupper(trim(($firstSource->last_name ?? '') . (filled($firstSource->last_name) ? ', ' : '') . collect([$firstSource->first_name, $firstSource->middle_name])->filter()->join(' ')), 'UTF-8') }}
+                                                </div>
+                                                <div class="text-xs text-muted-foreground">
+                                                    {{ __('KRA Category') }}:
+                                                    {{ \App\Support\KraCategory::label((int) ($firstSource->kra_category ?? 1)) }}
+                                                    | {{ __('Year') }}: {{ $firstSource->year ?? '-' }}
+                                                    | {{ __('Semester') }}:
+                                                    {{ $firstSource->semester == 1 ? __('1st Semester') : __('2nd Semester') }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            @foreach ($items as $sourceItem)
+                                                <div class="flex items-start justify-between gap-3 rounded-lg border border-border bg-background p-3">
+                                                    <div class="min-w-0 flex-1">
+                                                        <div class="text-sm font-medium text-foreground whitespace-normal break-words">
+                                                            {!! nl2br(e($formatValue($sourceItem->description ?? ''))) !!}
+                                                        </div>
+                                                        <div class="mt-1 text-xs text-muted-foreground">
+                                                            {{ __('Attachments found') }}:
+                                                            {{ trans_choice(':count file|:count files', $this->movTransferAttachmentCount((int) $sourceItem->item_id), ['count' => $this->movTransferAttachmentCount((int) $sourceItem->item_id)]) }}
+                                                        </div>
+                                                    </div>
+                                                    <flux:button type="button" size="sm" variant="primary"
+                                                        class="bg-emerald-600 text-white hover:bg-emerald-700"
+                                                        wire:click="copyStaffMovsToTarget({{ (int) $sourceItem->item_id }})"
+                                                        wire:loading.attr="disabled"
+                                                        wire:target="copyStaffMovsToTarget({{ (int) $sourceItem->item_id }})">
+                                                        {{ __('Use MOVs') }}
+                                                    </flux:button>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="shrink-0 flex items-center justify-end gap-2 pt-1">
+                        <flux:modal.close>
+                            <flux:button type="button" variant="ghost">
+                                {{ __('Close') }}
+                            </flux:button>
+                        </flux:modal.close>
+                    </div>
+                </div>
+            </flux:modal>
+        </template>
+    @endif
+
 </tbody>
