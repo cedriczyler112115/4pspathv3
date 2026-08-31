@@ -55,6 +55,7 @@ class PrintIpcrfController extends Controller
                 'sti.activity',
                 'sti.kra_category',
                 'stil.description',
+                'stil.actual_accomp',
                 'stil.rg_quantity',
                 'stil.rg_quality',
                 'stil.rg_timeliness',
@@ -70,17 +71,24 @@ class PrintIpcrfController extends Controller
         $rateeFullName = mb_strtoupper(trim(($semRecord->ratee_last_name ?? '') . (filled($semRecord->ratee_last_name) ? ', ' : '') . collect([$semRecord->ratee_first_name, $semRecord->ratee_middle_name])->filter()->join(' ')), 'UTF-8');
         $supFullName = mb_strtoupper(trim(($semRecord->sup_last_name ?? '') . (filled($semRecord->sup_last_name) ? ', ' : '') . collect([$semRecord->sup_first_name, $semRecord->sup_middle_name])->filter()->join(' ')), 'UTF-8');
 
-        return view('print.ipcrf', [
-            'semRecord' => $semRecord,
-            'year' => $semRecord->year ?? now()->year,
-            'semester' => $semRecord->semester ?? '',
-            'rateeFullName' => $rateeFullName,
-            'rateePosition' => mb_strtoupper((string) ($semRecord->ratee_designation ?: ($semRecord->ratee_position ?: '-')), 'UTF-8'),
-            'rateeDivision' => $semRecord->ratee_division ?: 'PANTAWID PAMILYANG PILIPINO PROGRAM',
-            'supFullName' => $supFullName,
-            'supPosition' => mb_strtoupper((string) ($semRecord->sup_designation ?: ($semRecord->sup_position ?: 'DIVISION CHIEF')), 'UTF-8'),
-            'rows' => $rows,
-            'dateFormatted' => Carbon::now('Asia/Manila')->format('F d, Y'),
-        ]);
+        $year = $semRecord->year ?? now()->year;
+        $semester = $semRecord->semester ?? '';
+        $rateePosition = mb_strtoupper((string) ($semRecord->ratee_designation ?: ($semRecord->ratee_position ?: '-')), 'UTF-8');
+        $rateeDivision = $semRecord->ratee_division ?: 'PANTAWID PAMILYANG PILIPINO PROGRAM';
+        $supPosition = mb_strtoupper((string) ($semRecord->sup_designation ?: ($semRecord->sup_position ?: 'DIVISION CHIEF')), 'UTF-8');
+        $dateFormatted = Carbon::now('Asia/Manila')->format('F d, Y');
+
+        return view('print.ipcrf', compact(
+            'semRecord',
+            'year',
+            'semester',
+            'rateeFullName',
+            'rateePosition',
+            'rateeDivision',
+            'supFullName',
+            'supPosition',
+            'rows',
+            'dateFormatted'
+        ));
     }
 }

@@ -28,7 +28,7 @@ class AnnualTargetPage extends Component
     use WithPagination;
 
     #[Url(as: 'perPage', keep: true)]
-    public int $perPage = 10;
+    public int|string $perPage = 10;
 
     #[Url(as: 'search', keep: true)]
     public string $search = '';
@@ -221,7 +221,8 @@ class AnnualTargetPage extends Component
 
     public function updatedPerPage(): void
     {
-        if (!in_array((int) $this->perPage, [10, 20, 50, -1], true)) {
+        $raw = strtolower((string) $this->perPage);
+        if (! in_array($raw, ['10', '20', '50', '100', 'all', '-1'], true) && ! ctype_digit($raw)) {
             $this->perPage = 10;
         }
 
@@ -1758,6 +1759,9 @@ class AnnualTargetPage extends Component
     public function annualTargets(): LengthAwarePaginator
     {
         $userId = Auth::id();
+        $rawPerPage = (string) $this->perPage;
+        $isAll = strtolower($rawPerPage) === 'all' || $rawPerPage === '-1';
+        $perPageInt = $isAll ? 999999 : max(1, (int) $rawPerPage);
 
         return app(AnnualTargetDirectory::class)->paginate(
             is_int($userId) ? $userId : null,
@@ -1766,7 +1770,7 @@ class AnnualTargetPage extends Component
             $this->categoryFilter,
             $this->semesterFilter,
             trim($this->search),
-            $this->perPage,
+            $perPageInt,
             $this->showOnlyDuplicates,
         );
     }
@@ -1814,10 +1818,11 @@ class AnnualTargetPage extends Component
     public function perPageOptions(): Collection
     {
         return collect([
-            (object) ['value' => 10, 'label' => '10'],
-            (object) ['value' => 20, 'label' => '20'],
-            (object) ['value' => 50, 'label' => '50'],
-            (object) ['value' => -1, 'label' => 'All'],
+            (object) ['value' => '10', 'label' => '10'],
+            (object) ['value' => '20', 'label' => '20'],
+            (object) ['value' => '50', 'label' => '50'],
+            (object) ['value' => '100', 'label' => '100'],
+            (object) ['value' => 'all', 'label' => 'ALL'],
         ]);
     }
 }

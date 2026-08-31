@@ -84,31 +84,13 @@
             this.contextIndicatorId = indicatorId;
             this.contextItemId = itemId;
 
-            if (subTargetCount <= 1) {
-                this.canDeleteTarget = true;
-                this.canDeleteSubTarget = false;
-            } else if (isKraOrAction) {
-                this.canDeleteTarget = true;
-                this.canDeleteSubTarget = false;
-            } else {
-                this.canDeleteTarget = false;
-                this.canDeleteSubTarget = true;
-            }
+            this.canDeleteTarget = true;
+            this.canDeleteSubTarget = subTargetCount >= 2;
 
             this.activeSubMenu = null;
 
-            let x = event.clientX;
-            let y = event.clientY;
-
-            const menuWidth = 220;
-            const menuHeight = 240;
-
-            if (x + menuWidth > window.innerWidth) {
-                x = window.innerWidth - menuWidth - 12;
-            }
-            if (y + menuHeight > window.innerHeight) {
-                y = window.innerHeight - menuHeight - 12;
-            }
+            let x = event.pageX || (event.clientX + window.scrollX);
+            let y = event.pageY || (event.clientY + window.scrollY);
 
             this.contextX = Math.max(8, x);
             this.contextY = Math.max(8, y);
@@ -315,9 +297,8 @@
             x-on:close-all-target-context-menus.window="closeContextMenu()"
             x-on:click.outside="closeContextMenu()"
             x-on:keydown.escape.window="closeContextMenu()"
-            x-on:scroll.window="closeContextMenu()"
             :style="`top: ${contextY}px; left: ${contextX}px; z-index: 99999 !important;`"
-            class="fixed min-w-[14rem] rounded-xl border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 p-1.5 text-xs font-medium opacity-100 shadow-2xl animate-in fade-in-50 zoom-in-95">
+            class="absolute min-w-[14rem] rounded-xl border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 p-1.5 text-xs font-medium opacity-100 shadow-2xl animate-in fade-in-50 zoom-in-95">
             
             <div class="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 mb-1 flex items-center justify-between cursor-move select-none"
                 x-on:pointerdown="startMenuDrag($event)"
@@ -415,7 +396,7 @@
                 class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors"
                 :class="!canDeleteSubTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'">
                 <flux:icon icon="minus-circle" class="size-4" :class="!canDeleteSubTarget ? 'text-slate-400 dark:text-zinc-500' : 'text-rose-500 dark:text-rose-400'" />
-                <span>{{ __('Delete selected sub-target') }}</span>
+                <span>{{ __('Delete selected sub-target only') }}</span>
             </button>
         </div>
     </template>

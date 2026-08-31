@@ -65,7 +65,11 @@ final class SidebarMenuTree
     {
         return array_map(function (array $nodeData): SidebarMenuNode {
             $item = new SidebarMenuItem();
-            $item->setRawAttributes($nodeData['item'] ?? [], true);
+            $rawItem = $nodeData['item'] ?? [];
+            if (isset($rawItem['user_levels']) && is_array($rawItem['user_levels'])) {
+                $rawItem['user_levels'] = json_encode($rawItem['user_levels']);
+            }
+            $item->setRawAttributes($rawItem, true);
             $item->exists = true;
 
             $children = $this->unserializeNodes($nodeData['children'] ?? []);

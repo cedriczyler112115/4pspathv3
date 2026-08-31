@@ -753,15 +753,15 @@
                                 @endif
                                 <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                                     style="border-right: 1px solid var(--border);">
-                                    {{ $isSemesterLocked ? __('Efficiency') : __('RG Efficiency') }}
+                                    {{ __('EFFICIENCY') }}
                                 </th>
                                 <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                                     style="border-right: 1px solid var(--border);">
-                                    {{ $isSemesterLocked ? __('Quality') : __('RG Quality') }}
+                                    {{ __('QUALITY') }}
                                 </th>
                                 <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                                     style="border-right: 1px solid var(--border);">
-                                    {{ $isSemesterLocked ? __('Timeliness') : __('RG Timeliness') }}
+                                    {{ __('TIMELINESS') }}
                                 </th>
                                 @if ($isSemesterLocked)
                                     <th class="border-b border-r border-border px-2 py-3 text-center whitespace-nowrap"
@@ -771,11 +771,11 @@
                                 @endif
                                 <th class="border-b border-r border-border px-3 py-3 whitespace-nowrap"
                                     style="border-right: 1px solid var(--border);">
-                                    {{ $isSemesterLocked ? __('MOVs') : __('RG MOVs') }}
+                                    {{ __('MOVS') }}
                                 </th>
                                 <th class="border-b border-l border-border px-3 py-3 whitespace-nowrap last:rounded-tr-xl"
                                     style="border-left: 1px solid var(--border);">
-                                    {{ $isSemesterLocked ? __('Remarks') : __('RG Remarks') }}
+                                    {{ __('REMARKS') }}
                                 </th>
                             </tr>
                         </thead>

@@ -1,4 +1,61 @@
 {
+  "_AutoResizingTextarea-DAnbV832.js": {
+    "file": "assets/AutoResizingTextarea-DAnbV832.js",
+    "name": "AutoResizingTextarea",
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
+  "_ToastContainer-BluouXyo.js": {
+    "file": "assets/ToastContainer-BluouXyo.js",
+    "name": "ToastContainer",
+    "imports": [
+      "resources/js/inertia/app.tsx"
+    ]
+  },
+  "_eye-C7hF7XDZ.js": {
+    "file": "assets/eye-C7hF7XDZ.js",
+    "name": "eye",
+    "imports": [
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
+  "_pencil-CowpB85P.js": {
+    "file": "assets/pencil-CowpB85P.js",
+    "name": "pencil",
+    "imports": [
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
+  "_plus-dU66OyS0.js": {
+    "file": "assets/plus-dU66OyS0.js",
+    "name": "plus",
+    "imports": [
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
+  "_printer-BNhLQE4U.js": {
+    "file": "assets/printer-BNhLQE4U.js",
+    "name": "printer",
+    "imports": [
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
+  "_rotate-ccw-ECzNXL-2.js": {
+    "file": "assets/rotate-ccw-ECzNXL-2.js",
+    "name": "rotate-ccw",
+    "imports": [
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
+  "_trash-2-BeBP-AFJ.js": {
+    "file": "assets/trash-2-BeBP-AFJ.js",
+    "name": "trash-2",
+    "imports": [
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
   "node_modules/@fontsource-variable/geist/files/geist-cyrillic-ext-wght-normal.woff2": {
     "file": "assets/geist-cyrillic-ext-wght-normal-DjL33-gN.woff2",
     "src": "node_modules/@fontsource-variable/geist/files/geist-cyrillic-ext-wght-normal.woff2"
@@ -20,7 +77,7 @@
     "src": "node_modules/@fontsource-variable/geist/files/geist-vietnamese-wght-normal.woff2"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CzbNq_k5.css",
+    "file": "assets/app-CudMHonK.css",
     "name": "app",
     "names": [
       "app.css"
@@ -36,9 +93,236 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-BSGc3zxI.js",
+    "file": "assets/app-CDfU0UDs.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true
+  },
+  "resources/js/inertia/Layouts/AppLayout.tsx": {
+    "file": "assets/AppLayout-2ufhv-fO.js",
+    "name": "AppLayout",
+    "src": "resources/js/inertia/Layouts/AppLayout.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
+  "resources/js/inertia/Layouts/AuthLayout.tsx": {
+    "file": "assets/AuthLayout-w_WpPMeh.js",
+    "name": "AuthLayout",
+    "src": "resources/js/inertia/Layouts/AuthLayout.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-BluouXyo.js"
+    ]
+  },
+  "resources/js/inertia/Pages/Administration/ApplicationSettings.tsx": {
+    "file": "assets/ApplicationSettings-Chxw2Vdc.js",
+    "name": "ApplicationSettings",
+    "src": "resources/js/inertia/Pages/Administration/ApplicationSettings.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Administration/UserLevel.tsx": {
+    "file": "assets/UserLevel-fi02zzBm.js",
+    "name": "UserLevel",
+    "src": "resources/js/inertia/Pages/Administration/UserLevel.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Administration/Users.tsx": {
+    "file": "assets/Users-wzWWQ3Mh.js",
+    "name": "Users",
+    "src": "resources/js/inertia/Pages/Administration/Users.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_pencil-CowpB85P.js",
+      "_trash-2-BeBP-AFJ.js",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/AnnualTarget/AnnualTarget.tsx": {
+    "file": "assets/AnnualTarget-BDGee62A.js",
+    "name": "AnnualTarget",
+    "src": "resources/js/inertia/Pages/AnnualTarget/AnnualTarget.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-BluouXyo.js",
+      "_AutoResizingTextarea-DAnbV832.js",
+      "_printer-BNhLQE4U.js",
+      "_pencil-CowpB85P.js",
+      "_plus-dU66OyS0.js",
+      "_rotate-ccw-ECzNXL-2.js",
+      "_trash-2-BeBP-AFJ.js",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Auth/Login.tsx": {
+    "file": "assets/Login-tCaddfNK.js",
+    "name": "Login",
+    "src": "resources/js/inertia/Pages/Auth/Login.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "resources/js/inertia/Layouts/AuthLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Dashboard.tsx": {
+    "file": "assets/Dashboard-DfSKEj16.js",
+    "name": "Dashboard",
+    "src": "resources/js/inertia/Pages/Dashboard.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-BluouXyo.js",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Libraries/HarmonizedStaff.tsx": {
+    "file": "assets/HarmonizedStaff-BWTH_WAq.js",
+    "name": "HarmonizedStaff",
+    "src": "resources/js/inertia/Pages/Libraries/HarmonizedStaff.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_pencil-CowpB85P.js",
+      "_plus-dU66OyS0.js",
+      "_rotate-ccw-ECzNXL-2.js",
+      "_trash-2-BeBP-AFJ.js",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Ratings/MyRatings.tsx": {
+    "file": "assets/MyRatings-2VBFnsD0.js",
+    "name": "MyRatings",
+    "src": "resources/js/inertia/Pages/Ratings/MyRatings.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-BluouXyo.js",
+      "_eye-C7hF7XDZ.js",
+      "_rotate-ccw-ECzNXL-2.js",
+      "_trash-2-BeBP-AFJ.js",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Ratings/SemestralTarget.tsx": {
+    "file": "assets/SemestralTarget-C1rZOFc1.js",
+    "name": "SemestralTarget",
+    "src": "resources/js/inertia/Pages/Ratings/SemestralTarget.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-BluouXyo.js",
+      "_AutoResizingTextarea-DAnbV832.js",
+      "_eye-C7hF7XDZ.js",
+      "_printer-BNhLQE4U.js",
+      "_pencil-CowpB85P.js",
+      "_plus-dU66OyS0.js",
+      "_rotate-ccw-ECzNXL-2.js",
+      "_trash-2-BeBP-AFJ.js",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/RpmoManagement/HarmonizedIpc.tsx": {
+    "file": "assets/HarmonizedIpc-CYzuNP-Z.js",
+    "name": "HarmonizedIpc",
+    "src": "resources/js/inertia/Pages/RpmoManagement/HarmonizedIpc.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-BluouXyo.js",
+      "_AutoResizingTextarea-DAnbV832.js",
+      "_pencil-CowpB85P.js",
+      "_plus-dU66OyS0.js",
+      "_rotate-ccw-ECzNXL-2.js",
+      "_trash-2-BeBP-AFJ.js",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Search.tsx": {
+    "file": "assets/Search-DPL9K5i0.js",
+    "name": "Search",
+    "src": "resources/js/inertia/Pages/Search.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Settings/Appearance.tsx": {
+    "file": "assets/Appearance-B5g5BRau.js",
+    "name": "Appearance",
+    "src": "resources/js/inertia/Pages/Settings/Appearance.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Settings/Profile.tsx": {
+    "file": "assets/Profile-CPSk0noX.js",
+    "name": "Profile",
+    "src": "resources/js/inertia/Pages/Settings/Profile.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Settings/Security.tsx": {
+    "file": "assets/Security-CGHe8HFI.js",
+    "name": "Security",
+    "src": "resources/js/inertia/Pages/Settings/Security.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/Pages/Settings/SidebarMenu.tsx": {
+    "file": "assets/SidebarMenu-DI24Uum8.js",
+    "name": "SidebarMenu",
+    "src": "resources/js/inertia/Pages/Settings/SidebarMenu.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "resources/js/inertia/Layouts/AppLayout.tsx"
+    ]
+  },
+  "resources/js/inertia/app.tsx": {
+    "file": "assets/app-BFYRraMv.js",
+    "name": "app",
+    "src": "resources/js/inertia/app.tsx",
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/inertia/Layouts/AppLayout.tsx",
+      "resources/js/inertia/Layouts/AuthLayout.tsx",
+      "resources/js/inertia/Pages/Administration/ApplicationSettings.tsx",
+      "resources/js/inertia/Pages/Administration/UserLevel.tsx",
+      "resources/js/inertia/Pages/Administration/Users.tsx",
+      "resources/js/inertia/Pages/AnnualTarget/AnnualTarget.tsx",
+      "resources/js/inertia/Pages/Auth/Login.tsx",
+      "resources/js/inertia/Pages/Dashboard.tsx",
+      "resources/js/inertia/Pages/Libraries/HarmonizedStaff.tsx",
+      "resources/js/inertia/Pages/Ratings/MyRatings.tsx",
+      "resources/js/inertia/Pages/Ratings/SemestralTarget.tsx",
+      "resources/js/inertia/Pages/RpmoManagement/HarmonizedIpc.tsx",
+      "resources/js/inertia/Pages/Search.tsx",
+      "resources/js/inertia/Pages/Settings/Appearance.tsx",
+      "resources/js/inertia/Pages/Settings/Profile.tsx",
+      "resources/js/inertia/Pages/Settings/Security.tsx",
+      "resources/js/inertia/Pages/Settings/SidebarMenu.tsx"
+    ]
   }
 }

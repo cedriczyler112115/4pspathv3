@@ -48,53 +48,53 @@
             data-na-quality="{{ (int) ($row['na_quality'] ?? 0) }}"
             data-na-timeliness="{{ (int) ($row['na_timeliness'] ?? 0) }}"
             x-data="semestralScoreRow({
-                                                                                                                                                                            q: @js($scores[$semItemId]['quantity_score'] ?? ''),
-                                                                                                                                                                            ql: @js($scores[$semItemId]['quality_score'] ?? ''),
-                                                                                                                                                                            t: @js($scores[$semItemId]['timeliness_score'] ?? ''),
-                                                                                                                                                                            avg: @js($scores[$semItemId]['average'] ?? ''),
-                                                                                                                                                                            accomp: @js($scores[$semItemId]['actual_accomp'] ?? ''),
-                                                                                                                                                                            movs: @js($scores[$semItemId]['target_movs'] ?? ''),
-                                                                                                                                                                            remarks: @js($scores[$semItemId]['target_remarks'] ?? ''),
-                                                                                                                                                                            itemId: {{ $semItemId }},
-                                                                                                                                                                            semId: @js($row['semester_id'] ?? request()->query('sem_id') ?? 0)
-                                                                                                                                                                        })"
+                                                                                                                                                                                    q: @js($scores[$semItemId]['quantity_score'] ?? ''),
+                                                                                                                                                                                    ql: @js($scores[$semItemId]['quality_score'] ?? ''),
+                                                                                                                                                                                    t: @js($scores[$semItemId]['timeliness_score'] ?? ''),
+                                                                                                                                                                                    avg: @js($scores[$semItemId]['average'] ?? ''),
+                                                                                                                                                                                    accomp: @js($scores[$semItemId]['actual_accomp'] ?? ''),
+                                                                                                                                                                                    movs: @js($scores[$semItemId]['target_movs'] ?? ''),
+                                                                                                                                                                                    remarks: @js($scores[$semItemId]['target_remarks'] ?? ''),
+                                                                                                                                                                                    itemId: {{ $semItemId }},
+                                                                                                                                                                                    semId: @js($row['semester_id'] ?? request()->query('sem_id') ?? 0)
+                                                                                                                                                                                })"
             x-init="initRow()"
             x-on:semestral-target-scores-saved.window="
-                                                                                                                                                                            let savedItems = $event.detail?.savedItems || {};
-                                                                                                                                                                            let saved = savedItems[itemId] || savedItems[String(itemId)];
-                                                                                                                                                                            if (!saved) return;
-                                                                                                                                                                            confirmed = { id: itemId, ...saved };
-                                                                                                                                                                            lastSavedStr = JSON.stringify(confirmed);
-                                                                                                                                                                            isSaving = false;
-                                                                                                                                                                            savingField = '';
-                                                                                                                                                                            let storageKey = 'sem_target_drafts_' + (semId || '0');
-                                                                                                                                                                            try {
-                                                                                                                                                                                let drafts = JSON.parse(localStorage.getItem(storageKey) || '{}');
-                                                                                                                                                                                if (drafts[itemId]) {
-                                                                                                                                                                                    delete drafts[itemId];
-                                                                                                                                                                                    if (Object.keys(drafts).length === 0) {
-                                                                                                                                                                                        localStorage.removeItem(storageKey);
-                                                                                                                                                                                    } else {
-                                                                                                                                                                                        localStorage.setItem(storageKey, JSON.stringify(drafts));
-                                                                                                                                                                                    }
-                                                                                                                                                                                }
-                                                                                                                                                                            } catch(e) {}
-                                                                                                                                                                        "
+                                                                                                                                                                                    let savedItems = $event.detail?.savedItems || {};
+                                                                                                                                                                                    let saved = savedItems[itemId] || savedItems[String(itemId)];
+                                                                                                                                                                                    if (!saved) return;
+                                                                                                                                                                                    confirmed = { id: itemId, ...saved };
+                                                                                                                                                                                    lastSavedStr = JSON.stringify(confirmed);
+                                                                                                                                                                                    isSaving = false;
+                                                                                                                                                                                    savingField = '';
+                                                                                                                                                                                    let storageKey = 'sem_target_drafts_' + (semId || '0');
+                                                                                                                                                                                    try {
+                                                                                                                                                                                        let drafts = JSON.parse(localStorage.getItem(storageKey) || '{}');
+                                                                                                                                                                                        if (drafts[itemId]) {
+                                                                                                                                                                                            delete drafts[itemId];
+                                                                                                                                                                                            if (Object.keys(drafts).length === 0) {
+                                                                                                                                                                                                localStorage.removeItem(storageKey);
+                                                                                                                                                                                            } else {
+                                                                                                                                                                                                localStorage.setItem(storageKey, JSON.stringify(drafts));
+                                                                                                                                                                                            }
+                                                                                                                                                                                        }
+                                                                                                                                                                                    } catch(e) {}
+                                                                                                                                                                                "
             x-on:semestral-target-scores-failed.window="
-                                                                                                                                                                            let failed = ($event.detail?.items || []).some(item => Number(item.id) === Number(itemId));
-                                                                                                                                                                            if (!failed || !confirmed) return;
-                                                                                                                                                                            isSaving = false;
-                                                                                                                                                                            savingField = '';
-                                                                                                                                                                            q = confirmed.quantity_score || '';
-                                                                                                                                                                            ql = confirmed.quality_score || '';
-                                                                                                                                                                            t = confirmed.timeliness_score || '';
-                                                                                                                                                                            avg = confirmed.average || '';
-                                                                                                                                                                            accomp = confirmed.actual_accomp || '';
-                                                                                                                                                                            movs = confirmed.target_movs || '';
-                                                                                                                                                                            remarks = confirmed.target_remarks || '';
-                                                                                                                                                                            lastSavedStr = JSON.stringify(confirmed);
-                                                                                                                                                                            saveLocalDraft();
-                                                                                                                                                                        "
+                                                                                                                                                                                    let failed = ($event.detail?.items || []).some(item => Number(item.id) === Number(itemId));
+                                                                                                                                                                                    if (!failed || !confirmed) return;
+                                                                                                                                                                                    isSaving = false;
+                                                                                                                                                                                    savingField = '';
+                                                                                                                                                                                    q = confirmed.quantity_score || '';
+                                                                                                                                                                                    ql = confirmed.quality_score || '';
+                                                                                                                                                                                    t = confirmed.timeliness_score || '';
+                                                                                                                                                                                    avg = confirmed.average || '';
+                                                                                                                                                                                    accomp = confirmed.actual_accomp || '';
+                                                                                                                                                                                    movs = confirmed.target_movs || '';
+                                                                                                                                                                                    remarks = confirmed.target_remarks || '';
+                                                                                                                                                                                    lastSavedStr = JSON.stringify(confirmed);
+                                                                                                                                                                                    saveLocalDraft();
+                                                                                                                                                                                "
             x-on:contextmenu.prevent="openContextMenu($event, {{ (int) ($row['kra_category'] ?? $kraCategory) }}, {{ $indicatorId }}, {{ $semItemId }}, {{ count($groupRows) }}, {{ $index === 0 ? 'true' : 'false' }}, {{ $isRowLocked ? 'true' : 'false' }})"
             x-on:dragover.prevent="$event.dataTransfer.dropEffect = 'move'" x-on:dragend="endDrag()"
             x-on:drop.prevent="dropOn($event, { type: '{{ $index === 0 ? 'main' : 'sub' }}', indicatorId: {{ $indicatorId }}, itemId: {{ $semItemId }}, kra: {{ $kraCategory }} })"
@@ -130,7 +130,8 @@
                                         </svg>
                                     </div>
                                     @if ($showVerifiedBadge)
-                                        <div class="absolute left-1/2 top-full mt-1 flex -translate-x-1/2 items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                        <div
+                                            class="absolute left-1/2 top-full mt-1 flex -translate-x-1/2 items-center justify-center text-emerald-600 dark:text-emerald-400">
                                             <flux:icon icon="check-circle" class="size-6" />
                                         </div>
                                     @endif
@@ -189,21 +190,21 @@
                 @endif
             </td>
             @if ($isRowLocked)
-            <td data-col-type="actual-accomp" class="border-b border-r border-border px-3 py-3 align-top text-xs"
+                <td data-col-type="actual-accomp" class="border-b border-r border-border px-3 py-3 align-top text-xs"
                     style="{{ $cellStyle }}">
                     <div class="flex h-full min-h-[180px] flex-col">
                         <div class="min-h-[60px] space-y-2">
-                        @if ($semLock === 2)
-                            <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[60px]"
-                                x-text="accomp || '-'">
-                                {!! nl2br(e($formatValue($scores[$semItemId]['actual_accomp'] ?? $row['actual_accomp'] ?? ''))) !!}
-                            </div>
-                        @else
-                            <textarea data-autosize="true" data-field="actual_accomp" x-model="accomp"
-                                x-on:input="scheduleSave('actual_accomp')" x-on:change="saveField('actual_accomp')"
-                                x-on:blur="saveField('actual_accomp')" rows="3" placeholder="Actual accomplishment..."
-                                class="{{ $textareaClass }} min-h-[60px]" style="resize:none; min-height: 60px;"></textarea>
-                        @endif
+                            @if ($semLock === 2)
+                                <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[60px]"
+                                    x-text="accomp || '-'">
+                                    {!! nl2br(e($formatValue($scores[$semItemId]['actual_accomp'] ?? $row['actual_accomp'] ?? ''))) !!}
+                                </div>
+                            @else
+                                <textarea data-autosize="true" data-field="actual_accomp" x-model="accomp"
+                                    x-on:input="scheduleSave('actual_accomp')" x-on:change="saveField('actual_accomp')"
+                                    x-on:blur="saveField('actual_accomp')" rows="3" placeholder="Actual accomplishment..."
+                                    class="{{ $textareaClass }} min-h-[60px]" style="resize:none; min-height: 60px;"></textarea>
+                            @endif
                         </div>
                         <div class="flex items-center justify-between gap-3 border-t border-border/60 pt-2">
                             <div class="flex flex-col leading-none">
@@ -217,8 +218,7 @@
                             @if ((int) ($semLock ?? 0) === 2)
                                 <a href="#"
                                     class="inline-flex shrink-0 items-center gap-1 px-1 py-1 text-xs font-semibold text-primary hover:text-primary/80 dark:text-primary dark:hover:text-primary/90"
-                                    wire:click.prevent="openAttachmentUpload({{ $semItemId }})"
-                                    wire:loading.attr="aria-disabled"
+                                    wire:click.prevent="openAttachmentUpload({{ $semItemId }})" wire:loading.attr="aria-disabled"
                                     wire:target="openAttachmentUpload({{ $semItemId }})">
                                     <span class="inline-flex items-center gap-1">
                                         <flux:icon icon="eye" class="size-3.5" />
@@ -228,8 +228,7 @@
                             @else
                                 <a href="#"
                                     class="inline-flex shrink-0 items-center gap-1 px-1 py-1 text-xs font-semibold text-primary underline decoration-primary/30 underline-offset-2 hover:text-primary/80 hover:decoration-primary/60 dark:text-primary dark:decoration-primary/40 dark:hover:text-primary/90"
-                                    wire:click.prevent="openAttachmentUpload({{ $semItemId }})"
-                                    wire:loading.attr="aria-disabled"
+                                    wire:click.prevent="openAttachmentUpload({{ $semItemId }})" wire:loading.attr="aria-disabled"
                                     wire:target="openAttachmentUpload({{ $semItemId }})">
                                     <span class="inline-flex items-center gap-1">
                                         <flux:icon icon="arrow-up-tray" class="size-3.5" />
@@ -258,65 +257,66 @@
                         @else
                             <input type="text" data-field="quantity" x-model="q"
                                 x-on:keydown="
-                                                                                                                                                if ($event.key === 'n' || $event.key === 'N') {
-                                                                                                                                                    $event.preventDefault();
-                                                                                                                                                    q = 'N/A';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    saveField('quantity');
-                                                                                                                                                    focusNextInput($el);
-                                                                                                                                                }
-                                                                                                                                            "
+                                                                                                                                                                        if ($event.key === 'n' || $event.key === 'N') {
+                                                                                                                                                                            $event.preventDefault();
+                                                                                                                                                                            q = 'N/A';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            saveField('quantity');
+                                                                                                                                                                            focusNextInput($el);
+                                                                                                                                                                        }
+                                                                                                                                                                    "
                                 x-on:keydown.down.prevent="
-                                                                                                                                                let valStr = (q || '').toString().trim().toUpperCase();
-                                                                                                                                                if (valStr === 'N/A') return;
-                                                                                                                                                let num = parseFloat(valStr);
-                                                                                                                                                if (!isNaN(num) && num > 1) {
-                                                                                                                                                    q = (num - 1).toFixed(2);
-                                                                                                                                                }
-                                                                                                                                                computeAverage();
-                                                                                                                                            "
+                                                                                                                                                                        let valStr = (q || '').toString().trim().toUpperCase();
+                                                                                                                                                                        if (valStr === 'N/A') return;
+                                                                                                                                                                        let num = parseFloat(valStr);
+                                                                                                                                                                        if (!isNaN(num) && num > 1) {
+                                                                                                                                                                            q = (num - 1).toFixed(2);
+                                                                                                                                                                        }
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
                                 x-on:keydown.up.prevent="
-                                                                                                                                                let valStr = (q || '').toString().trim().toUpperCase();
-                                                                                                                                                if (valStr === 'N/A') {
-                                                                                                                                                    q = '1';
-                                                                                                                                                } else {
-                                                                                                                                                    let num = parseFloat(valStr);
-                                                                                                                                                    if (isNaN(num)) {
-                                                                                                                                                        q = '1';
-                                                                                                                                                    } else if (num < 5) {
-                                                                                                                                                        q = Math.min(5, num + 1).toFixed(2);
-                                                                                                                                                    }
-                                                                                                                                                }
-                                                                                                                                                computeAverage();
-                                                                                                                                            "
+                                                                                                                                                                        let valStr = (q || '').toString().trim().toUpperCase();
+                                                                                                                                                                        if (valStr === 'N/A') {
+                                                                                                                                                                            q = '1';
+                                                                                                                                                                        } else {
+                                                                                                                                                                            let num = parseFloat(valStr);
+                                                                                                                                                                            if (isNaN(num)) {
+                                                                                                                                                                                q = '1';
+                                                                                                                                                                            } else if (num < 5) {
+                                                                                                                                                                                q = Math.min(5, num + 1).toFixed(2);
+                                                                                                                                                                            }
+                                                                                                                                                                        }
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
                                 x-on:input="
-                                                                                                                                                let raw = ($el.value || '').trim();
-                                                                                                                                                if (raw === '') {
-                                                                                                                                                    q = '';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    return;
-                                                                                                                                                }
-                                                                                                                                                let upper = raw.toUpperCase();
-                                                                                                                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                                                                                                                                    q = 'N/A';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    saveField('quantity');
-                                                                                                                                                    focusNextInput($el);
-                                                                                                                                                    return;
-                                                                                                                                                }
-                                                                                                                                                let cleaned = raw.replace(/[^0-9.]/g, '');
-                                                                                                                                                let parts = cleaned.split('.');
-                                                                                                                                                if (parts.length > 2) {
-                                                                                                                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
-                                                                                                                                                }
-                                                                                                                                                let num = parseFloat(cleaned);
-                                                                                                                                                if (!isNaN(num) && num > 5) {
-                                                                                                                                                    cleaned = '5';
-                                                                                                                                                }
-                                                                                                                                                q = cleaned;
-                                                                                                                                                computeAverage();
-                                                                                                                                            " x-on:change="saveField('quantity')"
-                                x-on:blur="saveField('quantity')" placeholder="Score (1-5 or N/A)"
+                                                                                                                                                                        let raw = ($el.value || '').trim();
+                                                                                                                                                                        if (raw === '') {
+                                                                                                                                                                            q = '';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            return;
+                                                                                                                                                                        }
+                                                                                                                                                                        let upper = raw.toUpperCase();
+                                                                                                                                                                        if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                                                                                                                                            q = 'N/A';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            saveField('quantity');
+                                                                                                                                                                            focusNextInput($el);
+                                                                                                                                                                            return;
+                                                                                                                                                                        }
+                                                                                                                                                                        let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                                                                                                                                        let parts = cleaned.split('.');
+                                                                                                                                                                        if (parts.length > 2) {
+                                                                                                                                                                            cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                                                                                                                                        }
+                                                                                                                                                                        let num = parseFloat(cleaned);
+                                                                                                                                                                        if (!isNaN(num) && num > 5) {
+                                                                                                                                                                            cleaned = '5';
+                                                                                                                                                                        }
+                                                                                                                                                                        q = cleaned;
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
+                                x-on:change="saveField('quantity')" x-on:blur="saveField('quantity')"
+                                placeholder="Score (1-5 or N/A)"
                                 class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         @endif
                         <div class="text-[10px] text-muted-foreground leading-tight">
@@ -360,65 +360,65 @@
                         @else
                             <input type="text" data-field="quality" x-model="ql"
                                 x-on:keydown="
-                                                                                                                                                if ($event.key === 'n' || $event.key === 'N') {
-                                                                                                                                                    $event.preventDefault();
-                                                                                                                                                    ql = 'N/A';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    saveField('quality');
-                                                                                                                                                    focusNextInput($el);
-                                                                                                                                                }
-                                                                                                                                            "
+                                                                                                                                                                        if ($event.key === 'n' || $event.key === 'N') {
+                                                                                                                                                                            $event.preventDefault();
+                                                                                                                                                                            ql = 'N/A';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            saveField('quality');
+                                                                                                                                                                            focusNextInput($el);
+                                                                                                                                                                        }
+                                                                                                                                                                    "
                                 x-on:keydown.down.prevent="
-                                                                                                                                                let valStr = (ql || '').toString().trim().toUpperCase();
-                                                                                                                                                if (valStr === 'N/A') return;
-                                                                                                                                                let num = parseFloat(valStr);
-                                                                                                                                                if (!isNaN(num) && num > 1) {
-                                                                                                                                                    ql = (num - 1).toFixed(2);
-                                                                                                                                                }
-                                                                                                                                                computeAverage();
-                                                                                                                                            "
+                                                                                                                                                                        let valStr = (ql || '').toString().trim().toUpperCase();
+                                                                                                                                                                        if (valStr === 'N/A') return;
+                                                                                                                                                                        let num = parseFloat(valStr);
+                                                                                                                                                                        if (!isNaN(num) && num > 1) {
+                                                                                                                                                                            ql = (num - 1).toFixed(2);
+                                                                                                                                                                        }
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
                                 x-on:keydown.up.prevent="
-                                                                                                                                                let valStr = (ql || '').toString().trim().toUpperCase();
-                                                                                                                                                if (valStr === 'N/A') {
-                                                                                                                                                    ql = '1';
-                                                                                                                                                } else {
-                                                                                                                                                    let num = parseFloat(valStr);
-                                                                                                                                                    if (isNaN(num)) {
-                                                                                                                                                        ql = '1';
-                                                                                                                                                    } else if (num < 5) {
-                                                                                                                                                        ql = Math.min(5, num + 1).toFixed(2);
-                                                                                                                                                    }
-                                                                                                                                                }
-                                                                                                                                                computeAverage();
-                                                                                                                                            "
+                                                                                                                                                                        let valStr = (ql || '').toString().trim().toUpperCase();
+                                                                                                                                                                        if (valStr === 'N/A') {
+                                                                                                                                                                            ql = '1';
+                                                                                                                                                                        } else {
+                                                                                                                                                                            let num = parseFloat(valStr);
+                                                                                                                                                                            if (isNaN(num)) {
+                                                                                                                                                                                ql = '1';
+                                                                                                                                                                            } else if (num < 5) {
+                                                                                                                                                                                ql = Math.min(5, num + 1).toFixed(2);
+                                                                                                                                                                            }
+                                                                                                                                                                        }
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
                                 x-on:input="
-                                                                                                                                                let raw = ($el.value || '').trim();
-                                                                                                                                                if (raw === '') {
-                                                                                                                                                    ql = '';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    return;
-                                                                                                                                                }
-                                                                                                                                                let upper = raw.toUpperCase();
-                                                                                                                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                                                                                                                                    ql = 'N/A';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    saveField('quality');
-                                                                                                                                                    focusNextInput($el);
-                                                                                                                                                    return;
-                                                                                                                                                }
-                                                                                                                                                let cleaned = raw.replace(/[^0-9.]/g, '');
-                                                                                                                                                let parts = cleaned.split('.');
-                                                                                                                                                if (parts.length > 2) {
-                                                                                                                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
-                                                                                                                                                }
-                                                                                                                                                let num = parseFloat(cleaned);
-                                                                                                                                                if (!isNaN(num) && num > 5) {
-                                                                                                                                                    cleaned = '5';
-                                                                                                                                                }
-                                                                                                                                                ql = cleaned;
-                                                                                                                                                computeAverage();
-                                                                                                                                            " x-on:change="saveField('quality')"
-                                x-on:blur="saveField('quality')" placeholder="Score (1-5 or N/A)"
+                                                                                                                                                                        let raw = ($el.value || '').trim();
+                                                                                                                                                                        if (raw === '') {
+                                                                                                                                                                            ql = '';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            return;
+                                                                                                                                                                        }
+                                                                                                                                                                        let upper = raw.toUpperCase();
+                                                                                                                                                                        if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                                                                                                                                            ql = 'N/A';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            saveField('quality');
+                                                                                                                                                                            focusNextInput($el);
+                                                                                                                                                                            return;
+                                                                                                                                                                        }
+                                                                                                                                                                        let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                                                                                                                                        let parts = cleaned.split('.');
+                                                                                                                                                                        if (parts.length > 2) {
+                                                                                                                                                                            cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                                                                                                                                        }
+                                                                                                                                                                        let num = parseFloat(cleaned);
+                                                                                                                                                                        if (!isNaN(num) && num > 5) {
+                                                                                                                                                                            cleaned = '5';
+                                                                                                                                                                        }
+                                                                                                                                                                        ql = cleaned;
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
+                                x-on:change="saveField('quality')" x-on:blur="saveField('quality')" placeholder="Score (1-5 or N/A)"
                                 class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         @endif
                         <div class="text-[10px] text-muted-foreground leading-tight">
@@ -462,65 +462,66 @@
                         @else
                             <input type="text" data-field="timeliness" x-model="t"
                                 x-on:keydown="
-                                                                                                                                                if ($event.key === 'n' || $event.key === 'N') {
-                                                                                                                                                    $event.preventDefault();
-                                                                                                                                                    t = 'N/A';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    saveField('timeliness');
-                                                                                                                                                    focusNextInput($el);
-                                                                                                                                                }
-                                                                                                                                            "
+                                                                                                                                                                        if ($event.key === 'n' || $event.key === 'N') {
+                                                                                                                                                                            $event.preventDefault();
+                                                                                                                                                                            t = 'N/A';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            saveField('timeliness');
+                                                                                                                                                                            focusNextInput($el);
+                                                                                                                                                                        }
+                                                                                                                                                                    "
                                 x-on:keydown.down.prevent="
-                                                                                                                                                let valStr = (t || '').toString().trim().toUpperCase();
-                                                                                                                                                if (valStr === 'N/A') return;
-                                                                                                                                                let num = parseFloat(valStr);
-                                                                                                                                                if (!isNaN(num) && num > 1) {
-                                                                                                                                                    t = (num - 1).toFixed(2);
-                                                                                                                                                }
-                                                                                                                                                computeAverage();
-                                                                                                                                            "
+                                                                                                                                                                        let valStr = (t || '').toString().trim().toUpperCase();
+                                                                                                                                                                        if (valStr === 'N/A') return;
+                                                                                                                                                                        let num = parseFloat(valStr);
+                                                                                                                                                                        if (!isNaN(num) && num > 1) {
+                                                                                                                                                                            t = (num - 1).toFixed(2);
+                                                                                                                                                                        }
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
                                 x-on:keydown.up.prevent="
-                                                                                                                                                let valStr = (t || '').toString().trim().toUpperCase();
-                                                                                                                                                if (valStr === 'N/A') {
-                                                                                                                                                    t = '1';
-                                                                                                                                                } else {
-                                                                                                                                                    let num = parseFloat(valStr);
-                                                                                                                                                    if (isNaN(num)) {
-                                                                                                                                                        t = '1';
-                                                                                                                                                    } else if (num < 5) {
-                                                                                                                                                        t = Math.min(5, num + 1).toFixed(2);
-                                                                                                                                                    }
-                                                                                                                                                }
-                                                                                                                                                computeAverage();
-                                                                                                                                            "
+                                                                                                                                                                        let valStr = (t || '').toString().trim().toUpperCase();
+                                                                                                                                                                        if (valStr === 'N/A') {
+                                                                                                                                                                            t = '1';
+                                                                                                                                                                        } else {
+                                                                                                                                                                            let num = parseFloat(valStr);
+                                                                                                                                                                            if (isNaN(num)) {
+                                                                                                                                                                                t = '1';
+                                                                                                                                                                            } else if (num < 5) {
+                                                                                                                                                                                t = Math.min(5, num + 1).toFixed(2);
+                                                                                                                                                                            }
+                                                                                                                                                                        }
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
                                 x-on:input="
-                                                                                                                                                let raw = ($el.value || '').trim();
-                                                                                                                                                if (raw === '') {
-                                                                                                                                                    t = '';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    return;
-                                                                                                                                                }
-                                                                                                                                                let upper = raw.toUpperCase();
-                                                                                                                                                if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
-                                                                                                                                                    t = 'N/A';
-                                                                                                                                                    computeAverage();
-                                                                                                                                                    saveField('timeliness');
-                                                                                                                                                    focusNextInput($el);
-                                                                                                                                                    return;
-                                                                                                                                                }
-                                                                                                                                                let cleaned = raw.replace(/[^0-9.]/g, '');
-                                                                                                                                                let parts = cleaned.split('.');
-                                                                                                                                                if (parts.length > 2) {
-                                                                                                                                                    cleaned = parts[0] + '.' + parts.slice(1).join('');
-                                                                                                                                                }
-                                                                                                                                                let num = parseFloat(cleaned);
-                                                                                                                                                if (!isNaN(num) && num > 5) {
-                                                                                                                                                    cleaned = '5';
-                                                                                                                                                }
-                                                                                                                                                t = cleaned;
-                                                                                                                                                computeAverage();
-                                                                                                                                            " x-on:change="saveField('timeliness')"
-                                x-on:blur="saveField('timeliness')" placeholder="Score (1-5 or N/A)"
+                                                                                                                                                                        let raw = ($el.value || '').trim();
+                                                                                                                                                                        if (raw === '') {
+                                                                                                                                                                            t = '';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            return;
+                                                                                                                                                                        }
+                                                                                                                                                                        let upper = raw.toUpperCase();
+                                                                                                                                                                        if (upper === 'N' || upper === 'NA' || upper === 'N/' || upper === 'N/A') {
+                                                                                                                                                                            t = 'N/A';
+                                                                                                                                                                            computeAverage();
+                                                                                                                                                                            saveField('timeliness');
+                                                                                                                                                                            focusNextInput($el);
+                                                                                                                                                                            return;
+                                                                                                                                                                        }
+                                                                                                                                                                        let cleaned = raw.replace(/[^0-9.]/g, '');
+                                                                                                                                                                        let parts = cleaned.split('.');
+                                                                                                                                                                        if (parts.length > 2) {
+                                                                                                                                                                            cleaned = parts[0] + '.' + parts.slice(1).join('');
+                                                                                                                                                                        }
+                                                                                                                                                                        let num = parseFloat(cleaned);
+                                                                                                                                                                        if (!isNaN(num) && num > 5) {
+                                                                                                                                                                            cleaned = '5';
+                                                                                                                                                                        }
+                                                                                                                                                                        t = cleaned;
+                                                                                                                                                                        computeAverage();
+                                                                                                                                                                    "
+                                x-on:change="saveField('timeliness')" x-on:blur="saveField('timeliness')"
+                                placeholder="Score (1-5 or N/A)"
                                 class="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary mb-1" />
                         @endif
                         <div class="text-[10px] text-muted-foreground leading-tight">
@@ -635,7 +636,7 @@
         <template x-if="showContextMenu">
             <div x-on:close-all-target-context-menus.window="closeContextMenu()" x-on:click.outside="closeContextMenu()"
                 :style="`top: ${contextY}px; left: ${contextX}px; z-index: 99999 !important;`"
-                class="fixed min-w-[14rem] rounded-xl border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 p-1.5 text-xs font-medium opacity-100 shadow-2xl animate-in fade-in-50 zoom-in-95">
+                class="absolute min-w-[14rem] rounded-xl border border-slate-200 dark:border-zinc-700/80 bg-white dark:bg-zinc-900 text-slate-900 dark:text-zinc-100 p-1.5 text-xs font-medium opacity-100 shadow-2xl animate-in fade-in-50 zoom-in-95">
 
                 <div class="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/60 mb-1 flex items-center justify-between cursor-move select-none"
                     x-on:pointerdown="startMenuDrag($event)" title="{{ __('Drag to move popup') }}">
@@ -731,7 +732,7 @@
                     :class="!canDeleteSubTarget ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-zinc-500' : 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40'">
                     <flux:icon icon="minus-circle" class="size-4"
                         :class="!canDeleteSubTarget ? 'text-slate-400 dark:text-zinc-500' : 'text-rose-500 dark:text-rose-400'" />
-                    <span>{{ __('Delete selected sub-target') }}</span>
+                    <span>{{ __('Delete selected sub-target only') }}</span>
                 </button>
             </div>
         </template>
@@ -814,64 +815,65 @@
                 style="width: 45vw !important; max-width: 45vw !important; height: 85vh !important; max-height: 85vh !important;"
                 @close="cancelAttachmentUpload; queuedAttachments = []; activeIndex = -1;">
                 <div class="relative flex h-full w-full flex-col overflow-hidden" x-data="{
-                                                                            progress: 0,
-                                                                            uploading: false,
-                                                                            attachments: @js($galleryAttachments),
-                                                                            serverPreviews: @js($serverPreviewFiles),
-                                                                            queuedAttachments: [],
-                                                                            activeIndex: -1,
-                                                                            currentAttachment() {
-                                                                            return this.activeIndex >= 0 && this.activeIndex < this.attachments.length
-                                                                            ? this.attachments[this.activeIndex]
-                                                                            : null;
-                                                                            },
-                                                                            openAttachment(index) {
-                                                                            this.attachments = @js($galleryAttachments);
-                                                                            if (index < 0 || index >= this.attachments.length) return;
-                                                                            this.activeIndex = index;
-                                                                            },
-                                                                            previousAttachment() {
-                                                                            this.attachments = @js($galleryAttachments);
-                                                                            if (!this.attachments.length) return;
-                                                                            this.activeIndex = (this.activeIndex - 1 + this.attachments.length) % this.attachments.length;
-                                                                            },
-                                                                            nextAttachment() {
-                                                                            this.attachments = @js($galleryAttachments);
-                                                                            if (!this.attachments.length) return;
-                                                                            this.activeIndex = (this.activeIndex + 1) % this.attachments.length;
-                                                                            },
-                                                                            closeViewer() { this.activeIndex = -1 },
-                                                                            queueSelectedFiles(event) {
-                                                                            this.queuedAttachments.forEach((file) => {
-                                                                            if (file?.url) {
-                                                                                URL.revokeObjectURL(file.url);
-                                                                            }
-                                                                            });
-                                                                            const files = Array.from(event.target.files || []);
-                                                                            this.queuedAttachments = files.map((file) => ({
-                                                                            name: file.name,
-                                                                            url: file.type === 'application/pdf' ? '' : URL.createObjectURL(file),
-                                                                            type: file.type === 'application/pdf' ? 'pdf' : 'image',
-                                                                            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-                                                                            }));
-                                                                            },
-                                                                            removeQueuedFile(index) {
-                                                                            if (index < 0) return;
-                                                                            if (this.queuedAttachments.length > 0 && index < this.queuedAttachments.length) {
-                                                                            const removed = this.queuedAttachments.splice(index, 1);
-                                                                            if (removed[0]?.url) {
-                                                                                URL.revokeObjectURL(removed[0].url);
-                                                                            }
-                                                                            }
-                                                                            if (this.serverPreviews && index < this.serverPreviews.length) {
-                                                                            this.serverPreviews.splice(index, 1);
-                                                                            }
-                                                                            $wire.removeQueuedAttachment(index);
-                                                                            },
-                                                                            displayPreviews() {
-                                                                            return this.queuedAttachments.length > 0 ? this.queuedAttachments : this.serverPreviews;
-                                                                            }
-                                                                            }" x-on:keydown.escape.window="closeViewer()"
+                                                                                    progress: 0,
+                                                                                    uploading: false,
+                                                                                    attachments: @js($galleryAttachments),
+                                                                                    serverPreviews: @js($serverPreviewFiles),
+                                                                                    queuedAttachments: [],
+                                                                                    activeIndex: -1,
+                                                                                    currentAttachment() {
+                                                                                    return this.activeIndex >= 0 && this.activeIndex < this.attachments.length
+                                                                                    ? this.attachments[this.activeIndex]
+                                                                                    : null;
+                                                                                    },
+                                                                                    openAttachment(index) {
+                                                                                    this.attachments = @js($galleryAttachments);
+                                                                                    if (index < 0 || index >= this.attachments.length) return;
+                                                                                    this.activeIndex = index;
+                                                                                    },
+                                                                                    previousAttachment() {
+                                                                                    this.attachments = @js($galleryAttachments);
+                                                                                    if (!this.attachments.length) return;
+                                                                                    this.activeIndex = (this.activeIndex - 1 + this.attachments.length) % this.attachments.length;
+                                                                                    },
+                                                                                    nextAttachment() {
+                                                                                    this.attachments = @js($galleryAttachments);
+                                                                                    if (!this.attachments.length) return;
+                                                                                    this.activeIndex = (this.activeIndex + 1) % this.attachments.length;
+                                                                                    },
+                                                                                    closeViewer() { this.activeIndex = -1 },
+                                                                                    queueSelectedFiles(event) {
+                                                                                    this.queuedAttachments.forEach((file) => {
+                                                                                    if (file?.url) {
+                                                                                        URL.revokeObjectURL(file.url);
+                                                                                    }
+                                                                                    });
+                                                                                    const files = Array.from(event.target.files || []);
+                                                                                    this.queuedAttachments = files.map((file) => ({
+                                                                                    name: file.name,
+                                                                                    url: file.type === 'application/pdf' ? '' : URL.createObjectURL(file),
+                                                                                    type: file.type === 'application/pdf' ? 'pdf' : 'image',
+                                                                                    size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+                                                                                    }));
+                                                                                    },
+                                                                                    removeQueuedFile(index) {
+                                                                                    if (index < 0) return;
+                                                                                    if (this.queuedAttachments.length > 0 && index < this.queuedAttachments.length) {
+                                                                                    const removed = this.queuedAttachments.splice(index, 1);
+                                                                                    if (removed[0]?.url) {
+                                                                                        URL.revokeObjectURL(removed[0].url);
+                                                                                    }
+                                                                                    }
+                                                                                    if (this.serverPreviews && index < this.serverPreviews.length) {
+                                                                                    this.serverPreviews.splice(index, 1);
+                                                                                    }
+                                                                                    $wire.removeQueuedAttachment(index);
+                                                                                    },
+                                                                                    displayPreviews() {
+                                                                                    return this.queuedAttachments.length > 0 ? this.queuedAttachments : this.serverPreviews;
+                                                                                    }
+                                                                                    }"
+                    x-on:keydown.escape.window="closeViewer()"
                     x-on:keydown.left.window="if (activeIndex >= 0 && attachments.length > 1) previousAttachment()"
                     x-on:keydown.right.window="if (activeIndex >= 0 && attachments.length > 1) nextAttachment()"
                     x-on:livewire-upload-start="uploading = true; progress = 0"
@@ -1159,8 +1161,8 @@
                 class="!w-[52vw] !max-w-[52vw] !h-[78vh] !max-h-[78vh] p-6"
                 style="width: 52vw !important; max-width: 52vw !important; height: 78vh !important; max-height: 78vh !important;">
                 <div class="flex h-full min-h-0 flex-col space-y-5 overflow-hidden">
-                        <div
-                            class="rounded-2xl border border-emerald-200/70 bg-gradient-to-r from-emerald-50 via-white to-slate-50 px-4 py-3 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/35 dark:via-zinc-900 dark:to-zinc-950">
+                    <div
+                        class="rounded-2xl border border-emerald-200/70 bg-gradient-to-r from-emerald-50 via-white to-slate-50 px-4 py-3 shadow-sm dark:border-emerald-900/40 dark:from-emerald-950/35 dark:via-zinc-900 dark:to-zinc-950">
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <div class="space-y-1">
                                 <flux:heading size="lg">{{ __('Get MOVs From Staff') }}</flux:heading>
@@ -1209,7 +1211,7 @@
                                 {{ __('Use the filters above to display MOVs from other staff.') }}
                             </div>
                         @else
-                                    <div class="space-y-4 p-4">
+                            <div class="space-y-4 p-4">
                                 @foreach ($movSources as $sourceTargetId => $items)
                                     @php
                                         $firstSource = $items->first();
@@ -1232,7 +1234,8 @@
 
                                         <div class="space-y-2">
                                             @foreach ($items as $sourceItem)
-                                                <div class="flex items-start justify-between gap-3 rounded-lg border border-border bg-background p-3">
+                                                <div
+                                                    class="flex items-start justify-between gap-3 rounded-lg border border-border bg-background p-3">
                                                     <div class="min-w-0 flex-1">
                                                         <div class="text-sm font-medium text-foreground whitespace-normal break-words">
                                                             {!! nl2br(e($formatValue($sourceItem->description ?? ''))) !!}

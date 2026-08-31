@@ -52,6 +52,22 @@ class SidebarMenuItem extends Model
         'user_levels' => 'array',
     ];
 
+    /**
+     * Decode the given JSON back into an array or object safely.
+     *
+     * @param  mixed  $value
+     * @param  bool  $asAssociative
+     * @return mixed
+     */
+    public function fromJson($value, $asAssociative = false)
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        return parent::fromJson($value, $asAssociative);
+    }
+
     /** @return BelongsTo<self, $this> */
     public function parent(): BelongsTo
     {

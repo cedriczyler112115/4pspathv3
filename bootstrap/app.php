@@ -13,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->appendToGroup('web', \App\Http\Middleware\CheckUserLevelChanged::class);
+
+        if (class_exists(\Inertia\Middleware::class)) {
+            $middleware->appendToGroup('web', \App\Http\Middleware\HandleInertiaRequests::class);
+        }
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

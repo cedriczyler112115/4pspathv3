@@ -83,12 +83,13 @@ class AnnualTargetDirectory
             ->orderBy('iti.date_created')
             ->orderBy('iti.id');
 
-        if ($perPage <= 0) {
+        if ($perPage <= 0 || $perPage >= 99999) {
             $indicatorIds = $indicatorQuery->pluck('iti.id')->map(static fn(mixed $id): int => (int) $id);
+            $totalCount = max(1, $indicatorIds->count());
             $indicatorPage = new Paginator(
                 $indicatorIds->map(static fn(int $id): object => (object) ['id' => $id]),
-                $indicatorIds->count(),
-                1,
+                $totalCount,
+                $totalCount,
                 1,
                 ['path' => Paginator::resolveCurrentPath(), 'pageName' => 'page'],
             );

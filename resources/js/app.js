@@ -921,7 +921,7 @@ window.semestralTargetGroup = (hasHistoryByItem) => ({
         this.contextIndicatorId = indicatorId;
         this.contextItemId = itemId;
         this.canDeleteTarget = true;
-        this.canDeleteSubTarget = subTargetCount > 1 && !isMainRow;
+        this.canDeleteSubTarget = subTargetCount > 1;
         this.activeSubMenu = null;
         this.contextX = Math.max(8, Math.min(event.clientX, window.innerWidth - 198));
         this.contextY = Math.max(8, Math.min(event.clientY, window.innerHeight - 168));

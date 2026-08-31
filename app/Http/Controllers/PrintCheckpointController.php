@@ -335,25 +335,27 @@ class PrintCheckpointController extends Controller
             ]);
         }
 
-        $formattedDate = Carbon::now('Asia/Manila')->format('F d, Y');
+        $dateFormatted = Carbon::now('Asia/Manila')->format('F d, Y');
 
         $activeRows = $checkpointRows->filter(fn ($r) => ! ($r->is_deleted ?? false))->values();
         $deletedRows = $checkpointRows->filter(fn ($r) => ($r->is_deleted ?? false))->values();
+        $year = $semRecord->year ?? now()->year;
+        $rateeDivision = $semRecord->ratee_division ?: 'PANTAWID PAMILYANG PILIPINO PROGRAM';
 
-        return view('print.ipcrf-checkpoint', [
-            'semRecord' => $semRecord,
-            'year' => $semRecord->year ?? now()->year,
-            'rateeFullName' => $rateeFullName,
-            'rateePosition' => $rateePosition,
-            'rateeDivision' => $semRecord->ratee_division ?: 'PANTAWID PAMILYANG PILIPINO PROGRAM',
-            'supFullName' => $supFullName,
-            'supPosition' => $supPosition,
-            'appFullName' => $appFullName,
-            'appPosition' => $appPosition,
-            'dateFormatted' => $formattedDate,
-            'activeRows' => $activeRows,
-            'deletedRows' => $deletedRows,
-            'checkpointRows' => $checkpointRows,
-        ]);
+        return view('print.ipcrf-checkpoint', compact(
+            'semRecord',
+            'year',
+            'rateeFullName',
+            'rateePosition',
+            'rateeDivision',
+            'supFullName',
+            'supPosition',
+            'appFullName',
+            'appPosition',
+            'dateFormatted',
+            'activeRows',
+            'deletedRows',
+            'checkpointRows'
+        ));
     }
 }

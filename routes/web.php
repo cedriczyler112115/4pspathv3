@@ -45,3 +45,4 @@ Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
     ->name('google.callback');
 
 require __DIR__.'/settings.php';
+require __DIR__.'/inertia.php';

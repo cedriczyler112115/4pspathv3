@@ -9,7 +9,7 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 8mm 10mm 10mm 10mm;
+            margin: 5mm 6mm;
         }
 
         @media print {
@@ -41,18 +41,18 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.025em;
-            font-size: 11px;
-            padding: 8px 10px;
+            font-size: 9px;
+            padding: 4px 6px;
             border: 1px solid #1e4f66;
             text-align: center;
         }
 
         .table-checkpoint td {
             border: 1px solid #1e293b;
-            padding: 8px 10px;
+            padding: 4px 6px;
             vertical-align: top;
-            font-size: 11px;
-            line-height: 1.4;
+            font-size: 9px;
+            line-height: 1.25;
         }
 
         .label-italic {
@@ -62,7 +62,7 @@
     </style>
 </head>
 
-<body class="min-h-screen p-4 sm:p-6 print:p-0">
+<body class="min-h-screen p-2 print:p-0">
 
     <!-- Floating Action Toolbar (Hidden when printing) -->
     <div
@@ -83,41 +83,41 @@
     </div>
 
     <!-- Main Print Container -->
-    <div class="mx-auto max-w-7xl bg-white p-6 shadow-md print:max-w-none print:p-0 print:shadow-none">
+    <div class="mx-auto max-w-7xl bg-white p-3 shadow-md print:max-w-none print:p-0 print:shadow-none">
 
         <!-- Document Header Section -->
-        <div class="relative mb-6">
+        <div class="relative mb-3">
             <!-- Top Right Annex Code -->
-            <div class="text-right text-[10px] font-medium text-slate-600 print:text-black">
+            <div class="text-right text-[9px] font-medium text-slate-600 print:text-black">
                 Annex M. Individual Performance Checkpoint Form
             </div>
 
             <!-- Top Left DSWD & Bagong Pilipinas Logos -->
             <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <img src="{{ asset('logos/dswd1.png') }}" alt="DSWD Logo" style="width: 150px;"
-                        class="h-12 w-auto object-contain">
-                    <img src="{{ asset('logos/bagongpilipinas1.png') }}" style="width: 50px;margin-top:-10px;"
-                        alt="Bagong Pilipinas Logo" class="h-12 w-auto object-contain">
+                <div class="flex items-center gap-2">
+                    <img src="{{ asset('logos/dswd1.png') }}" alt="DSWD Logo" style="width: 110px;"
+                        class="h-9 w-auto object-contain">
+                    <img src="{{ asset('logos/bagongpilipinas1.png') }}" style="width: 38px;margin-top:-6px;"
+                        alt="Bagong Pilipinas Logo" class="h-9 w-auto object-contain">
                 </div>
 
                 <!-- Center Title Header Block -->
                 <div class="flex-1 text-center px-4">
-                    <h1 class="text-xs font-bold uppercase tracking-wide text-slate-900 print:text-black">
+                    <h1 class="text-[10px] font-bold uppercase tracking-wide text-slate-900 print:text-black">
                         DEPARTMENT OF SOCIAL WELFARE AND DEVELOPMENT
                     </h1>
-                    <h2 class="text-sm font-extrabold uppercase tracking-wide text-slate-700 print:text-black mt-0.5">
+                    <h2 class="text-xs font-extrabold uppercase tracking-wide text-slate-700 print:text-black mt-0.5">
                         Individual Performance Checkpoint Form
                     </h2>
-                    <div class="text-xs font-bold text-slate-900 print:text-black mt-0.5">
+                    <div class="text-[10px] font-bold text-slate-900 print:text-black mt-0.5">
                         CY {{ $year }}
                     </div>
-                    <div class="text-xs font-extrabold uppercase tracking-wide text-slate-900 print:text-black mt-0.5">
+                    <div class="text-[10px] font-extrabold uppercase tracking-wide text-slate-900 print:text-black mt-0.5">
                         FIELD OFFICE CARAGA - {{ $rateeDivision }}
                     </div>
                 </div>
 
-                <div class="w-32"></div>
+                <div class="w-28"></div>
             </div>
         </div>
 
@@ -372,59 +372,59 @@
         </div>
 
         <!-- Footer Signatures Section -->
-        <div class="mt-12 grid grid-cols-3 gap-8 pt-4">
+        <div class="mt-6 grid grid-cols-3 gap-6 pt-2">
             <!-- Prepared By (Ratee) -->
-            <div class="space-y-8">
+            <div class="space-y-4">
                 <div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Prepared by:</div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Position:</div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Date:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Prepared by:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Position:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Date:</div>
                 </div>
                 <div class="text-center">
                     <div
-                        class="inline-block border-b border-black pb-0.5 text-xs font-extrabold tracking-wide uppercase text-black">
+                        class="inline-block border-b border-black pb-0.5 text-[10px] font-extrabold tracking-wide uppercase text-black">
                         {{ $rateeFullName }}
                     </div>
-                    <div class="text-[11px] font-bold uppercase text-black mt-0.5">
+                    <div class="text-[9px] font-bold uppercase text-black mt-0.5">
                         {{ $rateePosition }}
                     </div>
-                    <div class="text-[10px] text-slate-700 print:text-black mt-0.5">
+                    <div class="text-[9px] text-slate-700 print:text-black mt-0.5">
                         {{ $dateFormatted }}
                     </div>
                 </div>
             </div>
 
             <!-- Recommending Approval (Supervisor) -->
-            <div class="space-y-8">
+            <div class="space-y-4">
                 <div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Recommending Approval:</div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Position:</div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Date:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Recommending Approval:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Position:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Date:</div>
                 </div>
                 <div class="text-center">
                     <div
-                        class="inline-block border-b border-black pb-0.5 text-xs font-extrabold tracking-wide uppercase text-black">
+                        class="inline-block border-b border-black pb-0.5 text-[10px] font-extrabold tracking-wide uppercase text-black">
                         {{ $supFullName }}
                     </div>
-                    <div class="text-[11px] font-bold uppercase text-black mt-0.5">
+                    <div class="text-[9px] font-bold uppercase text-black mt-0.5">
                         {{ $supPosition }}
                     </div>
                 </div>
             </div>
 
             <!-- Approved By (Division Chief / Head) -->
-            <div class="space-y-8">
+            <div class="space-y-4">
                 <div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Approved by:</div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Position:</div>
-                    <div class="text-xs font-medium text-slate-700 print:text-black">Date:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Approved by:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Position:</div>
+                    <div class="text-[10px] font-medium text-slate-700 print:text-black">Date:</div>
                 </div>
                 <div class="text-center">
                     <div
-                        class="inline-block border-b border-black pb-0.5 text-xs font-bold tracking-wide uppercase text-slate-500 print:text-black">
+                        class="inline-block border-b border-black pb-0.5 text-[10px] font-bold tracking-wide uppercase text-slate-500 print:text-black">
                         {{ $appFullName }}
                     </div>
-                    <div class="text-[11px] font-medium uppercase text-slate-500 print:text-black mt-0.5">
+                    <div class="text-[9px] font-medium uppercase text-slate-500 print:text-black mt-0.5">
                         {{ $appPosition }}
                     </div>
                 </div>

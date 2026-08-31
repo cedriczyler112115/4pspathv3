@@ -63,13 +63,17 @@ final class HarmonizedIpcDirectory
             ->when($semester !== '', function ($query) use ($semester): void {
                 $query->where(function ($semesterQuery) use ($semester): void {
                     if ($semester === '1') {
-                        $semesterQuery->whereIn('iti.target_sem', [1, 3]);
+                        $semesterQuery->whereIn('itl.new_semester', [1, 3])
+                            ->orWhereIn('iti.target_sem', [1, 3]);
                     } elseif ($semester === '2') {
-                        $semesterQuery->whereIn('iti.target_sem', [2, 3]);
+                        $semesterQuery->whereIn('itl.new_semester', [2, 3])
+                            ->orWhereIn('iti.target_sem', [2, 3]);
                     } elseif ($semester === '3') {
-                        $semesterQuery->whereIn('iti.target_sem', [1, 2, 3]);
+                        $semesterQuery->whereIn('itl.new_semester', [1, 2, 3])
+                            ->orWhereIn('iti.target_sem', [1, 2, 3]);
                     } else {
-                        $semesterQuery->where('iti.target_sem', $semester);
+                        $semesterQuery->where('itl.new_semester', $semester)
+                            ->orWhere('iti.target_sem', $semester);
                     }
                 });
             })
