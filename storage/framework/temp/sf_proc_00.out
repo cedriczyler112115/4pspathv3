@@ -492,3 +492,11 @@
 [Mon Aug 31 15:55:21 2026] 127.0.0.1:51856 [GET] URI: /inertia/verification/2039/semestral-verification
 [Mon Aug 31 15:55:25 2026] 127.0.0.1:56737 [GET] URI: /inertia/verification/2039/semestral-verification
 [Mon Aug 31 15:57:58 2026] 127.0.0.1:55587 [GET] URI: /inertia/ipcrf/myratings/semestral-target/print-checkpoint
+[Mon Aug 31 16:01:27 2026] 127.0.0.1:51390 [GET] URI: /inertia/verification/2039/semestral-verification
+[Mon Aug 31 16:01:30 2026] 127.0.0.1:60903 [GET] URI: /logout
+[Mon Aug 31 16:01:30 2026] 127.0.0.1:63180 [GET] URI: /inertia/auth/login
+[Mon Aug 31 16:01:37 2026] 127.0.0.1:55365 [POST] URI: /login
+[Mon Aug 31 16:01:37 2026] 127.0.0.1:49470 [GET] URI: /dashboard
+[Mon Aug 31 16:01:37 2026] 127.0.0.1:63921 [GET] URI: /inertia/dashboard
+[Mon Aug 31 16:01:39 2026] 127.0.0.1:55635 [GET] URI: /inertia/search
+[Mon Aug 31 16:01:40 2026] 127.0.0.1:54918 [GET] URI: /inertia/verification
