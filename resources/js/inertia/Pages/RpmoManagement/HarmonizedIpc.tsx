@@ -222,7 +222,7 @@ export default function HarmonizedIpc({
 
   const submitFilters = (overrides = {}) => {
     const data = { ...filterForm.data, ...overrides };
-    router.get('/inertia/rpmo-management/harmonized-ipc', data, {
+    router.get('/rpmo-management/harmonized-ipc', data, {
       preserveState: true,
       replace: true,
     });
@@ -238,7 +238,7 @@ export default function HarmonizedIpc({
       perPage: '10',
     });
     router.get(
-      '/inertia/rpmo-management/harmonized-ipc',
+      '/rpmo-management/harmonized-ipc',
       {
         search: '',
         year: String(new Date().getFullYear()),
@@ -359,7 +359,7 @@ export default function HarmonizedIpc({
     if (!firstRowId) return;
 
     inlineEditForm.patch(
-      `/inertia/rpmo-management/harmonized-ipc/${group.indicatorId}/${firstRowId}`,
+      `/rpmo-management/harmonized-ipc/${group.indicatorId}/${firstRowId}`,
       {
         onSuccess: () => {
           cancelInlineEdit();
@@ -392,7 +392,7 @@ export default function HarmonizedIpc({
 
   const handleSaveAddTarget = (e: React.FormEvent) => {
     e.preventDefault();
-    addForm.post('/inertia/rpmo-management/harmonized-ipc', {
+    addForm.post('/rpmo-management/harmonized-ipc', {
       onSuccess: () => {
         setShowAddModal(false);
       },
@@ -409,7 +409,7 @@ export default function HarmonizedIpc({
     }
 
     router.post(
-      '/inertia/rpmo-management/harmonized-ipc/reorder',
+      '/rpmo-management/harmonized-ipc/reorder',
       { source, target },
       { preserveScroll: true }
     );
@@ -422,7 +422,7 @@ export default function HarmonizedIpc({
     setPendingMove(null);
 
     router.post(
-      '/inertia/rpmo-management/harmonized-ipc/reorder',
+      '/rpmo-management/harmonized-ipc/reorder',
       { source, target },
       { preserveScroll: true }
     );
@@ -1377,7 +1377,7 @@ export default function HarmonizedIpc({
                     type="button"
                     onClick={() =>
                       router.get(
-                        '/inertia/rpmo-management/harmonized-ipc',
+                        '/rpmo-management/harmonized-ipc',
                         { ...filterForm.data, page: targets.currentPage - 1 },
                         { replace: true, preserveState: true }
                       )
@@ -1406,7 +1406,7 @@ export default function HarmonizedIpc({
                       type="button"
                       onClick={() =>
                         router.get(
-                          '/inertia/rpmo-management/harmonized-ipc',
+                          '/rpmo-management/harmonized-ipc',
                           { ...filterForm.data, page },
                           { replace: true, preserveState: true }
                         )
@@ -1427,7 +1427,7 @@ export default function HarmonizedIpc({
                     type="button"
                     onClick={() =>
                       router.get(
-                        '/inertia/rpmo-management/harmonized-ipc',
+                        '/rpmo-management/harmonized-ipc',
                         { ...filterForm.data, page: targets.currentPage + 1 },
                         { replace: true, preserveState: true }
                       )
@@ -1830,7 +1830,7 @@ export default function HarmonizedIpc({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/rpmo-management/harmonized-ipc/${deletingIndicatorId}`, {
+                    router.delete(`/rpmo-management/harmonized-ipc/${deletingIndicatorId}`, {
                       onSuccess: () => setDeletingIndicatorId(null),
                     });
                   }}
@@ -1874,7 +1874,7 @@ export default function HarmonizedIpc({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/rpmo-management/harmonized-ipc-item/${deletingSubTargetId}`, {
+                    router.delete(`/rpmo-management/harmonized-ipc-item/${deletingSubTargetId}`, {
                       onSuccess: () => setDeletingSubTargetId(null),
                     });
                   }}

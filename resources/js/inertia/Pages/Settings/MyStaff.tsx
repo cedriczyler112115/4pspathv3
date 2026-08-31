@@ -76,7 +76,7 @@ export default function MyStaff({
 
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
     const data = { ...filterForm.data, ...overrides };
-    router.get('/inertia/settings/mystaff', data, {
+    router.get('/settings/mystaff', data, {
       preserveState: true,
       replace: true,
     });
@@ -88,7 +88,7 @@ export default function MyStaff({
       status: '',
       perPage: '10',
     });
-    router.get('/inertia/settings/mystaff', {}, { replace: true });
+    router.get('/settings/mystaff', {}, { replace: true });
   };
 
   const getInitials = (name?: string) => {

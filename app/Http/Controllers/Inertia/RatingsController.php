@@ -1957,14 +1957,33 @@ class RatingsController extends Controller
             'strengths' => ['nullable', 'string'],
         ]);
 
+        $recommendation = isset($validated['recommendation']) ? $this->cleanFeedbackHtml($validated['recommendation']) : null;
+        $strengths = isset($validated['strengths']) ? $this->cleanFeedbackHtml($validated['strengths']) : null;
+
         DB::table('ipc_semester')
             ->where('id', $ratingId)
             ->update([
-                'recommendation' => $validated['recommendation'] ?? '',
-                'strengths' => $validated['strengths'] ?? '',
+                'recommendation' => $recommendation,
+                'strengths' => $strengths,
             ]);
 
         return back()->with('success', __('Feedback saved successfully.'));
+    }
+
+    private function cleanFeedbackHtml(?string $html): ?string
+    {
+        if ($html === null) {
+            return null;
+        }
+
+        $html = preg_replace('/<font[^>]*face=["\']?Symbol["\']?[^>]*>(.*?)<\/font>/is', '$1', $html);
+        $html = preg_replace('/<font[^>]*>(.*?)<\/font>/is', '$1', $html);
+        $html = preg_replace('/<!--\[if.*?\]>.*?<!\[endif\]-->/is', '', $html);
+        $html = preg_replace('/<o:p>.*?<\/o:p>/is', '', $html);
+        $html = preg_replace('/style="[^"]*mso-[^"]*"/is', '', $html);
+        $html = preg_replace('/style="[^"]*font-family:\s*Symbol[^"]*"/is', '', $html);
+
+        return trim($html);
     }
 
     public function reorderTargets(Request $request, int $ratingId): RedirectResponse

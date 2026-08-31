@@ -43,23 +43,23 @@ export type SidebarItem = {
 };
 
 const routeMap: Record<string, string> = {
-  '/dashboard': '/inertia/dashboard',
-  '/search': '/inertia/search',
-  '/ipcrf/myratings': '/inertia/ipcrf/myratings',
-  '/ipcrf/annualtarget': '/inertia/ipcrf/annualtarget',
-  '/annualtarget': '/inertia/ipcrf/annualtarget',
-  '/rpmo-management/harmonized-ipc': '/inertia/rpmo-management/harmonized-ipc',
-  '/libraries/harmonized-staff': '/inertia/libraries/harmonized-staff',
-  '/libraries/users/users-list': '/inertia/administration/users',
-  '/libraries/users/user-level': '/inertia/administration/user-level',
-  '/administration/settings': '/inertia/administration/settings',
-  '/administration/sidebar-menu': '/inertia/settings/sidebar-menu',
-  '/myaccount/profile': '/inertia/settings/profile',
-  '/myaccount/mystaff': '/inertia/settings/mystaff',
-  '/settings/mystaff': '/inertia/settings/mystaff',
-  '/verification': '/inertia/verification',
-  '/ipcrf/verification': '/inertia/verification',
-  '/myaccount/security': '/inertia/settings/security',
+  '/dashboard': '/dashboard',
+  '/search': '/search',
+  '/ipcrf/myratings': '/ipcrf/myratings',
+  '/ipcrf/annualtarget': '/ipcrf/annualtarget',
+  '/annualtarget': '/ipcrf/annualtarget',
+  '/rpmo-management/harmonized-ipc': '/rpmo-management/harmonized-ipc',
+  '/libraries/harmonized-staff': '/libraries/harmonized-staff',
+  '/libraries/users/users-list': '/administration/users',
+  '/libraries/users/user-level': '/administration/user-level',
+  '/administration/settings': '/administration/settings',
+  '/administration/sidebar-menu': '/settings/sidebar-menu',
+  '/myaccount/profile': '/settings/profile',
+  '/myaccount/mystaff': '/settings/mystaff',
+  '/settings/mystaff': '/settings/mystaff',
+  '/verification': '/verification',
+  '/ipcrf/verification': '/verification',
+  '/myaccount/security': '/settings/security',
   '/logout': '/logout',
 };
 
@@ -67,7 +67,7 @@ export function mapHref(href?: string | null): string {
   if (!href) return '#';
   if (routeMap[href]) return routeMap[href];
   if (href.startsWith('http://') || href.startsWith('https://')) return href;
-  return href.startsWith('/inertia/') ? href : `/inertia${href.startsWith('/') ? '' : '/'}${href}`;
+  return href.startsWith('/') ? href : `/${href}`;
 }
 
 export function getIconComponent(iconName?: string | null) {
@@ -129,7 +129,7 @@ export function isBranchActive(node: SidebarItem, currentPath: string): boolean 
   if (
     mappedHref !== '#' &&
     (currentPath === mappedHref ||
-      (mappedHref !== '/inertia/dashboard' && currentPath.startsWith(mappedHref + '/')))
+      (mappedHref !== '/dashboard' && currentPath.startsWith(mappedHref + '/')))
   ) {
     return true;
   }
@@ -146,7 +146,7 @@ export function findBreadcrumbTrail(
     const isDirectMatch =
       mapped !== '#' &&
       (currentPath === mapped ||
-        (mapped !== '/inertia/dashboard' && currentPath.startsWith(mapped + '/')));
+        (mapped !== '/dashboard' && currentPath.startsWith(mapped + '/')));
 
     const currentTrail = [...trail, { label: node.item.label, href: mapped !== '#' ? mapped : null }];
 
@@ -174,7 +174,7 @@ export default function Sidebar({ nodes, depth = 0, isCollapsed = false }: Sideb
   const currentPath =
     typeof window !== 'undefined'
       ? window.location.pathname.replace(/\/+$/, '') || '/'
-      : '/inertia/dashboard';
+      : '/dashboard';
 
   return (
     <ul className="space-y-0.5">
@@ -187,7 +187,7 @@ export default function Sidebar({ nodes, depth = 0, isCollapsed = false }: Sideb
         const isCurrent =
           mappedHref !== '#' &&
           (currentPath === mappedHref ||
-            (mappedHref !== '/inertia/dashboard' && currentPath.startsWith(mappedHref + '/')));
+            (mappedHref !== '/dashboard' && currentPath.startsWith(mappedHref + '/')));
         const isActiveBranch = isBranchActive(node, currentPath);
 
         const IconComponent = getIconComponent(item.icon);

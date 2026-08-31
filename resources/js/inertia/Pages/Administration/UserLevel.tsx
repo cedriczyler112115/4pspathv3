@@ -69,7 +69,7 @@ export default function UserLevel({
 
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
     const data = { ...filterForm.data, ...overrides };
-    router.get('/inertia/administration/user-level', data, {
+    router.get('/administration/user-level', data, {
       preserveState: true,
       replace: true,
     });
@@ -80,7 +80,7 @@ export default function UserLevel({
       search: '',
       perPage: '10',
     });
-    router.get('/inertia/administration/user-level', {}, { replace: true });
+    router.get('/administration/user-level', {}, { replace: true });
   };
 
   const openCreateModal = () => {
@@ -105,7 +105,7 @@ export default function UserLevel({
 
   const handleSaveLevel = (e: React.FormEvent) => {
     e.preventDefault();
-    levelForm.post('/inertia/administration/user-level', {
+    levelForm.post('/administration/user-level', {
       onSuccess: () => {
         setShowLevelModal(false);
         setEditingId(null);
@@ -140,7 +140,7 @@ export default function UserLevel({
     if (!accessTargetLevel) return;
 
     router.patch(
-      '/inertia/administration/user-level/menu-access',
+      '/administration/user-level/menu-access',
       {
         levelId: accessTargetLevel.id,
         selectedMenuItemIds: selectedMenuIds,
@@ -383,7 +383,7 @@ export default function UserLevel({
                     type="button"
                     onClick={() =>
                       router.get(
-                        '/inertia/administration/user-level',
+                        '/administration/user-level',
                         { ...filterForm.data, page: userLevels.currentPage - 1 },
                         { replace: true, preserveState: true }
                       )
@@ -403,7 +403,7 @@ export default function UserLevel({
                       type="button"
                       onClick={() =>
                         router.get(
-                          '/inertia/administration/user-level',
+                          '/administration/user-level',
                           { ...filterForm.data, page },
                           { replace: true, preserveState: true }
                         )
@@ -429,7 +429,7 @@ export default function UserLevel({
                     type="button"
                     onClick={() =>
                       router.get(
-                        '/inertia/administration/user-level',
+                        '/administration/user-level',
                         { ...filterForm.data, page: userLevels.currentPage + 1 },
                         { replace: true, preserveState: true }
                       )
@@ -647,7 +647,7 @@ export default function UserLevel({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/administration/user-level/${deletingId}`, {
+                    router.delete(`/administration/user-level/${deletingId}`, {
                       onSuccess: () => setDeletingId(null),
                     });
                   }}

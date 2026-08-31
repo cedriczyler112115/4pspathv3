@@ -25,6 +25,18 @@ interface RichTextEditorProps {
   readOnly?: boolean;
 }
 
+function cleanHtmlContent(raw: string): string {
+  if (!raw) return '';
+  return raw
+    .replace(/<font[^>]*face=["']?Symbol["']?[^>]*>(.*?)<\/font>/gis, '$1')
+    .replace(/<font[^>]*>(.*?)<\/font>/gis, '$1')
+    .replace(/<!--\[if.*?\]>.*?<!\[endif\]-->/gis, '')
+    .replace(/<o:p>.*?<\/o:p>/gis, '')
+    .replace(/style="[^"]*mso-[^"]*"/gis, '')
+    .replace(/style="[^"]*font-family:\s*Symbol[^"]*"/gis, '')
+    .replace(/class="Mso[^"]*"/gis, '');
+}
+
 export default function RichTextEditor({
   value,
   onChange,
@@ -35,26 +47,33 @@ export default function RichTextEditor({
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [showHtml, setShowHtml] = useState(false);
-  const [htmlContent, setHtmlContent] = useState(value || '');
+  const [htmlContent, setHtmlContent] = useState(cleanHtmlContent(value || ''));
 
-  // Synchronize incoming value if external change happens and editor is not focused
+  // Initialize innerHTML on mount
   useEffect(() => {
-    if (editorRef.current && editorRef.current !== document.activeElement) {
-      if (editorRef.current.innerHTML !== (value || '')) {
-        editorRef.current.innerHTML = value || '';
-      }
-      setHtmlContent(value || '');
+    if (editorRef.current) {
+      editorRef.current.innerHTML = cleanHtmlContent(value || '');
     }
+  }, []);
+
+  // Synchronize incoming value only when external update happens and user is NOT typing inside
+  useEffect(() => {
+    const cleaned = cleanHtmlContent(value || '');
+    if (editorRef.current && document.activeElement !== editorRef.current) {
+      if (editorRef.current.innerHTML !== cleaned) {
+        editorRef.current.innerHTML = cleaned;
+      }
+    }
+    setHtmlContent(cleaned);
   }, [value]);
 
   const executeCommand = (command: string, arg: string | undefined = undefined) => {
-    if (readOnly) return;
+    if (readOnly || !editorRef.current) return;
+    editorRef.current.focus();
     document.execCommand(command, false, arg);
-    if (editorRef.current) {
-      const newHtml = editorRef.current.innerHTML;
-      setHtmlContent(newHtml);
-      onChange(newHtml);
-    }
+    const newHtml = editorRef.current.innerHTML;
+    setHtmlContent(newHtml);
+    onChange(newHtml);
   };
 
   const handleInput = () => {
@@ -65,19 +84,49 @@ export default function RichTextEditor({
     }
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+    e.preventDefault();
+
+    const text = e.clipboardData.getData('text/plain');
+    const html = e.clipboardData.getData('text/html');
+
+    if (html) {
+      const cleaned = cleanHtmlContent(html);
+      document.execCommand('insertHTML', false, cleaned);
+    } else if (text) {
+      document.execCommand('insertText', false, text);
+    }
+
+    if (editorRef.current) {
+      const newHtml = editorRef.current.innerHTML;
+      setHtmlContent(newHtml);
+      onChange(newHtml);
+    }
+  };
+
   const handleHtmlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
-    setHtmlContent(val);
-    onChange(val);
+    const cleaned = cleanHtmlContent(val);
+    setHtmlContent(cleaned);
+    onChange(cleaned);
     if (editorRef.current) {
-      editorRef.current.innerHTML = val;
+      editorRef.current.innerHTML = cleaned;
     }
   };
 
   return (
-    <div className={`overflow-hidden rounded-xl border border-input bg-background shadow-2xs transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 ${className}`}>
+    <div
+      dir="ltr"
+      lang="en"
+      className={`overflow-hidden rounded-xl border border-input bg-background shadow-2xs transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 ${className}`}
+    >
       {!readOnly && (
-        <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/40 p-1.5 text-muted-foreground select-none">
+        <div
+          className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/40 p-1.5 text-muted-foreground select-none"
+          dir="ltr"
+          lang="en"
+        >
           <button
             type="button"
             onClick={() => executeCommand('bold')}
@@ -213,20 +262,32 @@ export default function RichTextEditor({
           value={htmlContent}
           onChange={handleHtmlChange}
           disabled={readOnly}
+          dir="ltr"
+          lang="en"
+          spellCheck={true}
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          inputMode="text"
           rows={5}
-          className="w-full bg-background p-3 font-mono text-xs text-foreground focus:outline-none resize-y"
+          className="w-full bg-background p-3 font-mono text-xs text-foreground focus:outline-none resize-y text-left [direction:ltr]"
           style={{ minHeight }}
         />
       ) : (
         <div
           ref={editorRef}
           contentEditable={!readOnly}
+          dir="ltr"
+          lang="en"
+          spellCheck={true}
+          autoCapitalize="sentences"
+          autoCorrect="on"
+          inputMode="text"
           onInput={handleInput}
           onBlur={handleInput}
-          dangerouslySetInnerHTML={{ __html: value || '' }}
+          onPaste={handlePaste}
           style={{ minHeight }}
           data-placeholder={placeholder}
-          className="rich-editor-body p-3 text-xs text-foreground leading-relaxed focus:outline-none overflow-y-auto [&_p]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 [&_h3]:font-bold [&_h3]:text-sm [&_h3]:mb-1.5 [&_blockquote]:border-l-2 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground empty:before:pointer-events-none"
+          className="rich-editor-body p-3 text-xs text-foreground leading-relaxed focus:outline-none overflow-y-auto text-left [direction:ltr] [text-align:left] font-sans [&_*]:!font-sans [&_font]:!font-sans [&_span]:!font-sans [&_*]:!text-left [&_*]:[direction:ltr!important] [&_p]:mb-2 [&_p]:text-left [&_p]:[direction:ltr] [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 [&_h3]:font-bold [&_h3]:text-sm [&_h3]:mb-1.5 [&_blockquote]:border-l-2 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground empty:before:pointer-events-none empty:before:text-left"
         />
       )}
     </div>

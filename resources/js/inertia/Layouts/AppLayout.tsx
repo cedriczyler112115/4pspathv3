@@ -54,7 +54,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const currentPath = typeof window !== 'undefined' ? window.location.pathname.replace(/\/+$/, '') || '/' : '/inertia/dashboard';
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname.replace(/\/+$/, '') || '/' : '/dashboard';
 
   // Synchronize dark mode state with document
   useEffect(() => {
@@ -92,14 +92,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   const defaultNavItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, href: '/inertia/dashboard' },
-    { label: 'Annual Target', icon: FolderKanban, href: '/inertia/ipcrf/annualtarget' },
-    { label: 'My Ratings', icon: BarChart3, href: '/inertia/ipcrf/myratings' },
-    { label: 'Harmonized IPC', icon: FileSpreadsheet, href: '/inertia/rpmo-management/harmonized-ipc' },
-    { label: 'Harmonized Staff', icon: HardHat, href: '/inertia/libraries/harmonized-staff' },
-    { label: 'Users Management', icon: ShieldCheck, href: '/inertia/administration/users' },
-    { label: 'Settings', icon: Settings, href: '/inertia/administration/settings' },
-    { label: 'My Account', icon: UserCircle, href: '/inertia/settings/profile' },
+    { label: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+    { label: 'Annual Target', icon: FolderKanban, href: '/ipcrf/annualtarget' },
+    { label: 'My Ratings', icon: BarChart3, href: '/ipcrf/myratings' },
+    { label: 'Harmonized IPC', icon: FileSpreadsheet, href: '/rpmo-management/harmonized-ipc' },
+    { label: 'Harmonized Staff', icon: HardHat, href: '/libraries/harmonized-staff' },
+    { label: 'Users Management', icon: ShieldCheck, href: '/administration/users' },
+    { label: 'Settings', icon: Settings, href: '/administration/settings' },
+    { label: 'My Account', icon: UserCircle, href: '/settings/profile' },
   ];
 
   // Dynamic hierarchical breadcrumb generator matching sidebar nodes
@@ -111,11 +111,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
       }
     }
 
-    const path = currentPath.replace('/inertia', '') || '/dashboard';
+    const path = currentPath || '/dashboard';
     const parts = path.split('/').filter(Boolean);
-    if (parts.length === 0) return [{ label: 'Dashboard', href: '/inertia/dashboard' }];
+    if (parts.length === 0) return [{ label: 'Dashboard', href: '/dashboard' }];
 
-    let accHref = '/inertia';
+    let accHref = '';
     return parts.map((p, idx) => {
       accHref += `/${p}`;
       return {
@@ -160,7 +160,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {/* COMPACT SIDEBAR BRAND HEADER */}
           <div className="h-11 shrink-0 border-b border-sidebar-border px-2.5 flex items-center justify-between gap-1.5">
             <Link
-              href="/inertia/dashboard"
+              href="/dashboard"
               className="flex items-center gap-2 min-w-0 group cursor-pointer"
             >
               <div className="size-6.5 shrink-0 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-black text-[10px] shadow-xs group-hover:scale-105 transition-transform">
@@ -209,7 +209,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 const Icon = item.icon;
                 const isActive =
                   currentPath === item.href ||
-                  (item.href !== '/inertia/dashboard' && currentPath.startsWith(item.href + '/'));
+                  (item.href !== '/dashboard' && currentPath.startsWith(item.href + '/'));
 
                 return (
                   <Link
@@ -235,7 +235,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             {sidebarOpen ? (
               <div className="rounded-lg border border-sidebar-border/80 bg-sidebar-accent/40 p-1.5 flex items-center justify-between gap-1.5 shadow-2xs">
                 <Link
-                  href="/inertia/settings/profile"
+                  href="/settings/profile"
                   className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition cursor-pointer"
                 >
                   <div className="relative size-7 shrink-0 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
@@ -254,7 +254,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
                 <div className="flex items-center gap-0.5 shrink-0">
                   <Link
-                    href="/inertia/settings/profile"
+                    href="/settings/profile"
                     title="Profile Settings"
                     className="size-6 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-sidebar-foreground flex items-center justify-center transition"
                   >
@@ -272,7 +272,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             ) : (
               <div className="flex justify-center">
                 <Link
-                  href="/inertia/settings/profile"
+                  href="/settings/profile"
                   title={user?.name || 'User Profile'}
                   className="relative size-8 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-[10px] shadow-xs hover:scale-105 transition-transform cursor-pointer"
                 >
@@ -301,7 +301,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
             <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-[11px] sm:text-xs font-medium text-muted-foreground truncate">
               <Link
-                href="/inertia/dashboard"
+                href="/dashboard"
                 className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition p-0.5 rounded hover:bg-muted"
                 title="Dashboard Home"
               >
@@ -342,7 +342,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <div className="flex items-center gap-1.5 shrink-0">
             {/* Quick Search */}
             <Link
-              href="/inertia/search"
+              href="/search"
               className="hidden md:flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-input bg-muted/30 text-muted-foreground text-xs hover:bg-muted/70 hover:text-foreground transition"
             >
               <Search className="size-3" />
@@ -386,7 +386,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <p className="text-[10px] text-muted-foreground truncate">{user?.email || ''}</p>
                   </div>
                   <Link
-                    href="/inertia/settings/profile"
+                    href="/settings/profile"
                     onClick={() => setUserMenuOpen(false)}
                     className="flex items-center gap-2 rounded-md px-2 py-1.25 hover:bg-muted transition font-medium"
                   >
@@ -394,7 +394,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <span>My Profile</span>
                   </Link>
                   <Link
-                    href="/inertia/settings/security"
+                    href="/settings/security"
                     onClick={() => setUserMenuOpen(false)}
                     className="flex items-center gap-2 rounded-md px-2 py-1.25 hover:bg-muted transition font-medium"
                   >
@@ -402,7 +402,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <span>Security</span>
                   </Link>
                   <Link
-                    href="/inertia/settings/appearance"
+                    href="/settings/appearance"
                     onClick={() => setUserMenuOpen(false)}
                     className="flex items-center gap-2 rounded-md px-2 py-1.25 hover:bg-muted transition font-medium"
                   >

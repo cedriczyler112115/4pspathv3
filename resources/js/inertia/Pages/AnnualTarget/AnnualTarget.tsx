@@ -305,7 +305,7 @@ export default function AnnualTarget({
       page: String(copyTab === 'staff' ? copyStaffPage : copyHarmonizedPage),
     });
 
-    fetch(`/inertia/ipcrf/annualtarget/copy-data?${params.toString()}`)
+    fetch(`/ipcrf/annualtarget/copy-data?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
         setCopyData(data);
@@ -342,7 +342,7 @@ export default function AnnualTarget({
 
   const submitFilters = (overrides = {}) => {
     const data = { ...filterForm.data, ...overrides };
-    router.get('/inertia/ipcrf/annualtarget', data, {
+    router.get('/ipcrf/annualtarget', data, {
       preserveState: true,
       replace: true,
     });
@@ -358,7 +358,7 @@ export default function AnnualTarget({
       duplicates: false,
     });
     router.get(
-      '/inertia/ipcrf/annualtarget',
+      '/ipcrf/annualtarget',
       {
         search: '',
         year: String(new Date().getFullYear()),
@@ -466,7 +466,7 @@ export default function AnnualTarget({
   };
 
   const handleSaveInlineEdit = (group: GroupRow) => {
-    inlineEditForm.patch(`/inertia/ipcrf/annualtarget/${group.indicatorId}`, {
+    inlineEditForm.patch(`/ipcrf/annualtarget/${group.indicatorId}`, {
       onSuccess: () => {
         cancelInlineEdit();
       },
@@ -492,7 +492,7 @@ export default function AnnualTarget({
 
   const handleSaveAddTarget = (e: React.FormEvent) => {
     e.preventDefault();
-    addForm.post('/inertia/ipcrf/annualtarget', {
+    addForm.post('/ipcrf/annualtarget', {
       onSuccess: () => {
         setShowAddModal(false);
       },
@@ -501,7 +501,7 @@ export default function AnnualTarget({
 
   const handleLockTargets = () => {
     router.post(
-      '/inertia/ipcrf/annualtarget/lock',
+      '/ipcrf/annualtarget/lock',
       { year: filterForm.data.year },
       { onSuccess: () => setShowLockModal(false) }
     );
@@ -509,14 +509,14 @@ export default function AnnualTarget({
 
   const handleUnlockTargets = () => {
     router.post(
-      '/inertia/ipcrf/annualtarget/unlock',
+      '/ipcrf/annualtarget/unlock',
       { year: filterForm.data.year },
       { onSuccess: () => setShowUnlockModal(false) }
     );
   };
 
   const handleCopySingleGroup = (indicatorId: number) => {
-    const route = copyTab === 'staff' ? '/inertia/ipcrf/annualtarget/copy-staff' : '/inertia/ipcrf/annualtarget/copy-harmonized';
+    const route = copyTab === 'staff' ? '/ipcrf/annualtarget/copy-staff' : '/ipcrf/annualtarget/copy-harmonized';
     const targetYear = Number(filterForm.data.year) || new Date().getFullYear();
 
     router.post(route, { indicatorId, targetYear }, { onSuccess: () => fetchCopyTargets() });
@@ -531,7 +531,7 @@ export default function AnnualTarget({
       return;
     }
 
-    router.post('/inertia/ipcrf/annualtarget/reorder', { source, target }, { preserveScroll: true });
+    router.post('/ipcrf/annualtarget/reorder', { source, target }, { preserveScroll: true });
   };
 
   const confirmTargetMove = () => {
@@ -540,7 +540,7 @@ export default function AnnualTarget({
     setShowMoveConfirmModal(false);
     setPendingMove(null);
 
-    router.post('/inertia/ipcrf/annualtarget/reorder', { source, target }, { preserveScroll: true });
+    router.post('/ipcrf/annualtarget/reorder', { source, target }, { preserveScroll: true });
   };
 
   const openRightClickMenu = (
@@ -1521,7 +1521,7 @@ export default function AnnualTarget({
                     type="button"
                     onClick={() =>
                       router.get(
-                        '/inertia/ipcrf/annualtarget',
+                        '/ipcrf/annualtarget',
                         { ...filterForm.data, page: targets.currentPage - 1 },
                         { replace: true, preserveState: true }
                       )
@@ -1562,7 +1562,7 @@ export default function AnnualTarget({
                       type="button"
                       onClick={() =>
                         router.get(
-                          '/inertia/ipcrf/annualtarget',
+                          '/ipcrf/annualtarget',
                           { ...filterForm.data, page },
                           { replace: true, preserveState: true }
                         )
@@ -1583,7 +1583,7 @@ export default function AnnualTarget({
                     type="button"
                     onClick={() =>
                       router.get(
-                        '/inertia/ipcrf/annualtarget',
+                        '/ipcrf/annualtarget',
                         { ...filterForm.data, page: targets.currentPage + 1 },
                         { replace: true, preserveState: true }
                       )
@@ -2482,7 +2482,7 @@ export default function AnnualTarget({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/ipcrf/annualtarget/${deletingIndicatorId}`, {
+                    router.delete(`/ipcrf/annualtarget/${deletingIndicatorId}`, {
                       onSuccess: () => setDeletingIndicatorId(null),
                     });
                   }}
@@ -2526,7 +2526,7 @@ export default function AnnualTarget({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/ipcrf/annualtarget-item/${deletingSubTargetId}`, {
+                    router.delete(`/ipcrf/annualtarget-item/${deletingSubTargetId}`, {
                       onSuccess: () => setDeletingSubTargetId(null),
                     });
                   }}

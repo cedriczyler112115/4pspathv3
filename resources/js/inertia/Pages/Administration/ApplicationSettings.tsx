@@ -26,7 +26,7 @@ export default function ApplicationSettings({ appName, user, settings, years = [
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    form.patch('/inertia/administration/settings');
+    form.patch('/administration/settings');
   };
 
   return (

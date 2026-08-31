@@ -113,13 +113,13 @@ export default function Search({
 
   const applyFilters = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    router.get('/inertia/search', { ...form.data, page: 1 }, { preserveState: true, replace: true });
+    router.get('/search', { ...form.data, page: 1 }, { preserveState: true, replace: true });
   };
 
   const handlePerPageChange = (val: string) => {
     form.setData('perPage', val);
     router.get(
-      '/inertia/search',
+      '/search',
       {
         search: form.data.search,
         division: form.data.division,
@@ -138,7 +138,7 @@ export default function Search({
       section: '',
       perPage: '10',
     });
-    router.get('/inertia/search', { search: '', division: '', section: '', perPage: 10 }, { replace: true });
+    router.get('/search', { search: '', division: '', section: '', perPage: 10 }, { replace: true });
   };
 
   return (

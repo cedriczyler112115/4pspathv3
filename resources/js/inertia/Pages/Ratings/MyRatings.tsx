@@ -67,7 +67,7 @@ export default function MyRatings({
 
   const applyFilters = (overrides?: Partial<typeof form.data>) => {
     const data = { ...form.data, ...overrides };
-    router.get('/inertia/ipcrf/myratings', data, {
+    router.get('/ipcrf/myratings', data, {
       preserveState: true,
       replace: true,
     });
@@ -104,7 +104,7 @@ export default function MyRatings({
       semester: '',
       perPage: '10',
     });
-    router.get('/inertia/ipcrf/myratings', {}, { replace: true });
+    router.get('/ipcrf/myratings', {}, { replace: true });
   };
 
   const confirmDelete = (id: number) => {
@@ -118,7 +118,7 @@ export default function MyRatings({
   const handleDelete = () => {
     if (!deletingId) return;
     setIsDeleting(true);
-    router.delete(`/inertia/ipcrf/myratings/${deletingId}`, {
+    router.delete(`/ipcrf/myratings/${deletingId}`, {
       preserveScroll: true,
       onFinish: () => {
         setIsDeleting(false);
@@ -374,7 +374,7 @@ export default function MyRatings({
                         <td className="px-3 py-2 text-left">
                           <div className="inline-flex items-center gap-1">
                             <Link
-                              href={`/inertia/ipcrf/myratings/${rating.id}/sem-target`}
+                              href={`/ipcrf/myratings/${rating.id}/sem-target`}
                               title="View Semestral Target"
                               className="p-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition"
                             >

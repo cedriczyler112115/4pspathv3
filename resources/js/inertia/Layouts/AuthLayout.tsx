@@ -33,12 +33,8 @@ export default function AuthLayout({ title, subtitle, children }: AuthLayoutProp
 
         {/* FOOTER LINKS */}
         <div className="mt-4 flex items-center justify-center gap-4 text-xs text-muted-foreground">
-          <Link href="/inertia/dashboard" className="hover:text-foreground transition">
-            Inertia App
-          </Link>
-          <span>•</span>
           <Link href="/dashboard" className="hover:text-foreground transition">
-            Livewire App
+            Dashboard
           </Link>
         </div>
       </div>

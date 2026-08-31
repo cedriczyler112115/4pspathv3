@@ -46,7 +46,7 @@ export default function Security({ appName, user, status }: Props) {
             className="space-y-3 pt-1"
             onSubmit={(e) => {
               e.preventDefault();
-              form.patch('/inertia/settings/security', {
+              form.patch('/settings/security', {
                 preserveScroll: true,
               });
             }}

@@ -467,7 +467,7 @@ export default function SemestralVerification({
     }
 
     router.post(
-      `/inertia/ipcrf/myratings/${rating.id}/target/${pendingSubTargetGroup.indicatorId}/subtarget`,
+      `/ipcrf/myratings/${rating.id}/target/${pendingSubTargetGroup.indicatorId}/subtarget`,
       {
         description: pendingForm.description,
         efficiency: pendingForm.efficiency,
@@ -542,7 +542,7 @@ export default function SemestralVerification({
     setIsLoadingHistory(true);
     setShowHistoryModal(true);
 
-    const url = `/inertia/ipcrf/myratings/${rating.id}/target/${targetId}/history` + (itemId ? `?itemId=${itemId}` : '');
+    const url = `/ipcrf/myratings/${rating.id}/target/${targetId}/history` + (itemId ? `?itemId=${itemId}` : '');
     fetch(url, {
       credentials: 'same-origin',
       headers: {
@@ -572,7 +572,7 @@ export default function SemestralVerification({
     if (!historyTargetId) return;
     if (!confirm('Are you sure you want to discard all edit history records for this target?')) return;
 
-    const url = `/inertia/ipcrf/myratings/${rating.id}/target/${historyTargetId}/history` + (historyItemId ? `?itemId=${historyItemId}` : '');
+    const url = `/ipcrf/myratings/${rating.id}/target/${historyTargetId}/history` + (historyItemId ? `?itemId=${historyItemId}` : '');
     router.delete(url, {
       onSuccess: () => {
         setShowHistoryModal(false);
@@ -627,7 +627,7 @@ export default function SemestralVerification({
 
     setIsSavingEditGroup(true);
     router.put(
-      `/inertia/ipcrf/myratings/${rating.id}/target/${editingGroup.indicatorId}`,
+      `/ipcrf/myratings/${rating.id}/target/${editingGroup.indicatorId}`,
       {
         activity: editingGroup.activity,
         kraCategory: editingGroup.kraCategory,
@@ -659,7 +659,7 @@ export default function SemestralVerification({
       onConfirm: () => {
         setRestoringId(item.id);
         router.post(
-          `/inertia/ipcrf/myratings/${rating.id}/target/${item.sem_target_id}/restore`,
+          `/ipcrf/myratings/${rating.id}/target/${item.sem_target_id}/restore`,
           {
             itemId: item.sem_item_id || null,
           },
@@ -845,7 +845,7 @@ export default function SemestralVerification({
     lastSavedValuesRef.current[itemId] = { ...updated };
 
     router.patch(
-      `/inertia/ipcrf/myratings/${rating.id}/accomplishment/${itemId}`,
+      `/ipcrf/myratings/${rating.id}/accomplishment/${itemId}`,
       updated,
       {
         preserveScroll: true,
@@ -1039,7 +1039,7 @@ export default function SemestralVerification({
     setActiveViewerIndex(-1);
     setIsLoadingAttachments(true);
     try {
-      const res = await fetch(`/inertia/ipcrf/myratings/${rating.id}/attachments/${itemId}`, {
+      const res = await fetch(`/ipcrf/myratings/${rating.id}/attachments/${itemId}`, {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
@@ -1103,7 +1103,7 @@ export default function SemestralVerification({
         headers['X-XSRF-TOKEN'] = csrf;
       }
 
-      const res = await fetch(`/inertia/ipcrf/myratings/${rating.id}/attachments/${attachmentItemId}`, {
+      const res = await fetch(`/ipcrf/myratings/${rating.id}/attachments/${attachmentItemId}`, {
         method: 'POST',
         headers,
         body: formData,
@@ -1183,7 +1183,7 @@ export default function SemestralVerification({
             headers['X-XSRF-TOKEN'] = csrf;
           }
 
-          const res = await fetch(`/inertia/ipcrf/myratings/${rating.id}/attachments/${attachmentItemId}/delete`, {
+          const res = await fetch(`/ipcrf/myratings/${rating.id}/attachments/${attachmentItemId}/delete`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ filename }),
@@ -1221,7 +1221,7 @@ export default function SemestralVerification({
     setStaffMovSearch('');
     setIsLoadingStaffMovs(true);
     try {
-      const res = await fetch(`/inertia/ipcrf/myratings/${rating.id}/staff-movs/${itemId}`, {
+      const res = await fetch(`/ipcrf/myratings/${rating.id}/staff-movs/${itemId}`, {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
@@ -1250,7 +1250,7 @@ export default function SemestralVerification({
       const query = new URLSearchParams();
       if (userId) query.set('staffUserId', userId);
       if (search) query.set('search', search);
-      const res = await fetch(`/inertia/ipcrf/myratings/${rating.id}/staff-movs/${staffMovItemId}?${query.toString()}`, {
+      const res = await fetch(`/ipcrf/myratings/${rating.id}/staff-movs/${staffMovItemId}?${query.toString()}`, {
         headers: {
           'Accept': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
@@ -1282,7 +1282,7 @@ export default function SemestralVerification({
         headers['X-XSRF-TOKEN'] = csrf;
       }
 
-      const res = await fetch(`/inertia/ipcrf/myratings/${rating.id}/copy-staff-movs/${staffMovItemId}`, {
+      const res = await fetch(`/ipcrf/myratings/${rating.id}/copy-staff-movs/${staffMovItemId}`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ sourceItemId }),
@@ -1418,7 +1418,7 @@ export default function SemestralVerification({
     }));
 
     router.post(
-      `/inertia/ipcrf/myratings/${rating.id}/target/reorder`,
+      `/ipcrf/myratings/${rating.id}/target/reorder`,
       { order: orderPayload },
       { preserveScroll: true }
     );
@@ -1466,14 +1466,14 @@ export default function SemestralVerification({
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
-    editForm.patch(`/inertia/ipcrf/myratings/${rating.id}/accomplishment/${editingItem.itemId}`, {
+    editForm.patch(`/ipcrf/myratings/${rating.id}/accomplishment/${editingItem.itemId}`, {
       onSuccess: () => setEditingItem(null),
     });
   };
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    addForm.post(`/inertia/ipcrf/myratings/${rating.id}/target`, {
+    addForm.post(`/ipcrf/myratings/${rating.id}/target`, {
       onSuccess: () => {
         setShowAddModal(false);
         addForm.reset();
@@ -1483,7 +1483,7 @@ export default function SemestralVerification({
 
   const handleAreaSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    areaForm.post(`/inertia/ipcrf/myratings/${rating.id}/areas-improvement`, {
+    areaForm.post(`/ipcrf/myratings/${rating.id}/areas-improvement`, {
       onSuccess: () => {
         setShowAreaModal(false);
         areaForm.reset();
@@ -1504,7 +1504,7 @@ export default function SemestralVerification({
     setIsUploadingDoc(true);
     setDocUploadProgress(0);
 
-    router.post(`/inertia/ipcrf/myratings/${rating.id}/documentation`, form, {
+    router.post(`/ipcrf/myratings/${rating.id}/documentation`, form, {
       preserveScroll: true,
       onProgress: (progress) => {
         if (progress?.percentage) {
@@ -1549,7 +1549,7 @@ export default function SemestralVerification({
       variant: 'danger',
       icon: 'trash',
       onConfirm: () => {
-        router.delete(`/inertia/ipcrf/myratings/${rating.id}/documentation`, {
+        router.delete(`/ipcrf/myratings/${rating.id}/documentation`, {
           data: { fileName },
           preserveScroll: true,
           onSuccess: () => {
@@ -1576,7 +1576,7 @@ export default function SemestralVerification({
   const handleCopyStaffMov = (sourceItemId: number) => {
     if (!movTargetItemId) return;
     router.post(
-      `/inertia/ipcrf/myratings/${rating.id}/copy-movs`,
+      `/ipcrf/myratings/${rating.id}/copy-movs`,
       { sourceItemId, targetItemId: movTargetItemId },
       {
         preserveScroll: true,
@@ -1619,7 +1619,7 @@ export default function SemestralVerification({
       icon: 'verify',
       onConfirm: () => {
         router.post(
-          `/inertia/ipcrf/myratings/${rating.id}/toggle-status`,
+          `/ipcrf/myratings/${rating.id}/toggle-status`,
           { action: 'verify' },
           {
             preserveScroll: true,
@@ -1642,7 +1642,7 @@ export default function SemestralVerification({
       icon: 'restore',
       onConfirm: () => {
         router.post(
-          `/inertia/ipcrf/myratings/${rating.id}/toggle-status`,
+          `/ipcrf/myratings/${rating.id}/toggle-status`,
           { action: 'unverify' },
           {
             preserveScroll: true,
@@ -1657,7 +1657,7 @@ export default function SemestralVerification({
   const handleSaveFeedback = (target?: 'recommendation' | 'strengths' | 'all') => {
     setIsSavingFeedback(true);
     router.post(
-      `/inertia/ipcrf/myratings/${rating.id}/feedback`,
+      `/ipcrf/myratings/${rating.id}/feedback`,
       {
         recommendation: recommendationHtml,
         strengths: strengthsHtml,
@@ -1687,7 +1687,7 @@ export default function SemestralVerification({
     }
     setIsSavingArea(true);
     router.post(
-      `/inertia/ipcrf/myratings/${rating.id}/areas-improvement`,
+      `/ipcrf/myratings/${rating.id}/areas-improvement`,
       newAreaForm,
       {
         preserveScroll: true,
@@ -1715,7 +1715,7 @@ export default function SemestralVerification({
     }
     setIsSavingArea(true);
     router.put(
-      `/inertia/ipcrf/myratings/${rating.id}/areas-improvement/${areaId}`,
+      `/ipcrf/myratings/${rating.id}/areas-improvement/${areaId}`,
       editAreaForm,
       {
         preserveScroll: true,
@@ -1740,7 +1740,7 @@ export default function SemestralVerification({
       variant: 'danger',
       icon: 'trash',
       onConfirm: () => {
-        router.delete(`/inertia/ipcrf/myratings/${rating.id}/areas-improvement/${areaId}`, {
+        router.delete(`/ipcrf/myratings/${rating.id}/areas-improvement/${areaId}`, {
           preserveScroll: true,
           onSuccess: () => toast.success('Development plan item deleted.'),
           onError: () => toast.error('Failed to delete development plan item.'),
@@ -1800,7 +1800,7 @@ export default function SemestralVerification({
 
             <div>
               <Link
-                href="/inertia/verification"
+                href="/verification"
                 className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
               >
                 <ArrowLeft className="size-3.5" />
@@ -1862,7 +1862,7 @@ export default function SemestralVerification({
                 {showPrintDropdown && (
                   <div className="absolute right-0 mt-2 w-44 rounded-xl border border-border bg-card p-1 shadow-xl z-30 text-xs animate-in fade-in-50 zoom-in-95">
                     <a
-                      href={`/inertia/ipcrf/myratings/semestral-target/print-ipcrf?sem_id=${rating.id}`}
+                      href={`/ipcrf/myratings/semestral-target/print-ipcrf?sem_id=${rating.id}`}
                       target="_blank"
                       rel="noreferrer"
                       onClick={() => setShowPrintDropdown(false)}
@@ -1871,7 +1871,7 @@ export default function SemestralVerification({
                       Print IPCR-F
                     </a>
                     <a
-                      href={`/inertia/ipcrf/myratings/semestral-target/print-checkpoint?sem_id=${rating.id}`}
+                      href={`/ipcrf/myratings/semestral-target/print-checkpoint?sem_id=${rating.id}`}
                       target="_blank"
                       rel="noreferrer"
                       onClick={() => setShowPrintDropdown(false)}
@@ -2713,7 +2713,7 @@ export default function SemestralVerification({
                   )}
 
                   <a
-                    href={`/inertia/ipcrf/myratings/semestral-target/print-checkpoint?sem_id=${rating.id}`}
+                    href={`/ipcrf/myratings/semestral-target/print-checkpoint?sem_id=${rating.id}`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 text-xs font-semibold shadow-sm transition cursor-pointer"
@@ -3149,9 +3149,9 @@ export default function SemestralVerification({
                 </div>
 
                 {/* Recommendations & Strengths Rich Text Editors */}
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid gap-5 md:grid-cols-2" dir="ltr" lang="en">
                   {/* Rater's Comments & Recommendations */}
-                  <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-3" dir="ltr" lang="en">
                     <div className="flex items-center justify-between gap-2 border-b border-border/80 pb-2.5">
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 flex items-center gap-1.5">
@@ -3175,13 +3175,13 @@ export default function SemestralVerification({
                     <RichTextEditor
                       value={recommendationHtml}
                       onChange={setRecommendationHtml}
-                      placeholder="Type rater's official comments, commendations and recommendations here..."
+                      placeholder="Type rater's official comments, commendations and recommendations here in English..."
                       minHeight="170px"
                     />
                   </div>
 
                   {/* Strengths */}
-                  <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-3">
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-3" dir="ltr" lang="en">
                     <div className="flex items-center justify-between gap-2 border-b border-border/80 pb-2.5">
                       <div>
                         <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
@@ -3205,7 +3205,7 @@ export default function SemestralVerification({
                     <RichTextEditor
                       value={strengthsHtml}
                       onChange={setStrengthsHtml}
-                      placeholder="Type ratee's identified strengths, notable capabilities and contributions here..."
+                      placeholder="Type ratee's identified strengths, notable capabilities and contributions here in English..."
                       minHeight="170px"
                     />
                   </div>
@@ -4177,7 +4177,7 @@ export default function SemestralVerification({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/ipcrf/myratings/${rating.id}/target/${deletingTargetId}`, {
+                    router.delete(`/ipcrf/myratings/${rating.id}/target/${deletingTargetId}`, {
                       data: { justification: deleteJustification || 'Target Deleted' },
                       onSuccess: () => {
                         setDeletingTargetId(null);
@@ -4238,7 +4238,7 @@ export default function SemestralVerification({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/ipcrf/myratings/${rating.id}/subtarget/${deletingSubTargetId}`, {
+                    router.delete(`/ipcrf/myratings/${rating.id}/subtarget/${deletingSubTargetId}`, {
                       data: { justification: deleteSubJustification || 'Sub-Target Deleted' },
                       onSuccess: () => {
                         setDeletingSubTargetId(null);
@@ -4833,7 +4833,7 @@ export default function SemestralVerification({
                   type="button"
                   onClick={() => {
                     setShowLockModal(false);
-                    router.post(`/inertia/ipcrf/myratings/${rating.id}/toggle-status`, { action: 'lock' });
+                    router.post(`/ipcrf/myratings/${rating.id}/toggle-status`, { action: 'lock' });
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 px-4 py-2 text-xs font-semibold shadow-md transition cursor-pointer"
                 >
@@ -4880,7 +4880,7 @@ export default function SemestralVerification({
                   type="button"
                   onClick={() => {
                     setShowUnlockModal(false);
-                    router.post(`/inertia/ipcrf/myratings/${rating.id}/toggle-status`, { action: 'unlock' });
+                    router.post(`/ipcrf/myratings/${rating.id}/toggle-status`, { action: 'unlock' });
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 text-xs font-semibold shadow-md transition cursor-pointer"
                 >
@@ -4927,7 +4927,7 @@ export default function SemestralVerification({
                   type="button"
                   onClick={() => {
                     setShowImReadyModal(false);
-                    router.post(`/inertia/ipcrf/myratings/${rating.id}/toggle-status`, { action: 'ready' });
+                    router.post(`/ipcrf/myratings/${rating.id}/toggle-status`, { action: 'ready' });
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-xs font-semibold shadow-md transition cursor-pointer"
                 >
@@ -4974,7 +4974,7 @@ export default function SemestralVerification({
                   type="button"
                   onClick={() => {
                     setShowCancelReadyModal(false);
-                    router.post(`/inertia/ipcrf/myratings/${rating.id}/toggle-status`, { action: 'unready' });
+                    router.post(`/ipcrf/myratings/${rating.id}/toggle-status`, { action: 'unready' });
                   }}
                   className="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 text-xs font-semibold shadow-md transition cursor-pointer"
                 >

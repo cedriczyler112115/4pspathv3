@@ -88,7 +88,7 @@ export default function Verification({
 
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
     const data = { ...filterForm.data, ...overrides };
-    router.get('/inertia/verification', data, {
+    router.get('/verification', data, {
       preserveState: true,
       replace: true,
     });
@@ -101,7 +101,7 @@ export default function Verification({
       semester: '',
       perPage: '10',
     });
-    router.get('/inertia/verification', {}, { replace: true });
+    router.get('/verification', {}, { replace: true });
   };
 
   const getInitials = (name?: string) => {
@@ -401,7 +401,7 @@ export default function Verification({
                         <div className="flex items-center justify-center">
                           {row.semesterId ? (
                             <Link
-                              href={`/inertia/verification/${row.semesterId}/semestral-verification`}
+                              href={`/verification/${row.semesterId}/semestral-verification`}
                               title="Review & Verify Semestral Targets"
                               className="size-7 inline-flex items-center justify-center rounded-lg bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white border border-emerald-500/20 transition cursor-pointer"
                             >

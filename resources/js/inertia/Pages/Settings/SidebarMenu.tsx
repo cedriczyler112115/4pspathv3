@@ -84,7 +84,7 @@ export default function SidebarMenu({
 
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
     const data = { ...filterForm.data, ...overrides };
-    router.get('/inertia/settings/sidebar-menu', data, {
+    router.get('/settings/sidebar-menu', data, {
       preserveState: true,
       replace: true,
     });
@@ -93,7 +93,7 @@ export default function SidebarMenu({
   const resetFilters = () => {
     filterForm.setData({ search: '', status: 'all', hierarchy: 'all', userLevel: 'all' });
     router.get(
-      '/inertia/settings/sidebar-menu',
+      '/settings/sidebar-menu',
       { search: '', status: 'all', hierarchy: 'all', userLevel: 'all' },
       { preserveState: true, replace: true }
     );
@@ -136,14 +136,14 @@ export default function SidebarMenu({
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      itemForm.patch(`/inertia/settings/sidebar-menu/${editingId}`, {
+      itemForm.patch(`/settings/sidebar-menu/${editingId}`, {
         onSuccess: () => {
           setShowModal(false);
           setEditingId(null);
         },
       });
     } else {
-      itemForm.post('/inertia/settings/sidebar-menu', {
+      itemForm.post('/settings/sidebar-menu', {
         onSuccess: () => {
           setShowModal(false);
         },
@@ -503,7 +503,7 @@ export default function SidebarMenu({
                     <input
                       value={itemForm.data.href}
                       onChange={(e) => itemForm.setData('href', e.target.value)}
-                      placeholder="E.g., /inertia/search"
+                      placeholder="E.g., /search"
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                     />
                   </div>
@@ -699,7 +699,7 @@ export default function SidebarMenu({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/settings/sidebar-menu/${deletingId}`, {
+                    router.delete(`/settings/sidebar-menu/${deletingId}`, {
                       onSuccess: () => setDeletingId(null),
                     });
                   }}

@@ -56,7 +56,7 @@ export default function HarmonizedStaff({
 
   const submitFilters = (overrides = {}) => {
     const data = { ...filterForm.data, ...overrides };
-    router.get('/inertia/libraries/harmonized-staff', data, {
+    router.get('/libraries/harmonized-staff', data, {
       preserveState: true,
       replace: true,
     });
@@ -64,7 +64,7 @@ export default function HarmonizedStaff({
 
   const resetFilters = () => {
     filterForm.setData({ search: '', perPage: '10' });
-    router.get('/inertia/libraries/harmonized-staff', { search: '', perPage: '10' }, {
+    router.get('/libraries/harmonized-staff', { search: '', perPage: '10' }, {
       replace: true,
     });
   };
@@ -93,14 +93,14 @@ export default function HarmonizedStaff({
     e.preventDefault();
 
     if (editingId !== null) {
-      positionForm.patch(`/inertia/libraries/harmonized-staff/${editingId}`, {
+      positionForm.patch(`/libraries/harmonized-staff/${editingId}`, {
         onSuccess: () => {
           setShowModal(false);
           setEditingId(null);
         },
       });
     } else {
-      positionForm.post('/inertia/libraries/harmonized-staff', {
+      positionForm.post('/libraries/harmonized-staff', {
         onSuccess: () => {
           setShowModal(false);
         },
@@ -309,7 +309,7 @@ export default function HarmonizedStaff({
                     type="button"
                     onClick={() =>
                       router.get(
-                        '/inertia/libraries/harmonized-staff',
+                        '/libraries/harmonized-staff',
                         { ...filterForm.data, page: positions.currentPage - 1 },
                         { replace: true, preserveState: true }
                       )
@@ -329,7 +329,7 @@ export default function HarmonizedStaff({
                       type="button"
                       onClick={() =>
                         router.get(
-                          '/inertia/libraries/harmonized-staff',
+                          '/libraries/harmonized-staff',
                           { ...filterForm.data, page },
                           { replace: true, preserveState: true }
                         )
@@ -355,7 +355,7 @@ export default function HarmonizedStaff({
                     type="button"
                     onClick={() =>
                       router.get(
-                        '/inertia/libraries/harmonized-staff',
+                        '/libraries/harmonized-staff',
                         { ...filterForm.data, page: positions.currentPage + 1 },
                         { replace: true, preserveState: true }
                       )
@@ -489,7 +489,7 @@ export default function HarmonizedStaff({
                 <button
                   type="button"
                   onClick={() => {
-                    router.delete(`/inertia/libraries/harmonized-staff/${deletingId}`, {
+                    router.delete(`/libraries/harmonized-staff/${deletingId}`, {
                       onSuccess: () => setDeletingId(null),
                     });
                   }}

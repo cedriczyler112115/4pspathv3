@@ -102,7 +102,7 @@ export default function Users({
 
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
     const data = { ...filterForm.data, ...overrides };
-    router.get('/inertia/administration/users', data, {
+    router.get('/administration/users', data, {
       preserveState: true,
       replace: true,
     });
@@ -117,7 +117,7 @@ export default function Users({
       status: '',
       perPage: '10',
     });
-    router.get('/inertia/administration/users', {}, { replace: true });
+    router.get('/administration/users', {}, { replace: true });
   };
 
   const openEditModal = (row: UserRow) => {
@@ -144,7 +144,7 @@ export default function Users({
     e.preventDefault();
     if (!editingUser) return;
 
-    editForm.patch(`/inertia/administration/users/${editingUser.id}`, {
+    editForm.patch(`/administration/users/${editingUser.id}`, {
       onSuccess: () => {
         setShowEditModal(false);
         setEditingUser(null);
@@ -389,7 +389,7 @@ export default function Users({
                         <button
                           type="button"
                           onClick={() =>
-                            router.patch(`/inertia/administration/users/${row.id}/toggle-status`, {}, { preserveScroll: true })
+                            router.patch(`/administration/users/${row.id}/toggle-status`, {}, { preserveScroll: true })
                           }
                           className={`rounded-full font-mono text-[10px] font-bold px-2.5 py-0.5 transition cursor-pointer border ${
                             row.isStatus === 1

@@ -89,7 +89,7 @@ export default function Profile({ appName, user, divisions, sections, supervisor
             className="space-y-3 pt-1"
             onSubmit={(e) => {
               e.preventDefault();
-              form.patch('/inertia/settings/profile', {
+              form.patch('/settings/profile', {
                 preserveScroll: true,
               });
             }}

@@ -26,17 +26,17 @@ class DashboardController extends Controller
             'entryPoints' => [
                 [
                     'label' => 'Annual Targets',
-                    'href' => route('inertia.annualtarget'),
+                    'href' => route('annualtarget.index'),
                     'description' => 'View and manage your annual performance target commitments.',
                 ],
                 [
                     'label' => 'Semestral Ratings',
-                    'href' => route('inertia.myratings'),
+                    'href' => route('myratings.index'),
                     'description' => 'Track your semestral performance, accomplishments, and ratings.',
                 ],
                 [
                     'label' => 'Verification',
-                    'href' => route('inertia.verification'),
+                    'href' => route('verification'),
                     'description' => 'Review and verify staff semestral performance submissions.',
                 ],
             ],
