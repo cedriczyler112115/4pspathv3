@@ -17,7 +17,7 @@ class DashboardController extends Controller
             'appName' => config('app.name'),
             'hero' => [
                 'title' => config('app.name'),
-                'subtitle' => 'A separate Inertia surface that can live beside the current Livewire app.',
+                'subtitle' => 'Performance and Individual Performance Commitment & Review System.',
             ],
             'user' => $user ? [
                 'name' => $user->name,
@@ -25,19 +25,19 @@ class DashboardController extends Controller
             ] : null,
             'entryPoints' => [
                 [
-                    'label' => 'Livewire dashboard',
-                    'href' => route('dashboard'),
-                    'description' => 'Keep the current Livewire experience available while you port pages gradually.',
+                    'label' => 'Annual Targets',
+                    'href' => route('inertia.annualtarget'),
+                    'description' => 'View and manage your annual performance target commitments.',
                 ],
                 [
-                    'label' => 'Inertia login',
-                    'href' => route('inertia.login'),
-                    'description' => 'Use the new React auth surface without touching the existing Livewire auth views.',
+                    'label' => 'Semestral Ratings',
+                    'href' => route('inertia.myratings'),
+                    'description' => 'Track your semestral performance, accomplishments, and ratings.',
                 ],
                 [
-                    'label' => 'Livewire semestral targets',
-                    'href' => route('myratings.semestral-target'),
-                    'description' => 'A good candidate to leave in Livewire until the Inertia side is stable.',
+                    'label' => 'Verification',
+                    'href' => route('inertia.verification'),
+                    'description' => 'Review and verify staff semestral performance submissions.',
                 ],
             ],
         ]);

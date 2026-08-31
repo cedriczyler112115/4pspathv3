@@ -1,13 +1,10 @@
 @import 'tailwindcss';
-@import '../../vendor/livewire/flux/dist/flux.css';
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
 @source '../views';
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
-@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
+@source '../js';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -62,45 +59,10 @@
     }
 }
 
-[data-flux-field]:not(ui-radio, ui-checkbox) {
-    @apply grid gap-1;
-}
-
-[data-flux-label] {
-    @apply !mb-0 !text-[11px] !leading-none;
-}
-
-input[data-flux-control],
-textarea[data-flux-control],
-select[data-flux-control],
-button[data-flux-control] {
-    @apply text-xs;
-}
-
-input[data-flux-control],
-textarea[data-flux-control],
-select[data-flux-control] {
-    @apply min-h-7 px-2 py-1;
-}
-
-button[data-flux-control] {
-    @apply min-h-7 px-2.5 py-1;
-}
-
-input:focus[data-flux-control],
-textarea:focus[data-flux-control],
-select:focus[data-flux-control] {
-    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
-}
-
 table th,
 table td {
     @apply px-2 py-1 text-xs;
 }
-
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */
 
 @theme inline {
     --font-heading: var(--font-sans);
