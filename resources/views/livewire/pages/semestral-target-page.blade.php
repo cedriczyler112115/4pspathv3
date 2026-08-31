@@ -1113,11 +1113,6 @@
                                 @endforelse
 
                                 @if ($checkpointDeletedRows->isNotEmpty())
-                                    <tr class="bg-slate-100 dark:bg-zinc-800 font-bold border-y border-border text-red-900 dark:text-red-300">
-                                        <td colspan="4" class="py-1.5 px-3 text-center uppercase tracking-wide text-xs">
-                                            --- DELETED TARGETS ---
-                                        </td>
-                                    </tr>
                                     @foreach ($checkpointDeletedRows as $row)
                                         <tr class="border-t border-border/60 align-top hover:bg-muted/20">
                                             <td class="border-r border-border px-3 py-2 text-center font-bold">{{ $checkpointRowIndex++ }}</td>

@@ -16,7 +16,11 @@ import {
   PlusCircle,
   FilePlus,
   ChevronRight,
+  ChevronLeft,
   Sliders,
+  SlidersHorizontal,
+  Target,
+  Search,
 } from 'lucide-react';
 
 type SubTargetRow = {
@@ -504,10 +508,10 @@ export default function HarmonizedIpc({
 
   return (
     <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
-      <Head title="Harmonized IPC" />
+      <Head title="Harmonized IPC - RPMO Management" />
 
-      <section
-        className="w-full space-y-6"
+      <div
+        className="space-y-3"
         onClick={() => {
           if (contextMenu) {
             setContextMenu(null);
@@ -515,29 +519,53 @@ export default function HarmonizedIpc({
           }
         }}
       >
-        {/* Top Header & Position Selector */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-              Harmonized IPC
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Review harmonized IPC entries and manage targets.
-            </p>
+        {/* TOP FILTER & ACTION CARD */}
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-2xs space-y-3">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <Target className="size-4.5" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <span>Harmonized IPC Directory</span>
+                  <span className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold px-2 py-0.2 border border-emerald-500/20">
+                    {targets.total} Total Targets
+                  </span>
+                </h1>
+                <p className="text-[11px] text-muted-foreground">
+                  Review standardized harmonized IPC templates, KRA categories, and distribute indicators across staff positions.
+                </p>
+              </div>
+            </div>
+
+            {/* ACTIONS */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
+                title="Reset all filters"
+              >
+                <RotateCcw className="size-3" />
+                <span>Reset</span>
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-end gap-3">
-            <div className="w-80 sm:w-[24rem]">
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                Select Position
-              </label>
+          {/* FILTERS FORM */}
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-6 items-end">
+            {/* Position Selector */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-[11px] font-semibold text-muted-foreground">Target Staff Position</label>
               <select
                 value={filterForm.data.position}
                 onChange={(e) => {
                   filterForm.setData('position', e.target.value);
                   submitFilters({ position: e.target.value });
                 }}
-                className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100 font-semibold text-emerald-800 dark:text-emerald-300"
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">Select Position</option>
                 {positions.map((p) => (
@@ -547,371 +575,619 @@ export default function HarmonizedIpc({
                 ))}
               </select>
             </div>
-          </div>
-        </div>
 
-        {/* Outer Card Container */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm space-y-4">
-          {/* Filters Bar */}
-          <div className="mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 items-end">
-              <div className="lg:col-span-2">
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Search
-                </label>
+            {/* Search Input */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-[11px] font-semibold text-muted-foreground">Search Target Content</label>
+              <div className="relative">
+                <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   value={filterForm.data.search}
                   onChange={(e) => filterForm.setData('search', e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
-                  placeholder="Search harmonized targets..."
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
+                  placeholder="Search activity, description, outputs..."
+                  className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Year
-                </label>
-                <select
-                  value={filterForm.data.year}
-                  onChange={(e) => {
-                    filterForm.setData('year', e.target.value);
-                    submitFilters({ year: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  <option value="">All years</option>
-                  {years.map((y) => (
-                    <option key={y.value} value={y.value}>
-                      {y.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Category
-                </label>
-                <select
-                  value={filterForm.data.category}
-                  onChange={(e) => {
-                    filterForm.setData('category', e.target.value);
-                    submitFilters({ category: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  <option value="">All categories</option>
-                  {categories.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Semester
-                </label>
-                <select
-                  value={filterForm.data.semester}
-                  onChange={(e) => {
-                    filterForm.setData('semester', e.target.value);
-                    submitFilters({ semester: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  <option value="">All semesters</option>
-                  {semesters.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Records Per Page
-                </label>
-                <select
-                  value={filterForm.data.perPage}
-                  onChange={(e) => {
-                    filterForm.setData('perPage', e.target.value);
-                    submitFilters({ perPage: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  {perPageOptions.map((opt) => (
-                    <option key={String(opt.value)} value={String(opt.value)}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="h-10 w-full inline-flex items-center justify-center gap-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Reset Filters</span>
-                </button>
+                {filterForm.data.search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      filterForm.setData('search', '');
+                      submitFilters({ search: '' });
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* Year Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Year</label>
+              <select
+                value={filterForm.data.year}
+                onChange={(e) => {
+                  filterForm.setData('year', e.target.value);
+                  submitFilters({ year: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All years</option>
+                {years.map((y) => (
+                  <option key={y.value} value={y.value}>
+                    {y.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Category</label>
+              <select
+                value={filterForm.data.category}
+                onChange={(e) => {
+                  filterForm.setData('category', e.target.value);
+                  submitFilters({ category: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All categories</option>
+                {categories.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Semester Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Semester</label>
+              <select
+                value={filterForm.data.semester}
+                onChange={(e) => {
+                  filterForm.setData('semester', e.target.value);
+                  submitFilters({ semester: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All semesters</option>
+                {semesters.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Records per page */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Per Page</label>
+              <select
+                value={filterForm.data.perPage}
+                onChange={(e) => {
+                  filterForm.setData('perPage', e.target.value);
+                  submitFilters({ perPage: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                {perPageOptions.map((opt) => (
+                  <option key={String(opt.value)} value={String(opt.value)}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+        </div>
 
-          {/* Categorized Table Grid */}
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full min-w-[1100px] border-separate border-spacing-0 text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                <tr>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center w-[70px] min-w-[70px]">
-                    Action
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[250px] min-w-[250px]">
-                    Activity / Indicator
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[140px] min-w-[140px]">
-                    Semester
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap min-w-[220px]">
-                    Target / Measure
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
-                    EFFICIENCY
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
-                    QUALITY
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
-                    TIMELINESS
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[160px] min-w-[160px]">
-                    MOVS
-                  </th>
-                  <th className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[180px] min-w-[180px]">
-                    REMARKS
-                  </th>
-                </tr>
-              </thead>
+        {/* Categorized Table Grid */}
+        <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+          <table className="w-full table-fixed border-collapse text-xs">
+            <colgroup>
+              <col style={{ width: '38px' }} />
+              <col style={{ width: '21%' }} />
+              <col style={{ width: '8.5%' }} />
+              <col style={{ width: '19.5%' }} />
+              <col style={{ width: '9.5%' }} />
+              <col style={{ width: '9.5%' }} />
+              <col style={{ width: '9.5%' }} />
+              <col style={{ width: '9.5%' }} />
+              <col />
+            </colgroup>
+            <thead className="bg-muted/60 text-left text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+              <tr>
+                <th className="border-b border-r border-border p-1.5 text-center">
+                  Action
+                </th>
+                <th className="border-b border-r border-border px-2 py-2">
+                  Activity / Indicator
+                </th>
+                <th className="border-b border-r border-border px-1.5 py-2 text-center">
+                  Semester
+                </th>
+                <th className="border-b border-r border-border px-2 py-2">
+                  Target / Measure
+                </th>
+                <th className="border-b border-r border-border px-1.5 py-2">
+                  Efficiency
+                </th>
+                <th className="border-b border-r border-border px-1.5 py-2">
+                  Quality
+                </th>
+                <th className="border-b border-r border-border px-1.5 py-2">
+                  Timeliness
+                </th>
+                <th className="border-b border-r border-border px-1.5 py-2">
+                  MOVs
+                </th>
+                <th className="border-b border-border px-1.5 py-2">
+                  Remarks
+                </th>
+              </tr>
+            </thead>
 
-              {categories
-                .filter((cat) => !filterForm.data.category || filterForm.data.category === cat.value)
-                .map((cat) => {
-                  const catVal = Number(cat.value);
-                  const catGroups = groups.filter((g) => g.category === catVal);
+            {categories
+              .filter((cat) => !filterForm.data.category || filterForm.data.category === cat.value)
+              .map((cat) => {
+                const catVal = Number(cat.value);
+                const catGroups = groups.filter((g) => g.category === catVal);
 
-                  return (
-                    <React.Fragment key={`cat-section-${cat.value}`}>
-                      {/* Category Header Banner */}
-                      <tbody
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = 'move';
-                        }}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          const raw = e.dataTransfer.getData('application/json');
-                          if (!raw) return;
-                          const source = JSON.parse(raw);
-                          handleDrop(source, {
-                            type: 'category',
-                            indicatorId: 0,
-                            itemId: 0,
-                            kra: catVal,
-                          });
-                        }}
-                      >
-                        <tr className="bg-slate-100/70 dark:bg-slate-800/70">
-                          <td colSpan={9} className="border-b border-slate-200 dark:border-slate-800 px-3 py-2.5">
-                            <div className="flex items-center justify-between font-bold text-slate-900 dark:text-slate-100">
-                              <span>{cat.label}</span>
-                              <button
-                                type="button"
-                                onClick={() => openAddModalForCategory(catVal)}
-                                className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800"
-                              >
-                                <Plus className="w-3.5 h-3.5" />
-                                <span>Add Target</span>
-                              </button>
-                            </div>
+                return (
+                  <React.Fragment key={`cat-section-${cat.value}`}>
+                    {/* Category Header Banner */}
+                    <tbody
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const raw = e.dataTransfer.getData('application/json');
+                        if (!raw) return;
+                        const source = JSON.parse(raw);
+                        handleDrop(source, {
+                          type: 'category',
+                          indicatorId: 0,
+                          itemId: 0,
+                          kra: catVal,
+                        });
+                      }}
+                    >
+                      <tr className="bg-muted/70">
+                        <td colSpan={9} className="border-b border-border px-2.5 py-1.5">
+                          <div className="flex items-center gap-2 font-bold text-foreground">
+                            <span className="text-xs uppercase tracking-wide">{cat.label}</span>
+                            <button
+                              type="button"
+                              onClick={() => openAddModalForCategory(catVal)}
+                              className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 cursor-pointer shadow-2xs transition"
+                            >
+                              <Plus className="size-3.5" />
+                              <span>Add Target</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+
+                    {catGroups.length === 0 ? (
+                      <tbody>
+                        <tr>
+                          <td colSpan={9} className="border-b border-border px-3 py-6 text-center text-xs text-muted-foreground">
+                            {!filterForm.data.position
+                              ? 'Please select a position to view harmonized IPC targets.'
+                              : 'No record found in this category.'}
                           </td>
                         </tr>
                       </tbody>
+                    ) : (
+                      catGroups.map((group) => {
+                        const isEditingGroup = editingIndicatorId === group.indicatorId;
+                        const isEditingExistingRows = isEditingGroup && !isCreatingSubTarget;
+                        const isPendingForThisGroup = isEditingGroup ? pendingSubTargets : [];
+                        const rowSpan = group.rows.length + isPendingForThisGroup.length;
+                        const isDragging = draggingIndicatorId === group.indicatorId;
 
-                      {catGroups.length === 0 ? (
-                        <tbody>
-                          <tr>
-                            <td colSpan={9} className="border-b border-slate-200 dark:border-slate-800 px-3 py-8 text-center text-slate-500">
-                              {!filterForm.data.position
-                                ? 'Please select a position to view harmonized IPC targets.'
-                                : 'No record found in this category.'}
-                            </td>
-                          </tr>
-                        </tbody>
-                      ) : (
-                        catGroups.map((group) => {
-                          const isEditingGroup = editingIndicatorId === group.indicatorId;
-                          const isEditingExistingRows = isEditingGroup && !isCreatingSubTarget;
-                          const isPendingForThisGroup = isEditingGroup ? pendingSubTargets : [];
-                          const rowSpan = group.rows.length + isPendingForThisGroup.length;
-                          const isDragging = draggingIndicatorId === group.indicatorId;
-
-                          return (
-                            <tbody key={`group-body-${group.indicatorId}`}>
-                              {group.rows.map((row, idx) => (
-                                <tr
-                                  key={`row-${group.indicatorId}-${row.id}`}
-                                  onDragOver={(e) => {
-                                    e.preventDefault();
-                                    e.dataTransfer.dropEffect = 'move';
-                                  }}
-                                  onDrop={(e) => {
-                                    e.preventDefault();
-                                    const raw = e.dataTransfer.getData('application/json');
-                                    if (!raw) return;
-                                    const source = JSON.parse(raw);
-                                    handleDrop(source, {
-                                      type: 'main',
-                                      indicatorId: group.indicatorId,
-                                      itemId: row.id,
-                                      kra: group.category,
-                                    });
-                                  }}
-                                  className={`border-t border-slate-200/60 dark:border-slate-800/60 text-sm hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${
-                                    isEditingGroup ? 'bg-amber-50/90 dark:bg-amber-950/40' : ''
-                                  } ${
-                                    isDragging ? 'opacity-50 bg-slate-200 dark:bg-slate-800' : ''
-                                  }`}
-                                >
-                                  {/* Main Indicator Rowspan Columns */}
-                                  {idx === 0 ? (
-                                    <>
-                                      <td
-                                        rowSpan={rowSpan}
-                                        onContextMenu={(e) =>
-                                          openRightClickMenu(
-                                            e,
-                                            group.category,
-                                            group.indicatorId,
-                                            row.id,
-                                            group.rows.length,
-                                            group.targetStatus,
-                                            true
-                                          )
-                                        }
-                                        className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-center"
-                                      >
-                                        <div className="flex items-center justify-center gap-1">
-                                          {isEditingGroup ? (
-                                            <div className="flex flex-col gap-1 items-center">
-                                              <button
-                                                type="button"
-                                                onClick={() => handleSaveInlineEdit(group)}
-                                                className="w-10 h-7 rounded bg-emerald-600 text-white flex items-center justify-center shadow-xs hover:bg-emerald-700"
-                                                title="Save Changes"
-                                              >
-                                                <Check className="w-4 h-4" />
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={cancelInlineEdit}
-                                                className="w-10 h-7 rounded bg-amber-500 text-white flex items-center justify-center shadow-xs hover:bg-amber-600"
-                                                title="Cancel"
-                                              >
-                                                <X className="w-4 h-4" />
-                                              </button>
-                                            </div>
-                                          ) : group.targetStatus === 3 ? (
-                                            <Lock className="w-4 h-4 text-slate-400" title="Locked target" />
-                                          ) : (
-                                            <div
-                                              draggable
-                                              onDragStart={(e) => {
-                                                e.dataTransfer.effectAllowed = 'move';
-                                                e.dataTransfer.setData(
-                                                  'application/json',
-                                                  JSON.stringify({
-                                                    type: 'main',
-                                                    indicatorId: group.indicatorId,
-                                                    itemId: row.id,
-                                                    kra: group.category,
-                                                  })
-                                                );
-                                                setDraggingIndicatorId(group.indicatorId);
-                                              }}
-                                              onDragEnd={() => setDraggingIndicatorId(null)}
-                                              className="p-1 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-700 transition"
-                                              title="Drag target to reorder or move category"
+                        return (
+                          <tbody key={`group-body-${group.indicatorId}`}>
+                            {group.rows.map((row, idx) => (
+                              <tr
+                                key={`row-${group.indicatorId}-${row.id}`}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  const raw = e.dataTransfer.getData('application/json');
+                                  if (!raw) return;
+                                  const source = JSON.parse(raw);
+                                  handleDrop(source, {
+                                    type: 'main',
+                                    indicatorId: group.indicatorId,
+                                    itemId: row.id,
+                                    kra: group.category,
+                                  });
+                                }}
+                                className={`border-t border-border/60 text-xs hover:bg-muted/40 transition-colors ${
+                                  isEditingGroup ? 'bg-amber-500/10' : ''
+                                } ${
+                                  isDragging ? 'opacity-50 bg-muted' : ''
+                                }`}
+                              >
+                                {/* Main Indicator Rowspan Columns */}
+                                {idx === 0 ? (
+                                  <>
+                                    <td
+                                      rowSpan={rowSpan}
+                                      onContextMenu={(e) =>
+                                        openRightClickMenu(
+                                          e,
+                                          group.category,
+                                          group.indicatorId,
+                                          row.id,
+                                          group.rows.length,
+                                          group.targetStatus,
+                                          true
+                                        )
+                                      }
+                                      className="border-b border-r border-border p-1.5 align-top text-center"
+                                    >
+                                      <div className="flex items-center justify-center">
+                                        {isEditingGroup ? (
+                                          <div className="flex flex-col gap-1 items-center">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleSaveInlineEdit(group)}
+                                              className="w-7 h-6 rounded bg-emerald-600 text-white flex items-center justify-center shadow-2xs hover:bg-emerald-700"
+                                              title="Save Changes"
                                             >
-                                              <GripVertical className="w-4 h-4" />
-                                            </div>
-                                          )}
-                                        </div>
-                                      </td>
-
-                                      <td
-                                        rowSpan={rowSpan}
-                                        onContextMenu={(e) =>
-                                          openRightClickMenu(
-                                            e,
-                                            group.category,
-                                            group.indicatorId,
-                                            row.id,
-                                            group.rows.length,
-                                            group.targetStatus,
-                                            true
-                                          )
-                                        }
-                                        className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-slate-900 dark:text-slate-100 font-medium"
-                                      >
-                                        {isEditingExistingRows ? (
-                                          <AutoResizingTextarea
-                                            value={inlineEditForm.data.activity}
-                                            onChange={(e) => inlineEditForm.setData('activity', e.target.value)}
-                                            rows={2}
-                                            className="w-full rounded-md border border-slate-300 p-2 text-xs"
-                                          />
+                                              <Check className="size-3.5" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={cancelInlineEdit}
+                                              className="w-7 h-6 rounded bg-amber-500 text-white flex items-center justify-center shadow-2xs hover:bg-amber-600"
+                                              title="Cancel"
+                                            >
+                                              <X className="size-3.5" />
+                                            </button>
+                                          </div>
+                                        ) : group.targetStatus === 3 ? (
+                                          <Lock className="size-3.5 text-muted-foreground" title="Locked target" />
                                         ) : (
-                                          <FormattedText value={group.activity} />
+                                          <div
+                                            draggable
+                                            onDragStart={(e) => {
+                                              e.dataTransfer.effectAllowed = 'move';
+                                              e.dataTransfer.setData(
+                                                'application/json',
+                                                JSON.stringify({
+                                                  type: 'main',
+                                                  indicatorId: group.indicatorId,
+                                                  itemId: row.id,
+                                                  kra: group.category,
+                                                })
+                                              );
+                                              setDraggingIndicatorId(group.indicatorId);
+                                            }}
+                                            onDragEnd={() => setDraggingIndicatorId(null)}
+                                            className="p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition"
+                                            title="Drag target to reorder or move category"
+                                          >
+                                            <GripVertical className="size-3.5" />
+                                          </div>
                                         )}
-                                      </td>
-                                    </>
-                                  ) : null}
+                                      </div>
+                                    </td>
 
-                                  {/* Sub-target Columns */}
-                                  <td
-                                    onContextMenu={(e) =>
-                                      openRightClickMenu(
-                                        e,
-                                        group.category,
-                                        group.indicatorId,
-                                        row.id,
-                                        group.rows.length,
-                                        group.targetStatus,
-                                        false
-                                      )
-                                    }
-                                    className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
+                                    <td
+                                      rowSpan={rowSpan}
+                                      onContextMenu={(e) =>
+                                        openRightClickMenu(
+                                          e,
+                                          group.category,
+                                          group.indicatorId,
+                                          row.id,
+                                          group.rows.length,
+                                          group.targetStatus,
+                                          true
+                                        )
+                                      }
+                                      className="border-b border-r border-border px-2 py-1.5 align-top font-semibold text-foreground break-words"
+                                    >
+                                      {isEditingExistingRows ? (
+                                        <AutoResizingTextarea
+                                          value={inlineEditForm.data.activity}
+                                          onChange={(e) => inlineEditForm.setData('activity', e.target.value)}
+                                          rows={2}
+                                          className="w-full rounded-md border border-input bg-background p-1.5 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                        />
+                                      ) : (
+                                        <FormattedText value={group.activity} />
+                                      )}
+                                    </td>
+                                  </>
+                                ) : null}
+
+                                {/* Sub-target Columns */}
+                                <td
+                                  onContextMenu={(e) =>
+                                    openRightClickMenu(
+                                      e,
+                                      group.category,
+                                      group.indicatorId,
+                                      row.id,
+                                      group.rows.length,
+                                      group.targetStatus,
+                                      false
+                                    )
+                                  }
+                                  className="border-b border-r border-border px-1.5 py-1.5 align-top text-xs text-foreground break-words text-center font-medium"
+                                >
+                                  {isEditingExistingRows ? (
+                                    <select
+                                      value={inlineEditForm.data.editRows[row.id]?.semester || '1'}
+                                      onChange={(e) =>
+                                        inlineEditForm.setData('editRows', {
+                                          ...inlineEditForm.data.editRows,
+                                          [row.id]: {
+                                            ...inlineEditForm.data.editRows[row.id],
+                                            semester: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      className="w-full rounded-md border border-input bg-background p-1 text-[11px] text-foreground outline-hidden focus:ring-1 focus:ring-ring cursor-pointer"
+                                    >
+                                      {semesters.map((s) => (
+                                        <option key={s.value} value={s.value}>
+                                          {s.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    formatSemesterLabel(row.newSemester || row.semester, semesters)
+                                  )}
+                                </td>
+
+                                <td
+                                  onContextMenu={(e) =>
+                                    openRightClickMenu(
+                                      e,
+                                      group.category,
+                                      group.indicatorId,
+                                      row.id,
+                                      group.rows.length,
+                                      group.targetStatus,
+                                      false
+                                    )
+                                  }
+                                  className="border-b border-r border-border px-2 py-1.5 align-top text-xs text-foreground break-words"
+                                >
+                                  {isEditingExistingRows ? (
+                                    <AutoResizingTextarea
+                                      value={inlineEditForm.data.editRows[row.id]?.description || ''}
+                                      onChange={(e) =>
+                                        inlineEditForm.setData('editRows', {
+                                          ...inlineEditForm.data.editRows,
+                                          [row.id]: {
+                                            ...inlineEditForm.data.editRows[row.id],
+                                            description: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      rows={2}
+                                      className="w-full rounded-md border border-input bg-background p-1.5 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                    />
+                                  ) : (
+                                    <FormattedText value={row.description} />
+                                  )}
+                                </td>
+
+                                <td
+                                  onContextMenu={(e) =>
+                                    openRightClickMenu(
+                                      e,
+                                      group.category,
+                                      group.indicatorId,
+                                      row.id,
+                                      group.rows.length,
+                                      group.targetStatus,
+                                      false
+                                    )
+                                  }
+                                  className="border-b border-r border-border px-1.5 py-1.5 align-top text-xs text-muted-foreground break-words"
+                                >
+                                  {isEditingExistingRows ? (
+                                    <AutoResizingTextarea
+                                      value={inlineEditForm.data.editRows[row.id]?.efficiency || ''}
+                                      onChange={(e) =>
+                                        inlineEditForm.setData('editRows', {
+                                          ...inlineEditForm.data.editRows,
+                                          [row.id]: {
+                                            ...inlineEditForm.data.editRows[row.id],
+                                            efficiency: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      rows={2}
+                                      className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                    />
+                                  ) : (
+                                    <FormattedText value={row.efficiency} />
+                                  )}
+                                </td>
+
+                                <td
+                                  onContextMenu={(e) =>
+                                    openRightClickMenu(
+                                      e,
+                                      group.category,
+                                      group.indicatorId,
+                                      row.id,
+                                      group.rows.length,
+                                      group.targetStatus,
+                                      false
+                                    )
+                                  }
+                                  className="border-b border-r border-border px-1.5 py-1.5 align-top text-xs text-muted-foreground break-words"
+                                >
+                                  {isEditingExistingRows ? (
+                                    <AutoResizingTextarea
+                                      value={inlineEditForm.data.editRows[row.id]?.quality || ''}
+                                      onChange={(e) =>
+                                        inlineEditForm.setData('editRows', {
+                                          ...inlineEditForm.data.editRows,
+                                          [row.id]: {
+                                            ...inlineEditForm.data.editRows[row.id],
+                                            quality: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      rows={2}
+                                      className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                    />
+                                  ) : (
+                                    <FormattedText value={row.quality} />
+                                  )}
+                                </td>
+
+                                <td
+                                  onContextMenu={(e) =>
+                                    openRightClickMenu(
+                                      e,
+                                      group.category,
+                                      group.indicatorId,
+                                      row.id,
+                                      group.rows.length,
+                                      group.targetStatus,
+                                      false
+                                    )
+                                  }
+                                  className="border-b border-r border-border px-1.5 py-1.5 align-top text-xs text-muted-foreground break-words"
+                                >
+                                  {isEditingExistingRows ? (
+                                    <AutoResizingTextarea
+                                      value={inlineEditForm.data.editRows[row.id]?.timeliness || ''}
+                                      onChange={(e) =>
+                                        inlineEditForm.setData('editRows', {
+                                          ...inlineEditForm.data.editRows,
+                                          [row.id]: {
+                                            ...inlineEditForm.data.editRows[row.id],
+                                            timeliness: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      rows={2}
+                                      className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                    />
+                                  ) : (
+                                    <FormattedText value={row.timeliness} />
+                                  )}
+                                </td>
+
+                                <td
+                                  onContextMenu={(e) =>
+                                    openRightClickMenu(
+                                      e,
+                                      group.category,
+                                      group.indicatorId,
+                                      row.id,
+                                      group.rows.length,
+                                      group.targetStatus,
+                                      false
+                                    )
+                                  }
+                                  className="border-b border-r border-border px-1.5 py-1.5 align-top text-xs text-muted-foreground break-words"
+                                >
+                                  {isEditingExistingRows ? (
+                                    <AutoResizingTextarea
+                                      value={inlineEditForm.data.editRows[row.id]?.movs || ''}
+                                      onChange={(e) =>
+                                        inlineEditForm.setData('editRows', {
+                                          ...inlineEditForm.data.editRows,
+                                          [row.id]: {
+                                            ...inlineEditForm.data.editRows[row.id],
+                                            movs: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      rows={2}
+                                      className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                    />
+                                  ) : (
+                                    <FormattedText value={row.movs} />
+                                  )}
+                                </td>
+
+                                <td
+                                  onContextMenu={(e) =>
+                                    openRightClickMenu(
+                                      e,
+                                      group.category,
+                                      group.indicatorId,
+                                      row.id,
+                                      group.rows.length,
+                                      group.targetStatus,
+                                      false
+                                    )
+                                  }
+                                  className="border-b border-border px-1.5 py-1.5 align-top text-xs text-muted-foreground break-words"
+                                >
+                                  {isEditingExistingRows ? (
+                                    <AutoResizingTextarea
+                                      value={inlineEditForm.data.editRows[row.id]?.remarks || ''}
+                                      onChange={(e) =>
+                                        inlineEditForm.setData('editRows', {
+                                          ...inlineEditForm.data.editRows,
+                                          [row.id]: {
+                                            ...inlineEditForm.data.editRows[row.id],
+                                            remarks: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      rows={2}
+                                      className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                    />
+                                  ) : (
+                                    <FormattedText value={row.remarks} />
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+
+                            {/* Render Pending Sub-target Input Rows ONLY when adding sub-target */}
+                            {isEditingGroup && isCreatingSubTarget && pendingSubTargets.length > 0
+                              ? pendingSubTargets.map((pending, pIdx) => (
+                                  <tr
+                                    key={`pending-${group.indicatorId}-${pending.tempId}`}
+                                    className="border-t border-amber-500/30 bg-amber-500/10 text-xs"
                                   >
-                                    {isEditingExistingRows ? (
+                                    <td className="border-b border-r border-border px-1.5 py-1.5 align-top text-center">
                                       <select
-                                        value={inlineEditForm.data.editRows[row.id]?.semester || '1'}
-                                        onChange={(e) =>
-                                          inlineEditForm.setData('editRows', {
-                                            ...inlineEditForm.data.editRows,
-                                            [row.id]: {
-                                              ...inlineEditForm.data.editRows[row.id],
-                                              semester: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        className="w-full rounded-md border border-slate-300 p-1 text-xs"
+                                        value={inlineEditForm.data.pendingSubTargets[pIdx]?.semester || '1'}
+                                        onChange={(e) => {
+                                          const updated = [...inlineEditForm.data.pendingSubTargets];
+                                          updated[pIdx] = {
+                                            ...(updated[pIdx] || {
+                                              semester: '1',
+                                              description: '',
+                                              efficiency: '',
+                                              quality: '',
+                                              timeliness: '',
+                                              movs: '',
+                                              remarks: '',
+                                            }),
+                                            semester: e.target.value,
+                                          };
+                                          inlineEditForm.setData('pendingSubTargets', updated);
+                                        }}
+                                        className="w-full rounded-md border border-input bg-background p-1 text-[11px] text-foreground outline-hidden focus:ring-1 focus:ring-ring cursor-pointer"
                                       >
                                         {semesters.map((s) => (
                                           <option key={s.value} value={s.value}>
@@ -919,429 +1195,181 @@ export default function HarmonizedIpc({
                                           </option>
                                         ))}
                                       </select>
-                                    ) : (
-                                      formatSemesterLabel(row.newSemester || row.semester, semesters)
-                                    )}
-                                  </td>
+                                    </td>
 
-                                  <td
-                                    onContextMenu={(e) =>
-                                      openRightClickMenu(
-                                        e,
-                                        group.category,
-                                        group.indicatorId,
-                                        row.id,
-                                        group.rows.length,
-                                        group.targetStatus,
-                                        false
-                                      )
-                                    }
-                                    className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-800 dark:text-slate-200"
-                                  >
-                                    {isEditingExistingRows ? (
-                                      <AutoResizingTextarea
-                                        value={inlineEditForm.data.editRows[row.id]?.description || ''}
-                                        onChange={(e) =>
-                                          inlineEditForm.setData('editRows', {
-                                            ...inlineEditForm.data.editRows,
-                                            [row.id]: {
-                                              ...inlineEditForm.data.editRows[row.id],
-                                              description: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={2}
-                                        className="w-full rounded-md border border-slate-300 p-1 text-xs"
-                                      />
-                                    ) : (
-                                      <FormattedText value={row.description} />
-                                    )}
-                                  </td>
+                                    <td className="border-b border-r border-border px-2 py-1.5 align-top">
+                                       <AutoResizingTextarea
+                                         value={inlineEditForm.data.pendingSubTargets[pIdx]?.description || ''}
+                                         onChange={(e) => {
+                                           const updated = [...inlineEditForm.data.pendingSubTargets];
+                                           updated[pIdx] = {
+                                             ...(updated[pIdx] || {
+                                               semester: '1',
+                                               description: '',
+                                               efficiency: '',
+                                               quality: '',
+                                               timeliness: '',
+                                               movs: '',
+                                               remarks: '',
+                                             }),
+                                             description: e.target.value,
+                                           };
+                                           inlineEditForm.setData('pendingSubTargets', updated);
+                                         }}
+                                         placeholder="Success indicator description..."
+                                         rows={2}
+                                         className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                       />
+                                    </td>
 
-                                  <td
-                                    onContextMenu={(e) =>
-                                      openRightClickMenu(
-                                        e,
-                                        group.category,
-                                        group.indicatorId,
-                                        row.id,
-                                        group.rows.length,
-                                        group.targetStatus,
-                                        false
-                                      )
-                                    }
-                                    className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
-                                  >
-                                    {isEditingExistingRows ? (
-                                      <AutoResizingTextarea
-                                        value={inlineEditForm.data.editRows[row.id]?.efficiency || ''}
-                                        onChange={(e) =>
-                                          inlineEditForm.setData('editRows', {
-                                            ...inlineEditForm.data.editRows,
-                                            [row.id]: {
-                                              ...inlineEditForm.data.editRows[row.id],
-                                              efficiency: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={2}
-                                        className="w-full rounded-md border border-slate-300 p-1 text-xs"
-                                      />
-                                    ) : (
-                                      <FormattedText value={row.efficiency} />
-                                    )}
-                                  </td>
+                                    <td className="border-b border-r border-border px-1.5 py-1.5 align-top">
+                                       <AutoResizingTextarea
+                                         value={inlineEditForm.data.pendingSubTargets[pIdx]?.efficiency || ''}
+                                         onChange={(e) => {
+                                           const updated = [...inlineEditForm.data.pendingSubTargets];
+                                           updated[pIdx] = {
+                                             ...(updated[pIdx] || {
+                                               semester: '1',
+                                               description: '',
+                                               efficiency: '',
+                                               quality: '',
+                                               timeliness: '',
+                                               movs: '',
+                                               remarks: '',
+                                             }),
+                                             efficiency: e.target.value,
+                                           };
+                                           inlineEditForm.setData('pendingSubTargets', updated);
+                                         }}
+                                         placeholder="Efficiency"
+                                         rows={2}
+                                         className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                       />
+                                    </td>
 
-                                  <td
-                                    onContextMenu={(e) =>
-                                      openRightClickMenu(
-                                        e,
-                                        group.category,
-                                        group.indicatorId,
-                                        row.id,
-                                        group.rows.length,
-                                        group.targetStatus,
-                                        false
-                                      )
-                                    }
-                                    className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
-                                  >
-                                    {isEditingExistingRows ? (
-                                      <AutoResizingTextarea
-                                        value={inlineEditForm.data.editRows[row.id]?.quality || ''}
-                                        onChange={(e) =>
-                                          inlineEditForm.setData('editRows', {
-                                            ...inlineEditForm.data.editRows,
-                                            [row.id]: {
-                                              ...inlineEditForm.data.editRows[row.id],
-                                              quality: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={2}
-                                        className="w-full rounded-md border border-slate-300 p-1 text-xs"
-                                      />
-                                    ) : (
-                                      <FormattedText value={row.quality} />
-                                    )}
-                                  </td>
+                                    <td className="border-b border-r border-border px-1.5 py-1.5 align-top">
+                                       <AutoResizingTextarea
+                                         value={inlineEditForm.data.pendingSubTargets[pIdx]?.quality || ''}
+                                         onChange={(e) => {
+                                           const updated = [...inlineEditForm.data.pendingSubTargets];
+                                           updated[pIdx] = {
+                                             ...(updated[pIdx] || {
+                                               semester: '1',
+                                               description: '',
+                                               efficiency: '',
+                                               quality: '',
+                                               timeliness: '',
+                                               movs: '',
+                                               remarks: '',
+                                             }),
+                                             quality: e.target.value,
+                                           };
+                                           inlineEditForm.setData('pendingSubTargets', updated);
+                                         }}
+                                         placeholder="Quality"
+                                         rows={2}
+                                         className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                       />
+                                    </td>
 
-                                  <td
-                                    onContextMenu={(e) =>
-                                      openRightClickMenu(
-                                        e,
-                                        group.category,
-                                        group.indicatorId,
-                                        row.id,
-                                        group.rows.length,
-                                        group.targetStatus,
-                                        false
-                                      )
-                                    }
-                                    className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
-                                  >
-                                    {isEditingExistingRows ? (
-                                      <AutoResizingTextarea
-                                        value={inlineEditForm.data.editRows[row.id]?.timeliness || ''}
-                                        onChange={(e) =>
-                                          inlineEditForm.setData('editRows', {
-                                            ...inlineEditForm.data.editRows,
-                                            [row.id]: {
-                                              ...inlineEditForm.data.editRows[row.id],
-                                              timeliness: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={2}
-                                        className="w-full rounded-md border border-slate-300 p-1 text-xs"
-                                      />
-                                    ) : (
-                                      <FormattedText value={row.timeliness} />
-                                    )}
-                                  </td>
+                                    <td className="border-b border-r border-border px-1.5 py-1.5 align-top">
+                                       <AutoResizingTextarea
+                                         value={inlineEditForm.data.pendingSubTargets[pIdx]?.timeliness || ''}
+                                         onChange={(e) => {
+                                           const updated = [...inlineEditForm.data.pendingSubTargets];
+                                           updated[pIdx] = {
+                                             ...(updated[pIdx] || {
+                                               semester: '1',
+                                               description: '',
+                                               efficiency: '',
+                                               quality: '',
+                                               timeliness: '',
+                                               movs: '',
+                                               remarks: '',
+                                             }),
+                                             timeliness: e.target.value,
+                                           };
+                                           inlineEditForm.setData('pendingSubTargets', updated);
+                                         }}
+                                         placeholder="Timeliness"
+                                         rows={2}
+                                         className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                       />
+                                    </td>
 
-                                  <td
-                                    onContextMenu={(e) =>
-                                      openRightClickMenu(
-                                        e,
-                                        group.category,
-                                        group.indicatorId,
-                                        row.id,
-                                        group.rows.length,
-                                        group.targetStatus,
-                                        false
-                                      )
-                                    }
-                                    className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
-                                  >
-                                    {isEditingExistingRows ? (
-                                      <AutoResizingTextarea
-                                        value={inlineEditForm.data.editRows[row.id]?.movs || ''}
-                                        onChange={(e) =>
-                                          inlineEditForm.setData('editRows', {
-                                            ...inlineEditForm.data.editRows,
-                                            [row.id]: {
-                                              ...inlineEditForm.data.editRows[row.id],
-                                              movs: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={2}
-                                        className="w-full rounded-md border border-slate-300 p-1 text-xs"
-                                      />
-                                    ) : (
-                                      <FormattedText value={row.movs} />
-                                    )}
-                                  </td>
+                                    <td className="border-b border-r border-border px-1.5 py-1.5 align-top">
+                                       <AutoResizingTextarea
+                                         value={inlineEditForm.data.pendingSubTargets[pIdx]?.movs || ''}
+                                         onChange={(e) => {
+                                           const updated = [...inlineEditForm.data.pendingSubTargets];
+                                           updated[pIdx] = {
+                                             ...(updated[pIdx] || {
+                                               semester: '1',
+                                               description: '',
+                                               efficiency: '',
+                                               quality: '',
+                                               timeliness: '',
+                                               movs: '',
+                                               remarks: '',
+                                             }),
+                                             movs: e.target.value,
+                                           };
+                                           inlineEditForm.setData('pendingSubTargets', updated);
+                                         }}
+                                         placeholder="MOVs"
+                                         rows={2}
+                                         className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                       />
+                                    </td>
 
-                                  <td
-                                    onContextMenu={(e) =>
-                                      openRightClickMenu(
-                                        e,
-                                        group.category,
-                                        group.indicatorId,
-                                        row.id,
-                                        group.rows.length,
-                                        group.targetStatus,
-                                        false
-                                      )
-                                    }
-                                    className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
-                                  >
-                                    {isEditingExistingRows ? (
-                                      <AutoResizingTextarea
-                                        value={inlineEditForm.data.editRows[row.id]?.remarks || ''}
-                                        onChange={(e) =>
-                                          inlineEditForm.setData('editRows', {
-                                            ...inlineEditForm.data.editRows,
-                                            [row.id]: {
-                                              ...inlineEditForm.data.editRows[row.id],
-                                              remarks: e.target.value,
-                                            },
-                                          })
-                                        }
-                                        rows={2}
-                                        className="w-full rounded-md border border-slate-300 p-1 text-xs"
-                                      />
-                                    ) : (
-                                      <FormattedText value={row.remarks} />
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
+                                    <td className="border-b border-border px-1.5 py-1.5 align-top">
+                                       <AutoResizingTextarea
+                                         value={inlineEditForm.data.pendingSubTargets[pIdx]?.remarks || ''}
+                                         onChange={(e) => {
+                                           const updated = [...inlineEditForm.data.pendingSubTargets];
+                                           updated[pIdx] = {
+                                             ...(updated[pIdx] || {
+                                               semester: '1',
+                                               description: '',
+                                               efficiency: '',
+                                               quality: '',
+                                               timeliness: '',
+                                               movs: '',
+                                               remarks: '',
+                                             }),
+                                             remarks: e.target.value,
+                                           };
+                                           inlineEditForm.setData('pendingSubTargets', updated);
+                                         }}
+                                         placeholder="Remarks"
+                                         rows={2}
+                                         className="w-full rounded-md border border-input bg-background p-1 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring"
+                                       />
+                                    </td>
+                                  </tr>
+                                ))
+                              : null}
+                          </tbody>
+                        );
+                      })
+                    )}
+                  </React.Fragment>
+                );
+              })}
+          </table>
 
-                              {/* Render Pending Sub-target Input Rows ONLY when adding sub-target */}
-                              {isEditingGroup && isCreatingSubTarget && pendingSubTargets.length > 0
-                                ? pendingSubTargets.map((pending, pIdx) => (
-                                    <tr
-                                      key={`pending-${group.indicatorId}-${pending.tempId}`}
-                                      className="border-t border-amber-300 bg-amber-100/90 dark:bg-amber-950/60 text-sm"
-                                    >
-                                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
-                                        <select
-                                          value={inlineEditForm.data.pendingSubTargets[pIdx]?.semester || '1'}
-                                          onChange={(e) => {
-                                            const updated = [...inlineEditForm.data.pendingSubTargets];
-                                            updated[pIdx] = {
-                                              ...(updated[pIdx] || {
-                                                semester: '1',
-                                                description: '',
-                                                efficiency: '',
-                                                quality: '',
-                                                timeliness: '',
-                                                movs: '',
-                                                remarks: '',
-                                              }),
-                                              semester: e.target.value,
-                                            };
-                                            inlineEditForm.setData('pendingSubTargets', updated);
-                                          }}
-                                          className="w-full rounded-md border border-amber-400 p-1 text-xs bg-white dark:bg-slate-900"
-                                        >
-                                          {semesters.map((s) => (
-                                            <option key={s.value} value={s.value}>
-                                              {s.label}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </td>
-
-                                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
-                                         <AutoResizingTextarea
-                                           value={inlineEditForm.data.pendingSubTargets[pIdx]?.description || ''}
-                                           onChange={(e) => {
-                                             const updated = [...inlineEditForm.data.pendingSubTargets];
-                                             updated[pIdx] = {
-                                               ...(updated[pIdx] || {
-                                                 semester: '1',
-                                                 description: '',
-                                                 efficiency: '',
-                                                 quality: '',
-                                                 timeliness: '',
-                                                 movs: '',
-                                                 remarks: '',
-                                               }),
-                                               description: e.target.value,
-                                             };
-                                             inlineEditForm.setData('pendingSubTargets', updated);
-                                           }}
-                                           placeholder="Enter success indicator / description for new sub-target"
-                                           rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
-                                         />
-                                      </td>
-
-                                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
-                                         <AutoResizingTextarea
-                                           value={inlineEditForm.data.pendingSubTargets[pIdx]?.efficiency || ''}
-                                           onChange={(e) => {
-                                             const updated = [...inlineEditForm.data.pendingSubTargets];
-                                             updated[pIdx] = {
-                                               ...(updated[pIdx] || {
-                                                 semester: '1',
-                                                 description: '',
-                                                 efficiency: '',
-                                                 quality: '',
-                                                 timeliness: '',
-                                                 movs: '',
-                                                 remarks: '',
-                                               }),
-                                               efficiency: e.target.value,
-                                             };
-                                             inlineEditForm.setData('pendingSubTargets', updated);
-                                           }}
-                                           placeholder="Efficiency"
-                                           rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
-                                         />
-                                      </td>
-
-                                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
-                                         <AutoResizingTextarea
-                                           value={inlineEditForm.data.pendingSubTargets[pIdx]?.quality || ''}
-                                           onChange={(e) => {
-                                             const updated = [...inlineEditForm.data.pendingSubTargets];
-                                             updated[pIdx] = {
-                                               ...(updated[pIdx] || {
-                                                 semester: '1',
-                                                 description: '',
-                                                 efficiency: '',
-                                                 quality: '',
-                                                 timeliness: '',
-                                                 movs: '',
-                                                 remarks: '',
-                                               }),
-                                               quality: e.target.value,
-                                             };
-                                             inlineEditForm.setData('pendingSubTargets', updated);
-                                           }}
-                                           placeholder="Quality"
-                                           rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
-                                         />
-                                      </td>
-
-                                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
-                                         <AutoResizingTextarea
-                                           value={inlineEditForm.data.pendingSubTargets[pIdx]?.timeliness || ''}
-                                           onChange={(e) => {
-                                             const updated = [...inlineEditForm.data.pendingSubTargets];
-                                             updated[pIdx] = {
-                                               ...(updated[pIdx] || {
-                                                 semester: '1',
-                                                 description: '',
-                                                 efficiency: '',
-                                                 quality: '',
-                                                 timeliness: '',
-                                                 movs: '',
-                                                 remarks: '',
-                                               }),
-                                               timeliness: e.target.value,
-                                             };
-                                             inlineEditForm.setData('pendingSubTargets', updated);
-                                           }}
-                                           placeholder="Timeliness"
-                                           rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
-                                         />
-                                      </td>
-
-                                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
-                                         <AutoResizingTextarea
-                                           value={inlineEditForm.data.pendingSubTargets[pIdx]?.movs || ''}
-                                           onChange={(e) => {
-                                             const updated = [...inlineEditForm.data.pendingSubTargets];
-                                             updated[pIdx] = {
-                                               ...(updated[pIdx] || {
-                                                 semester: '1',
-                                                 description: '',
-                                                 efficiency: '',
-                                                 quality: '',
-                                                 timeliness: '',
-                                                 movs: '',
-                                                 remarks: '',
-                                               }),
-                                               movs: e.target.value,
-                                             };
-                                             inlineEditForm.setData('pendingSubTargets', updated);
-                                           }}
-                                           placeholder="MOVs"
-                                           rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
-                                         />
-                                      </td>
-
-                                      <td className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
-                                         <AutoResizingTextarea
-                                           value={inlineEditForm.data.pendingSubTargets[pIdx]?.remarks || ''}
-                                           onChange={(e) => {
-                                             const updated = [...inlineEditForm.data.pendingSubTargets];
-                                             updated[pIdx] = {
-                                               ...(updated[pIdx] || {
-                                                 semester: '1',
-                                                 description: '',
-                                                 efficiency: '',
-                                                 quality: '',
-                                                 timeliness: '',
-                                                 movs: '',
-                                                 remarks: '',
-                                               }),
-                                               remarks: e.target.value,
-                                             };
-                                             inlineEditForm.setData('pendingSubTargets', updated);
-                                           }}
-                                           placeholder="Remarks"
-                                           rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
-                                         />
-                                      </td>
-                                    </tr>
-                                  ))
-                                : null}
-                            </tbody>
-                          );
-                        })
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-            </table>
-          </div>
-
-          {/* Livewire Pagination Style */}
+          {/* Pagination Footer */}
           {targets.lastPage > 1 ? (
-            <nav
-              role="navigation"
-              aria-label="Pagination Navigation"
-              className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-2"
-            >
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                Showing {targets.from ?? 0} to {targets.to ?? 0} of {targets.total} records
+            <div className="border-t border-border px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-muted/20 text-xs">
+              <div className="text-muted-foreground">
+                Showing <span className="font-semibold text-foreground">{targets.from ?? 0}</span> to{' '}
+                <span className="font-semibold text-foreground">{targets.to ?? 0}</span> of{' '}
+                <span className="font-semibold text-foreground">{targets.total}</span> records
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1">
                 {targets.currentPage === 1 ? (
-                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm text-slate-400 select-none">
+                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground select-none opacity-50">
                     Previous
                   </span>
                 ) : (
@@ -1354,7 +1382,7 @@ export default function HarmonizedIpc({
                         { replace: true, preserveState: true }
                       )
                     }
-                    className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 transition-colors"
+                    className="inline-flex cursor-pointer items-center rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
                   >
                     Previous
                   </button>
@@ -1366,7 +1394,7 @@ export default function HarmonizedIpc({
                       <span
                         key={page}
                         aria-current="page"
-                        className="inline-flex min-w-10 cursor-pointer items-center justify-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs"
+                        className="inline-flex min-w-7 cursor-default items-center justify-center rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white shadow-2xs"
                       >
                         {page}
                       </span>
@@ -1383,7 +1411,7 @@ export default function HarmonizedIpc({
                           { replace: true, preserveState: true }
                         )
                       }
-                      className="inline-flex min-w-10 cursor-pointer items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 transition-colors"
+                      className="inline-flex min-w-7 cursor-pointer items-center justify-center rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
                     >
                       {page}
                     </button>
@@ -1391,7 +1419,7 @@ export default function HarmonizedIpc({
                 })}
 
                 {targets.currentPage === targets.lastPage ? (
-                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm text-slate-400 select-none">
+                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground select-none opacity-50">
                     Next
                   </span>
                 ) : (
@@ -1404,13 +1432,13 @@ export default function HarmonizedIpc({
                         { replace: true, preserveState: true }
                       )
                     }
-                    className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 transition-colors"
+                    className="inline-flex cursor-pointer items-center rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
                   >
                     Next
                   </button>
                 )}
               </div>
-            </nav>
+            </div>
           ) : null}
         </div>
 
@@ -1817,22 +1845,29 @@ export default function HarmonizedIpc({
 
         {/* Modal: Delete Sub-target */}
         {deletingSubTargetId !== null ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  Delete selected sub-target
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Are you sure you want to delete this sub-target? This action cannot be undone.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Delete Sub-target Indicator</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Are you sure you want to remove this specific indicator entry?
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setDeletingSubTargetId(null)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 transition"
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setDeletingSubTargetId(null)}
+                  className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition"
                 >
                   Cancel
                 </button>
@@ -1843,15 +1878,15 @@ export default function HarmonizedIpc({
                       onSuccess: () => setDeletingSubTargetId(null),
                     });
                   }}
-                  className="rounded-xl bg-red-600 hover:bg-red-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition"
+                  className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition"
                 >
-                  Delete Sub-target
+                  Confirm &amp; Delete
                 </button>
               </div>
             </div>
           </div>
         ) : null}
-      </section>
+      </div>
     </AppLayout>
   );
 }

@@ -20,6 +20,8 @@ import {
   Sliders,
   Copy,
   Printer,
+  Target,
+  Search,
 } from 'lucide-react';
 
 type SubTargetRow = {
@@ -605,10 +607,10 @@ export default function AnnualTarget({
 
   return (
     <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
-      <Head title="Annual Target" />
+      <Head title="Annual Target Matrix - IPCRF" />
 
-      <section
-        className="w-full space-y-6"
+      <div
+        className="space-y-3"
         onClick={() => {
           if (contextMenu) {
             setContextMenu(null);
@@ -616,233 +618,224 @@ export default function AnnualTarget({
           }
         }}
       >
-        {/* Top Header */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-              Annual Target
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Review annual target entries and manage profile information.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-            {isLocked ? (
-              <button
-                type="button"
-                onClick={() => setShowUnlockModal(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-xs font-bold text-white transition shadow-xs"
-              >
-                <Unlock className="w-4 h-4" />
-                <span>Unlock Target</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                disabled={!filterForm.data.year}
-                onClick={() => setShowLockModal(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 text-xs font-bold text-white transition shadow-xs"
-              >
-                <Check className="w-4 h-4" />
-                <span>Save and Lock Annual Target</span>
-              </button>
-            )}
-
-            {!isLocked ? (
-              <button
-                type="button"
-                onClick={openCopyTargetsModal}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400 px-4 py-2 text-xs font-bold text-white transition shadow-xs"
-              >
-                <Copy className="w-4 h-4" />
-                <span>Copy Target</span>
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-600 hover:bg-slate-700 dark:bg-slate-500 dark:hover:bg-slate-400 px-4 py-2 text-xs font-bold text-white transition shadow-xs"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Print</span>
-            </button>
-          </div>
-        </div>
-
-        {/* User Profile Card Banner */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
-          <div className="overflow-x-auto">
-            <div className="flex flex-wrap gap-8 items-center text-xs">
-              <div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Full Name</div>
-                <div className="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                  {userProfile.fullName || '-'}
-                </div>
+        {/* TOP FILTER, PROFILE & ACTIONS CARD */}
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-2xs space-y-3">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <Target className="size-4.5" />
               </div>
-
               <div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Position</div>
-                <div className="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                  {userProfile.position || '-'}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Designation</div>
-                <div className="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                  {userProfile.designation || '-'}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Division Name</div>
-                <div className="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                  {userProfile.divisionName || '-'}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Section Name</div>
-                <div className="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">
-                  {userProfile.sectionName || '-'}
-                </div>
+                <h1 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <span>Annual Performance Target Matrix</span>
+                  <span className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold px-2 py-0.2 border border-emerald-500/20">
+                    {targets.total} Total Targets
+                  </span>
+                </h1>
+                <p className="text-[11px] text-muted-foreground">
+                  Define annual commitments, KRA categories, success indicators, and semestral performance distributions.
+                </p>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Outer Card Container */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm space-y-4">
-          {/* Filters Bar */}
-          <div className="mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 items-end">
-              <div className="lg:col-span-2">
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Search
-                </label>
+            {/* ACTION BUTTONS */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
+                title="Reset all filters"
+              >
+                <RotateCcw className="size-3" />
+                <span>Reset</span>
+              </button>
+
+              {!isLocked ? (
+                <button
+                  type="button"
+                  onClick={openCopyTargetsModal}
+                  className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white px-3 text-xs font-semibold shadow-xs transition cursor-pointer"
+                >
+                  <Copy className="size-3.5" />
+                  <span>Copy Target</span>
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted transition cursor-pointer"
+              >
+                <Printer className="size-3.5" />
+                <span>Print</span>
+              </button>
+
+              {isLocked ? (
+                <button
+                  type="button"
+                  onClick={() => setShowUnlockModal(true)}
+                  className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 text-xs font-semibold text-white transition shadow-xs cursor-pointer"
+                >
+                  <Unlock className="size-3.5" />
+                  <span>Unlock Target</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!filterForm.data.year}
+                  onClick={() => setShowLockModal(true)}
+                  className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed px-3 text-xs font-semibold text-white transition shadow-xs cursor-pointer"
+                >
+                  <Check className="size-3.5" />
+                  <span>Save &amp; Lock Target</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* USER PROFILE STRIP */}
+          {userProfile && (
+            <div className="rounded-lg border border-border bg-muted/30 p-2.5 overflow-x-auto">
+              <table className="w-full border-0 border-collapse text-xs">
+                <tbody>
+                  <tr className="align-top">
+                    <td className="pr-6 whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Full Name</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile.fullName || '-'}</div>
+                    </td>
+                    <td className="pr-6 whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Position</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile.position || '-'}</div>
+                    </td>
+                    <td className="pr-6 whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Designation</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile.designation || '-'}</div>
+                    </td>
+                    <td className="pr-6 whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Division Name</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile.divisionName || '-'}</div>
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Section Name</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile.sectionName || '-'}</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* FILTERS FORM */}
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-6 items-end">
+            {/* Search Input */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-[11px] font-semibold text-muted-foreground">Search Target Content</label>
+              <div className="relative">
+                <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   value={filterForm.data.search}
                   onChange={(e) => filterForm.setData('search', e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
-                  placeholder="Search annual targets"
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
+                  placeholder="Search activity, description, outputs..."
+                  className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Year
-                </label>
-                <select
-                  value={filterForm.data.year}
-                  onChange={(e) => {
-                    filterForm.setData('year', e.target.value);
-                    submitFilters({ year: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  {years.map((y) => (
-                    <option key={y.value} value={y.value}>
-                      Year: {y.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Category
-                </label>
-                <select
-                  value={filterForm.data.category}
-                  onChange={(e) => {
-                    filterForm.setData('category', e.target.value);
-                    submitFilters({ category: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  <option value="">All categories</option>
-                  {categories.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Semester
-                </label>
-                <select
-                  value={filterForm.data.semester}
-                  onChange={(e) => {
-                    filterForm.setData('semester', e.target.value);
-                    submitFilters({ semester: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  <option value="">All semesters</option>
-                  {semesters.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Records Per Page
-                </label>
-                <select
-                  value={filterForm.data.perPage}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    filterForm.setData('perPage', val);
-                    submitFilters({ perPage: val, page: 1 });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  {perPageOptions.map((opt) => (
-                    <option key={String(opt.value)} value={String(opt.value)}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={filterForm.data.duplicates}
-                      onChange={(e) => {
-                        filterForm.setData('duplicates', e.target.checked);
-                        submitFilters({ duplicates: e.target.checked });
-                      }}
-                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-                    />
-                    <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                      Show Duplicate Target
-                    </span>
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="h-10 w-full inline-flex items-center justify-center gap-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-600 hover:bg-slate-700 text-xs font-semibold text-white transition"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Reset</span>
-                </button>
+                {filterForm.data.search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      filterForm.setData('search', '');
+                      submitFilters({ search: '' });
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </div>
             </div>
+
+            {/* Year Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Target Year</label>
+              <select
+                value={filterForm.data.year}
+                onChange={(e) => {
+                  filterForm.setData('year', e.target.value);
+                  submitFilters({ year: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                {years.map((y) => (
+                  <option key={y.value} value={y.value}>
+                    Year: {y.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">KRA Category</label>
+              <select
+                value={filterForm.data.category}
+                onChange={(e) => {
+                  filterForm.setData('category', e.target.value);
+                  submitFilters({ category: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All Categories</option>
+                {categories.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Semester Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Semester</label>
+              <select
+                value={filterForm.data.semester}
+                onChange={(e) => {
+                  filterForm.setData('semester', e.target.value);
+                  submitFilters({ semester: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All Semesters</option>
+                {semesters.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Records per page & duplicate toggle */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Per Page</label>
+              <select
+                value={filterForm.data.perPage}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  filterForm.setData('perPage', val);
+                  submitFilters({ perPage: val, page: 1 });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                {perPageOptions.map((opt) => (
+                  <option key={String(opt.value)} value={String(opt.value)}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+        </div>
 
           {/* Categorized Table Grid */}
           <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
@@ -906,17 +899,17 @@ export default function AnnualTarget({
                           });
                         }}
                       >
-                        <tr className="bg-slate-100/70 dark:bg-slate-800/70">
-                          <td colSpan={9} className="border-b border-slate-200 dark:border-slate-800 px-3 py-2.5">
-                            <div className="flex items-center justify-between font-bold text-slate-900 dark:text-slate-100">
-                              <span>{cat.label}</span>
+                        <tr className="bg-muted/70">
+                          <td colSpan={9} className="border-b border-border px-3 py-2">
+                            <div className="sticky left-3 inline-flex items-center gap-2.5 font-bold text-foreground">
+                              <span className="text-xs uppercase tracking-wide">{cat.label}</span>
                               {!isLocked ? (
                                 <button
                                   type="button"
                                   onClick={() => openAddModalForCategory(catVal)}
-                                  className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800"
+                                  className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 cursor-pointer shadow-2xs transition"
                                 >
-                                  <Plus className="w-3.5 h-3.5" />
+                                  <Plus className="size-3.5" />
                                   <span>Add Target</span>
                                 </button>
                               ) : null}
@@ -2504,22 +2497,29 @@ export default function AnnualTarget({
 
         {/* Modal: Delete Sub-target */}
         {deletingSubTargetId !== null ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  Delete selected sub-target
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Are you sure you want to delete this sub-target? This action cannot be undone.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Delete Sub-target Indicator</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Are you sure you want to remove this specific indicator entry?
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setDeletingSubTargetId(null)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 transition"
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setDeletingSubTargetId(null)}
+                  className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition"
                 >
                   Cancel
                 </button>
@@ -2530,15 +2530,14 @@ export default function AnnualTarget({
                       onSuccess: () => setDeletingSubTargetId(null),
                     });
                   }}
-                  className="rounded-xl bg-red-600 hover:bg-red-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition"
+                  className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition"
                 >
-                  Delete
+                  Confirm &amp; Delete
                 </button>
               </div>
             </div>
           </div>
         ) : null}
-      </section>
     </AppLayout>
   );
 }

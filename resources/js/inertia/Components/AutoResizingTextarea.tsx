@@ -10,9 +10,10 @@ export const adjustTextareaHeight = (el: HTMLTextAreaElement | null) => {
   const computed = window.getComputedStyle(el);
   const borderTop = parseFloat(computed.borderTopWidth) || 0;
   const borderBottom = parseFloat(computed.borderBottomWidth) || 0;
+  const minHeight = parseFloat(computed.minHeight) || 0;
   const borderHeight = borderTop + borderBottom;
 
-  const targetHeight = el.scrollHeight + borderHeight;
+  const targetHeight = Math.max(el.scrollHeight + borderHeight, minHeight);
   el.style.height = `${targetHeight}px`;
 };
 

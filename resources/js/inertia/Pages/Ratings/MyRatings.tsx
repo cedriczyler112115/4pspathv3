@@ -146,177 +146,182 @@ export default function MyRatings({
 
   return (
     <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
-      <Head title="My Ratings" />
+      <Head title="My Ratings - IPCRF" />
 
-      <section className="w-full space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">My Ratings</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Review IPCRF semester ratings and performance entries.</p>
-          </div>
-        </div>
-
-        {/* Container for User Profile Info */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full border-0 border-collapse">
-              <tbody>
-                <tr className="align-top">
-                  <td className="pr-8 whitespace-nowrap">
-                    <div className="text-[11px] leading-none text-slate-500 dark:text-slate-400">Full Name</div>
-                    <div className="mt-1 text-sm font-semibold leading-tight text-slate-900 dark:text-slate-100 uppercase">
-                      {profile?.fullName || '-'}
-                    </div>
-                  </td>
-                  <td className="pr-8 whitespace-nowrap">
-                    <div className="text-[11px] leading-none text-slate-500 dark:text-slate-400">Position</div>
-                    <div className="mt-1 text-sm font-semibold leading-tight text-slate-900 dark:text-slate-100 uppercase">
-                      {profile?.position || '-'}
-                    </div>
-                  </td>
-                  <td className="pr-8 whitespace-nowrap">
-                    <div className="text-[11px] leading-none text-slate-500 dark:text-slate-400">Designation</div>
-                    <div className="mt-1 text-sm font-semibold leading-tight text-slate-900 dark:text-slate-100 uppercase">
-                      {profile?.designation || '-'}
-                    </div>
-                  </td>
-                  <td className="pr-8 whitespace-nowrap">
-                    <div className="text-[11px] leading-none text-slate-500 dark:text-slate-400">Division Name</div>
-                    <div className="mt-1 text-sm font-semibold leading-tight text-slate-900 dark:text-slate-100 uppercase">
-                      {profile?.divisionName || '-'}
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap">
-                    <div className="text-[11px] leading-none text-slate-500 dark:text-slate-400">Section Name</div>
-                    <div className="mt-1 text-sm font-semibold leading-tight text-slate-900 dark:text-slate-100 uppercase">
-                      {profile?.sectionName || '-'}
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Filters and Table Container */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm space-y-4">
-          {/* Filters Bar */}
-          <form onSubmit={handleSearchSubmit} className="pb-4 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex flex-wrap items-end gap-3">
-              {/* Search */}
-              <div className="flex-1 min-w-[200px]">
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Search</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={form.data.search}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    placeholder="Search ratings..."
-                    className="w-full h-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 pl-3 pr-8 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                  />
-                  <button type="submit" className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                    <Search className="w-4 h-4" />
-                  </button>
-                </div>
+      <div className="space-y-3">
+        {/* TOP FILTER & USER PROFILE CARD */}
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-2xs space-y-3">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <ShieldCheck className="size-4.5" />
               </div>
-
-              {/* Year */}
-              <div className="w-32">
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Year</label>
-                <select
-                  value={form.data.year}
-                  onChange={(e) => handleYearChange(e.target.value)}
-                  className="w-full h-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                >
-                  <option value="">All years</option>
-                  {years.map((y) => (
-                    <option key={y.target_year} value={y.target_year}>
-                      {y.target_year}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Semester */}
-              <div className="w-40">
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Semester</label>
-                <select
-                  value={form.data.semester}
-                  onChange={(e) => handleSemesterChange(e.target.value)}
-                  className="w-full h-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                >
-                  <option value="">All semesters</option>
-                  {semesters.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Records Per Page */}
-              <div className="w-32">
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Records Per Page</label>
-                <select
-                  value={form.data.perPage}
-                  onChange={(e) => handlePerPageChange(e.target.value)}
-                  className="w-full h-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
-                >
-                  {perPageOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Reset Button */}
               <div>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="h-9 px-4 rounded-xl bg-slate-600 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white text-xs font-semibold flex items-center gap-1.5 transition"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Reset</span>
-                </button>
+                <h1 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <span>My Performance Ratings (IPCRF)</span>
+                  <span className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold px-2 py-0.2 border border-emerald-500/20">
+                    {ratings.total} Total Ratings
+                  </span>
+                </h1>
+                <p className="text-[11px] text-muted-foreground">
+                  Review IPCRF semester ratings, performance achievements, and verification status.
+                </p>
               </div>
             </div>
-          </form>
 
-          {/* Table for ipc_semester Data */}
-          <div className="w-full overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full min-w-[900px] table-fixed border-separate border-spacing-0 text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/60 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                <tr>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center whitespace-nowrap" style={{ width: '50px' }}>
-                    #
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap" style={{ width: '90px' }}>
-                    Year
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap" style={{ width: '130px' }}>
-                    Semester
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap" style={{ width: '130px' }}>
-                    Final Rating
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap" style={{ width: '160px' }}>
-                    Adjectival Rating
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-4 py-3 text-center whitespace-nowrap" style={{ width: '220px' }}>
-                    Status
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap" style={{ width: '160px' }}>
-                    Date Created
-                  </th>
-                  <th className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 text-center whitespace-nowrap" style={{ width: '120px' }}>
-                    Action
-                  </th>
+            {/* ACTIONS */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
+                title="Reset all filters"
+              >
+                <RotateCcw className="size-3" />
+                <span>Reset</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSearchSubmit}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 text-white px-3 text-xs font-semibold hover:bg-emerald-700 transition shadow-xs cursor-pointer"
+              >
+                <Search className="size-3.5" />
+                <span>Apply Filters</span>
+              </button>
+            </div>
+          </div>
+
+          {/* USER PROFILE STRIP */}
+          {profile && (
+            <div className="rounded-lg border border-border bg-muted/30 p-2.5 overflow-x-auto">
+              <table className="w-full border-0 border-collapse text-xs">
+                <tbody>
+                  <tr className="align-top">
+                    <td className="pr-6 whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Full Name</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{profile.fullName || '-'}</div>
+                    </td>
+                    <td className="pr-6 whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Position</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{profile.position || '-'}</div>
+                    </td>
+                    <td className="pr-6 whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Designation</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{profile.designation || '-'}</div>
+                    </td>
+                    <td className="pr-6 whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Division Name</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{profile.divisionName || '-'}</div>
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">Section Name</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground">{profile.sectionName || '-'}</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* FILTERS FORM */}
+          <form onSubmit={handleSearchSubmit} className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Search Input */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Search by Keywords</label>
+              <div className="relative">
+                <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={form.data.search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Search remarks, ratings..."
+                  className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
+                />
+                {form.data.search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      form.setData('search', '');
+                      applyFilters({ search: '' });
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Year Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Target Year</label>
+              <select
+                value={form.data.year}
+                onChange={(e) => handleYearChange(e.target.value)}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All Years ({years.length})</option>
+                {years.map((y) => (
+                  <option key={y.target_year} value={y.target_year}>
+                    {y.target_year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Semester Selector */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Semester Period</label>
+              <select
+                value={form.data.semester}
+                onChange={(e) => handleSemesterChange(e.target.value)}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All Semesters</option>
+                {semesters.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Records per page */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Per Page</label>
+              <select
+                value={form.data.perPage}
+                onChange={(e) => handlePerPageChange(e.target.value)}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                {perPageOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </form>
+        </div>
+
+        {/* RESULTS TABLE CARD */}
+        <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[860px] border-collapse text-xs text-left">
+              <thead>
+                <tr className="bg-muted/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="px-3 py-2 text-center w-12 border-r border-border">#</th>
+                  <th className="px-3 py-2 border-r border-border w-24">Year</th>
+                  <th className="px-3 py-2 border-r border-border w-32">Semester</th>
+                  <th className="px-3 py-2 border-r border-border w-28">Final Rating</th>
+                  <th className="px-3 py-2 border-r border-border w-36">Adjectival</th>
+                  <th className="px-3 py-2 border-r border-border text-center">Status</th>
+                  <th className="px-3 py-2 border-r border-border">Date Created</th>
+                  <th className="px-3 py-2 text-center w-20">Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {ratings.data.length > 0 ? (
                   ratings.data.map((rating, index) => {
                     const isVerified = Boolean(rating.dateVerified);
@@ -324,68 +329,66 @@ export default function MyRatings({
                     const isOngoingSelfRating = rating.lock === 1;
 
                     return (
-                      <tr key={rating.id} className="border-t border-slate-200/60 dark:border-slate-800/60 text-sm hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition">
-                        <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center text-slate-500 dark:text-slate-400 align-middle">
+                      <tr key={rating.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="px-3 py-2 text-center font-mono text-[11px] text-muted-foreground border-r border-border">
                           {(ratings.from ?? 1) + index}
                         </td>
-                        <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 font-semibold text-slate-900 dark:text-slate-100 align-middle">
+                        <td className="px-3 py-2 font-bold text-foreground border-r border-border">
                           {rating.year}
                         </td>
-                        <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 font-medium align-middle text-slate-800 dark:text-slate-200">
+                        <td className="px-3 py-2 font-medium text-foreground border-r border-border">
                           {rating.semester === 1 ? '1st Semester' : rating.semester === 2 ? '2nd Semester' : rating.semester}
                         </td>
-                        <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 font-mono align-middle text-slate-800 dark:text-slate-200">
+                        <td className="px-3 py-2 font-mono font-bold text-foreground border-r border-border">
                           {rating.finalRating || '0.00000'}
                         </td>
-                        <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-middle text-slate-800 dark:text-slate-200">
+                        <td className="px-3 py-2 font-semibold text-emerald-600 dark:text-emerald-400 border-r border-border">
                           {rating.adjectivalRating || '-'}
                         </td>
-                        <td className="border-b border-r border-slate-200 dark:border-slate-800 px-4 py-3 align-middle whitespace-nowrap text-center">
+                        <td className="px-3 py-2 text-center border-r border-border">
                           {isVerified ? (
-                            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                              <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              <ShieldCheck className="size-3" />
                               <span>{formatDate(rating.dateVerified)}</span>
-                            </div>
+                            </span>
                           ) : isWaitingVerification ? (
-                            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                              <Clock className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                              <Clock className="size-3" />
                               <span>Waiting for Verification</span>
-                            </div>
+                            </span>
                           ) : isOngoingSelfRating ? (
-                            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400">
-                              <Edit3 className="w-4 h-4 shrink-0 text-sky-600 dark:text-sky-400" />
-                              <span>On-going for Self-Rating</span>
-                            </div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-700 dark:text-sky-300 bg-sky-500/10 px-2 py-0.5 rounded-full border border-sky-500/20">
+                              <Edit3 className="size-3" />
+                              <span>On-going Self Rating</span>
+                            </span>
                           ) : (
-                            <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                              <Flag className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                              <span>On-going for Checkpoint</span>
-                            </div>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                              <Flag className="size-3" />
+                              <span>On-going Checkpoint</span>
+                            </span>
                           )}
                         </td>
-                        <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-xs text-slate-500 dark:text-slate-400 align-middle">
+                        <td className="px-3 py-2 text-muted-foreground font-mono text-[11px] border-r border-border">
                           {formatDate(rating.dateCreated)}
                         </td>
-                        <td className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 align-middle whitespace-nowrap text-center">
-                          <div className="inline-flex items-center gap-1.5 justify-center">
-                            {/* View Button */}
+                        <td className="px-3 py-2 text-center">
+                          <div className="inline-flex items-center gap-1 justify-center">
                             <Link
                               href={`/inertia/ipcrf/myratings/${rating.id}/sem-target`}
-                              title="View"
-                              className="p-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                              title="View Semestral Target"
+                              className="p-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition"
                             >
-                              <Eye className="w-4 h-4" />
+                              <Eye className="size-3.5" />
                             </Link>
 
-                            {/* Remove Button */}
                             {!isWaitingVerification && !isVerified ? (
                               <button
                                 type="button"
                                 title="Remove"
                                 onClick={() => confirmDelete(rating.id)}
-                                className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition"
+                                className="p-1 rounded-md bg-rose-600 text-white hover:bg-rose-700 transition cursor-pointer"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="size-3.5" />
                               </button>
                             ) : null}
                           </div>
@@ -395,8 +398,16 @@ export default function MyRatings({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="border-b border-slate-200 dark:border-slate-800 px-3 py-10 text-center text-slate-500 dark:text-slate-400">
-                      No rating records found in ipc_semester.
+                    <td colSpan={8} className="px-4 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="size-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                          <ShieldCheck className="size-5" />
+                        </div>
+                        <p className="text-xs font-bold text-foreground">No ratings found</p>
+                        <p className="text-[11px] text-muted-foreground max-w-sm">
+                          No performance commitment records matched your query.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -404,21 +415,22 @@ export default function MyRatings({
             </table>
           </div>
 
-          {/* Pagination Bar */}
-          {ratings.links && ratings.links.length > 3 && (
-            <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-              <div>
-                Showing <span className="font-semibold text-slate-800 dark:text-slate-200">{ratings.from ?? 0}</span> to{' '}
-                <span className="font-semibold text-slate-800 dark:text-slate-200">{ratings.to ?? 0}</span> of{' '}
-                <span className="font-semibold text-slate-800 dark:text-slate-200">{ratings.total}</span> results
-              </div>
-              <div className="flex flex-wrap gap-1">
+          {/* PAGINATION FOOTER */}
+          <div className="border-t border-border px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-muted/20">
+            <div className="text-[11px] text-muted-foreground">
+              Showing <span className="font-bold text-foreground">{ratings.from ?? 0}</span> to{' '}
+              <span className="font-bold text-foreground">{ratings.to ?? 0}</span> of{' '}
+              <span className="font-bold text-foreground">{ratings.total}</span> rating periods
+            </div>
+
+            {ratings.links && ratings.links.length > 3 && (
+              <div className="flex items-center gap-1 flex-wrap">
                 {ratings.links.map((link, idx) => {
                   if (!link.url) {
                     return (
                       <span
                         key={idx}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed"
+                        className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none"
                         dangerouslySetInnerHTML={{ __html: link.label }}
                       />
                     );
@@ -430,51 +442,51 @@ export default function MyRatings({
                       href={link.url}
                       preserveState
                       preserveScroll
-                      className={`px-3 py-1.5 rounded-lg border transition ${
+                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
                         link.active
-                          ? 'bg-slate-900 text-white border-slate-900 dark:bg-emerald-600 dark:border-emerald-600 font-semibold'
-                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                          ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                          : 'border border-input bg-background text-foreground hover:bg-muted'
                       }`}
                       dangerouslySetInnerHTML={{ __html: link.label }}
                     />
                   );
                 })}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Delete Confirmation Modal */}
         {deletingId !== null && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-            <div className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-5">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400">
-                    <AlertTriangle className="w-6 h-6" />
+                  <div className="p-2 rounded-lg bg-rose-500/10 text-rose-600">
+                    <AlertTriangle className="size-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Remove Semester Rating Record</h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Are you sure you want to remove this semester rating record from ipc_semester? This action cannot be undone.
+                    <h3 className="text-sm font-bold text-foreground">Remove Rating Record</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Are you sure you want to remove this rating period? This action cannot be undone.
                     </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={cancelDelete}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg transition"
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="size-4" />
                 </button>
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
                 <button
                   type="button"
                   onClick={cancelDelete}
                   disabled={isDeleting}
-                  className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                  className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition"
                 >
                   Cancel
                 </button>
@@ -482,15 +494,15 @@ export default function MyRatings({
                   type="button"
                   onClick={handleDelete}
                   disabled={isDeleting}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm transition flex items-center gap-2"
+                  className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-2"
                 >
-                  {isDeleting ? 'Removing...' : 'Confirm and Remove'}
+                  {isDeleting ? 'Removing...' : 'Confirm & Remove'}
                 </button>
               </div>
             </div>
           </div>
         )}
-      </section>
+      </div>
     </AppLayout>
   );
 }

@@ -74,17 +74,17 @@ input[data-flux-control],
 textarea[data-flux-control],
 select[data-flux-control],
 button[data-flux-control] {
-    @apply text-sm;
+    @apply text-xs;
 }
 
 input[data-flux-control],
 textarea[data-flux-control],
 select[data-flux-control] {
-    @apply min-h-8 px-2.5 py-1.5;
+    @apply min-h-7 px-2 py-1;
 }
 
 button[data-flux-control] {
-    @apply min-h-8 px-2.5 py-1.5;
+    @apply min-h-7 px-2.5 py-1;
 }
 
 input:focus[data-flux-control],
@@ -95,7 +95,7 @@ select:focus[data-flux-control] {
 
 table th,
 table td {
-    @apply px-2.5 py-1.5;
+    @apply px-2 py-1 text-xs;
 }
 
 /* \[:where(&)\]:size-4 {

@@ -1,7 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
-import { Pencil, Trash2, Plus, RotateCcw } from 'lucide-react';
+import { Pencil, Trash2, Plus, RotateCcw, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 type PositionRow = {
   id: number;
@@ -110,183 +110,199 @@ export default function HarmonizedStaff({
 
   return (
     <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
-      <Head title="Harmonized Staff" />
+      <Head title="Harmonized Staff - Libraries" />
 
-      <section className="w-full space-y-6">
-        {/* Livewire Header Style */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-              Harmonized Staff
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Manage positions and roles for harmonized staff.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Position</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Outer Card Container */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm space-y-4">
-          {/* Filter Bar */}
-          <div className="mb-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4 items-end">
+      <div className="space-y-3">
+        {/* TOP FILTER & ACTION CARD */}
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-2xs">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-3 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <Plus className="size-4.5" />
+              </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Search
-                </label>
+                <h1 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <span>Harmonized Staff Library</span>
+                  <span className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold px-2 py-0.2 border border-emerald-500/20">
+                    {positions.total} Total Positions
+                  </span>
+                </h1>
+                <p className="text-[11px] text-muted-foreground">
+                  Manage positions, role designations, and library sorting configurations for harmonized staff.
+                </p>
+              </div>
+            </div>
+
+            {/* ACTIONS */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
+                title="Reset all filters"
+              >
+                <RotateCcw className="size-3" />
+                <span>Reset</span>
+              </button>
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 text-white px-3 text-xs font-semibold hover:bg-emerald-700 transition shadow-xs cursor-pointer"
+              >
+                <Plus className="size-3.5" />
+                <span>Add Position</span>
+              </button>
+            </div>
+          </div>
+
+          {/* FILTERS FORM */}
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Search Input */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-[11px] font-semibold text-muted-foreground">Search by Position Name</label>
+              <div className="relative">
+                <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   value={filterForm.data.search}
                   onChange={(e) => filterForm.setData('search', e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
-                  placeholder="Search positions..."
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
+                  placeholder="Type position title..."
+                  className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Records Per Page
-                </label>
-                <select
-                  value={filterForm.data.perPage}
-                  onChange={(e) => {
-                    filterForm.setData('perPage', e.target.value);
-                    submitFilters({ perPage: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  {perPageOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="h-10 inline-flex items-center gap-1.5 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Reset Filters</span>
-                </button>
+                {filterForm.data.search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      filterForm.setData('search', '');
+                      submitFilters({ search: '' });
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
               </div>
             </div>
-          </div>
 
-          {/* Table Matching Livewire Bordered Grid Exact Layout */}
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full border-separate border-spacing-0 text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                <tr>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center first:rounded-tl-xl w-[60px]">
-                    #
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
-                    Position Name
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center whitespace-nowrap w-[120px]">
-                    Sort Order
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center whitespace-nowrap w-[120px]">
-                    Status
-                  </th>
-                  <th className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 text-center whitespace-nowrap last:rounded-tr-xl w-[120px]">
-                    Action
-                  </th>
+            {/* Records per page */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Per Page</label>
+              <select
+                value={filterForm.data.perPage}
+                onChange={(e) => {
+                  filterForm.setData('perPage', e.target.value);
+                  submitFilters({ perPage: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                {perPageOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* RESULTS TABLE CARD */}
+        <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[650px] border-collapse text-xs text-left">
+              <thead>
+                <tr className="bg-muted/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="px-3 py-2 text-center w-12 border-r border-border">#</th>
+                  <th className="px-3 py-2 border-r border-border">Position Name</th>
+                  <th className="px-3 py-2 text-center w-28 border-r border-border">Sort Order</th>
+                  <th className="px-3 py-2 text-center w-28 border-r border-border">Status</th>
+                  <th className="px-3 py-2 text-center w-24">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {positions.data.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="border-b border-slate-200 dark:border-slate-800 px-3 py-10 text-center text-slate-500 dark:text-slate-400">
-                      No positions found.
-                    </td>
-                  </tr>
-                ) : (
+              <tbody className="divide-y divide-border">
+                {positions.data.length > 0 ? (
                   positions.data.map((pos, index) => (
-                    <tr key={pos.id} className="border-t border-slate-200 dark:border-slate-800 text-sm hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center text-slate-500">
+                    <tr key={pos.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-3 py-2 text-center font-mono text-[11px] text-muted-foreground border-r border-border">
                         {(positions.from ?? 1) + index}
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 font-medium text-slate-900 dark:text-slate-100">
+                      <td className="px-3 py-2 font-bold text-foreground border-r border-border">
                         {pos.name}
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center text-slate-700 dark:text-slate-300">
+                      <td className="px-3 py-2 text-center font-mono text-muted-foreground border-r border-border">
                         {pos.sortOrder}
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center">
+                      <td className="px-3 py-2 text-center border-r border-border">
                         {pos.isActive ? (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                          <span className="inline-flex items-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-bold px-2 py-0.2 border border-emerald-500/20">
                             Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-500 dark:text-slate-400">
+                          <span className="inline-flex items-center rounded-full bg-muted text-muted-foreground font-mono text-[10px] font-bold px-2 py-0.2 border border-border">
                             Inactive
                           </span>
                         )}
                       </td>
 
-                      <td className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      <td className="px-3 py-2 text-center">
+                        <div className="inline-flex items-center justify-center gap-1">
                           <button
                             type="button"
                             onClick={() => openEditModal(pos)}
-                            aria-label="Edit"
-                            className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                            title="Edit"
+                            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                           >
-                            <Pencil className="w-3.5 h-3.5" />
+                            <Pencil className="size-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setDeletingId(pos.id)}
-                            aria-label="Delete"
-                            className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 transition"
+                            title="Delete"
+                            className="p-1 rounded-md text-rose-600 hover:bg-rose-500/10 transition cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="size-3.5" />
                           </button>
                         </div>
                       </td>
                     </tr>
                   ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="size-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                          <Search className="size-5" />
+                        </div>
+                        <p className="text-xs font-bold text-foreground">No positions found</p>
+                        <p className="text-[11px] text-muted-foreground max-w-sm">
+                          No staff position records matched your filter criteria.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Livewire Pagination Style Matching vendor.pagination.users-pagination */}
-          {positions.lastPage > 1 ? (
-            <nav
-              role="navigation"
-              aria-label="Pagination Navigation"
-              className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-2"
-            >
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                Showing {positions.from ?? 0} to {positions.to ?? 0} of {positions.total} records
+          {/* PAGINATION FOOTER */}
+          {positions.lastPage > 1 && (
+            <div className="border-t border-border px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-muted/20">
+              <div className="text-[11px] text-muted-foreground">
+                Showing <span className="font-bold text-foreground">{positions.from ?? 0}</span> to{' '}
+                <span className="font-bold text-foreground">{positions.to ?? 0}</span> of{' '}
+                <span className="font-bold text-foreground">{positions.total}</span> records
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                {/* Previous Button */}
+              <div className="flex items-center gap-1 flex-wrap">
+                {/* Previous */}
                 {positions.currentPage === 1 ? (
-                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm text-slate-400 select-none">
-                    Previous
+                  <span className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none">
+                    <ChevronLeft className="size-3.5" />
                   </span>
                 ) : (
                   <button
@@ -298,25 +314,15 @@ export default function HarmonizedStaff({
                         { replace: true, preserveState: true }
                       )
                     }
-                    className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-colors"
+                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
                   >
-                    Previous
+                    <ChevronLeft className="size-3.5" />
                   </button>
                 )}
 
-                {/* Page Numbers */}
+                {/* Pages */}
                 {Array.from({ length: positions.lastPage }, (_, i) => i + 1).map((page) => {
-                  if (page === positions.currentPage) {
-                    return (
-                      <span
-                        key={page}
-                        aria-current="page"
-                        className="inline-flex min-w-10 cursor-pointer items-center justify-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs"
-                      >
-                        {page}
-                      </span>
-                    );
-                  }
+                  const isActive = page === positions.currentPage;
                   return (
                     <button
                       key={page}
@@ -328,17 +334,21 @@ export default function HarmonizedStaff({
                           { replace: true, preserveState: true }
                         )
                       }
-                      className="inline-flex min-w-10 cursor-pointer items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-colors"
+                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
+                        isActive
+                          ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                          : 'border border-input bg-background text-foreground hover:bg-muted'
+                      }`}
                     >
                       {page}
                     </button>
                   );
                 })}
 
-                {/* Next Button */}
+                {/* Next */}
                 {positions.currentPage === positions.lastPage ? (
-                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm text-slate-400 select-none">
-                    Next
+                  <span className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none">
+                    <ChevronRight className="size-3.5" />
                   </span>
                 ) : (
                   <button
@@ -350,34 +360,43 @@ export default function HarmonizedStaff({
                         { replace: true, preserveState: true }
                       )
                     }
-                    className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-colors"
+                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
                   >
-                    Next
+                    <ChevronRight className="size-3.5" />
                   </button>
                 )}
               </div>
-            </nav>
-          ) : null}
+            </div>
+          )}
         </div>
 
         {/* Modal: Add/Edit Position */}
         {showModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  {editingId ? 'Edit Position' : 'Add Position'}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {editingId
-                    ? 'Update position details below.'
-                    : 'Enter position details to add a new record.'}
-                </p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">
+                    {editingId ? 'Edit Position' : 'Add Position'}
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {editingId
+                      ? 'Update position library details.'
+                      : 'Enter position library details.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
 
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              <form onSubmit={handleFormSubmit} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-muted-foreground">
                     Position Name
                   </label>
                   <input
@@ -385,13 +404,13 @@ export default function HarmonizedStaff({
                     value={positionForm.data.name}
                     onChange={(e) => positionForm.setData('name', e.target.value)}
                     placeholder="e.g., Provincial Link"
-                    className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                    className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-muted-foreground">
                     Sort Order
                   </label>
                   <input
@@ -399,37 +418,37 @@ export default function HarmonizedStaff({
                     min="0"
                     value={positionForm.data.sortOrder}
                     onChange={(e) => positionForm.setData('sortOrder', Number(e.target.value))}
-                    className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                    className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-muted-foreground">
                     Status
                   </label>
                   <select
                     value={positionForm.data.isActive ? '1' : '0'}
                     onChange={(e) => positionForm.setData('isActive', e.target.value === '1')}
-                    className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                    className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                   >
                     <option value="1">Active</option>
                     <option value="0">Inactive</option>
                   </select>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-border">
                   <button
                     type="button"
                     onClick={() => setShowModal(false)}
-                    className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                    className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={positionForm.processing}
-                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition"
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition"
                   >
                     {editingId ? 'Save Changes' : 'Create Position'}
                   </button>
@@ -441,20 +460,29 @@ export default function HarmonizedStaff({
 
         {/* Modal: Delete Position */}
         {deletingId !== null ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Delete Position</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Are you sure you want to delete this position? This action cannot be undone.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Delete Position</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Are you sure you want to delete this position record? This action cannot be undone.
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => setDeletingId(null)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setDeletingId(null)}
+                  className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition"
                 >
                   Cancel
                 </button>
@@ -465,15 +493,15 @@ export default function HarmonizedStaff({
                       onSuccess: () => setDeletingId(null),
                     });
                   }}
-                  className="rounded-xl bg-red-600 hover:bg-red-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition"
+                  className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition"
                 >
-                  Delete
+                  Confirm &amp; Delete
                 </button>
               </div>
             </div>
           </div>
         ) : null}
-      </section>
+      </div>
     </AppLayout>
   );
 }

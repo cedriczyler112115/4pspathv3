@@ -192,18 +192,18 @@
             @if ($isRowLocked)
                 <td data-col-type="actual-accomp" class="border-b border-r border-border px-3 py-3 align-top text-xs"
                     style="{{ $cellStyle }}">
-                    <div class="flex h-full min-h-[180px] flex-col">
-                        <div class="min-h-[60px] space-y-2">
+                    <div class="flex h-full min-h-[200px] flex-col">
+                        <div class="min-h-[200px] space-y-2">
                             @if ($semLock === 2)
-                                <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[60px]"
+                                <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]"
                                     x-text="accomp || '-'">
                                     {!! nl2br(e($formatValue($scores[$semItemId]['actual_accomp'] ?? $row['actual_accomp'] ?? ''))) !!}
                                 </div>
                             @else
                                 <textarea data-autosize="true" data-field="actual_accomp" x-model="accomp"
                                     x-on:input="scheduleSave('actual_accomp')" x-on:change="saveField('actual_accomp')"
-                                    x-on:blur="saveField('actual_accomp')" rows="3" placeholder="Actual accomplishment..."
-                                    class="{{ $textareaClass }} min-h-[60px]" style="resize:none; min-height: 60px;"></textarea>
+                                    x-on:blur="saveField('actual_accomp')" rows="6" placeholder="Actual accomplishment..."
+                                    class="{{ $textareaClass }} min-h-[200px]" style="resize:none; min-height: 200px;"></textarea>
                             @endif
                         </div>
                         <div class="flex items-center justify-between gap-3 border-t border-border/60 pt-2">
@@ -560,14 +560,14 @@
             <td class="border-b border-r border-border px-3 py-3 align-top text-xs" style="{{ $cellStyle }}">
                 @if ($isRowLocked)
                     @if ($semLock === 2)
-                        <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[60px]" x-text="movs || '-'">
+                        <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]" x-text="movs || '-'">
                             {!! nl2br(e($formatValue($scores[$semItemId]['target_movs'] ?? $row['target_movs'] ?? ''))) !!}
                         </div>
                     @else
                         <textarea data-autosize="true" data-field="target_movs" x-model="movs"
                             x-on:input="scheduleSave('target_movs')" x-on:change="saveField('target_movs')"
-                            x-on:blur="saveField('target_movs')" rows="3" placeholder="MOVs..."
-                            class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
+                            x-on:blur="saveField('target_movs')" rows="6" placeholder="MOVs..."
+                            class="{{ $textareaClass }} min-h-[200px]" style="resize:none; min-height: 200px;"></textarea>
                     @endif
                 @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.movs" rows="1"
@@ -579,15 +579,15 @@
             <td class="border-b border-l border-border px-3 py-3 align-top text-xs" style="{{ $lastCellStyle }}">
                 @if ($isRowLocked)
                     @if ($semLock === 2)
-                        <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[60px]"
+                        <div class="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]"
                             x-text="remarks || '-'">
                             {!! nl2br(e($formatValue($scores[$semItemId]['target_remarks'] ?? $row['target_remarks'] ?? ''))) !!}
                         </div>
                     @else
                         <textarea data-autosize="true" data-field="target_remarks" x-model="remarks"
                             x-on:input="scheduleSave('target_remarks')" x-on:change="saveField('target_remarks')"
-                            x-on:blur="saveField('target_remarks')" rows="3" placeholder="Remarks..."
-                            class="{{ $textareaClass }} min-h-[100px]" style="resize:none; min-height: 100px;"></textarea>
+                            x-on:blur="saveField('target_remarks')" rows="6" placeholder="Remarks..."
+                            class="{{ $textareaClass }} min-h-[200px]" style="resize:none; min-height: 200px;"></textarea>
                     @endif
                 @elseif ($editing && !$creatingSubTarget && isset($editRows[$semItemId]))
                     <textarea data-autosize="true" wire:model="editRows.{{ $semItemId }}.remarks" rows="1"

@@ -26,7 +26,8 @@ export function toast(options: { text: string; variant?: ToastVariant; title?: s
 }
 
 export default function ToastContainer() {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [activeToast, setActiveToast] = useState<ToastMessage | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { props } = usePage<{
     flash?: {
       success?: string | null;
@@ -40,22 +41,29 @@ export default function ToastContainer() {
     'flash.error'?: string | null;
   }>();
 
-  const lastFlashKeyRef = useRef<string>('');
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const dismissToast = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    setActiveToast(null);
   };
 
-  const addToast = (variant: ToastVariant, text: string, title?: string) => {
+  const showToast = (variant: ToastVariant, text: string, title?: string) => {
     if (!text || !text.trim()) return;
+
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
     const id = Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
-    const newToast: ToastMessage = { id, variant, text, title };
+    setActiveToast({ id, variant, text, title });
 
-    setToasts((prev) => [...prev, newToast]);
-
-    setTimeout(() => {
-      removeToast(id);
-    }, 4500);
+    timerRef.current = setTimeout(() => {
+      setActiveToast(null);
+      timerRef.current = null;
+    }, 3500);
   };
 
   // Listen to Inertia flash page props
@@ -66,16 +74,10 @@ export default function ToastContainer() {
     const warningMsg = flash.warning;
     const infoMsg = flash.info || flash.message;
 
-    const flashKey = `${successMsg || ''}|${errorMsg || ''}|${warningMsg || ''}|${infoMsg || ''}`;
-
-    if (flashKey !== '|||' && flashKey !== lastFlashKeyRef.current) {
-      lastFlashKeyRef.current = flashKey;
-
-      if (successMsg) addToast('success', successMsg);
-      if (errorMsg) addToast('danger', errorMsg);
-      if (warningMsg) addToast('warning', warningMsg);
-      if (infoMsg) addToast('info', infoMsg);
-    }
+    if (successMsg) showToast('success', successMsg);
+    else if (errorMsg) showToast('danger', errorMsg);
+    else if (warningMsg) showToast('warning', warningMsg);
+    else if (infoMsg) showToast('info', infoMsg);
   }, [props.flash, props['flash.success'], props['flash.error']]);
 
   // Listen to custom window events for manual toast trigger
@@ -84,72 +86,71 @@ export default function ToastContainer() {
       const customEvent = event as CustomEvent<{ text: string; variant?: ToastVariant; title?: string }>;
       if (customEvent.detail) {
         const { text, variant = 'success', title } = customEvent.detail;
-        addToast(variant, text, title);
+        showToast(variant, text, title);
       }
     };
 
     window.addEventListener('inertia-toast', handleCustomToast);
     return () => {
       window.removeEventListener('inertia-toast', handleCustomToast);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
     };
   }, []);
 
-  if (toasts.length === 0) {
+  if (!activeToast) {
     return null;
   }
+
+  const isSuccess = activeToast.variant === 'success';
+  const isDanger = activeToast.variant === 'danger' || activeToast.variant === 'error';
+  const isWarning = activeToast.variant === 'warning';
+  const isInfo = activeToast.variant === 'info';
 
   return (
     <div
       aria-live="polite"
-      className="fixed top-4 right-4 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"
+      className="fixed top-3 right-3 z-[9999] max-w-sm w-full pointer-events-none px-3 sm:px-0"
     >
-      {toasts.map((toastItem) => {
-        const isSuccess = toastItem.variant === 'success';
-        const isDanger = toastItem.variant === 'danger' || toastItem.variant === 'error';
-        const isWarning = toastItem.variant === 'warning';
-        const isInfo = toastItem.variant === 'info';
+      <div
+        key={activeToast.id}
+        className={`pointer-events-auto flex items-start gap-2.5 p-3 rounded-xl border shadow-lg backdrop-blur-md transition-all duration-200 animate-in fade-in slide-in-from-top-2 ${
+          isSuccess
+            ? 'bg-emerald-50/95 dark:bg-emerald-950/90 border-emerald-300 dark:border-emerald-700/60 text-emerald-950 dark:text-emerald-50 shadow-emerald-500/10'
+            : isDanger
+            ? 'bg-rose-50/95 dark:bg-rose-950/90 border-rose-300 dark:border-rose-700/60 text-rose-950 dark:text-rose-50 shadow-rose-500/10'
+            : isWarning
+            ? 'bg-amber-50/95 dark:bg-amber-950/90 border-amber-300 dark:border-amber-700/60 text-amber-950 dark:text-amber-50 shadow-amber-500/10'
+            : 'bg-sky-50/95 dark:bg-sky-950/90 border-sky-300 dark:border-sky-700/60 text-sky-950 dark:text-sky-50 shadow-sky-500/10'
+        }`}
+      >
+        {/* Icon */}
+        <div className="shrink-0 mt-0.5">
+          {isSuccess && <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />}
+          {isDanger && <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />}
+          {isWarning && <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />}
+          {isInfo && <Info className="w-4 h-4 text-sky-600 dark:text-sky-400" />}
+        </div>
 
-        return (
-          <div
-            key={toastItem.id}
-            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border shadow-lg backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-top-4 ${
-              isSuccess
-                ? 'bg-emerald-50/95 dark:bg-emerald-950/90 border-emerald-300 dark:border-emerald-700/60 text-emerald-950 dark:text-emerald-50 shadow-emerald-500/10'
-                : isDanger
-                ? 'bg-rose-50/95 dark:bg-rose-950/90 border-rose-300 dark:border-rose-700/60 text-rose-950 dark:text-rose-50 shadow-rose-500/10'
-                : isWarning
-                ? 'bg-amber-50/95 dark:bg-amber-950/90 border-amber-300 dark:border-amber-700/60 text-amber-950 dark:text-amber-50 shadow-amber-500/10'
-                : 'bg-sky-50/95 dark:bg-sky-950/90 border-sky-300 dark:border-sky-700/60 text-sky-950 dark:text-sky-50 shadow-sky-500/10'
-            }`}
-          >
-            {/* Icon */}
-            <div className="shrink-0 mt-0.5">
-              {isSuccess && <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
-              {isDanger && <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />}
-              {isWarning && <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />}
-              {isInfo && <Info className="w-5 h-5 text-sky-600 dark:text-sky-400" />}
-            </div>
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {activeToast.title && (
+            <h4 className="text-[11px] font-bold uppercase tracking-wider mb-0.5 opacity-90">{activeToast.title}</h4>
+          )}
+          <p className="text-xs font-semibold leading-snug break-words">{activeToast.text}</p>
+        </div>
 
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-              {toastItem.title && (
-                <h4 className="text-xs font-bold uppercase tracking-wider mb-0.5 opacity-90">{toastItem.title}</h4>
-              )}
-              <p className="text-xs font-semibold leading-snug break-words">{toastItem.text}</p>
-            </div>
-
-            {/* Dismiss Button */}
-            <button
-              type="button"
-              onClick={() => removeToast(toastItem.id)}
-              className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-0.5 rounded-lg transition"
-              aria-label="Close notification"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        );
-      })}
+        {/* Dismiss Button */}
+        <button
+          type="button"
+          onClick={dismissToast}
+          className="shrink-0 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-0.5 rounded-lg transition"
+          aria-label="Close notification"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
   );
 }

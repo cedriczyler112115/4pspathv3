@@ -88,6 +88,7 @@ class PrintCheckpointController extends Controller
                 'h.sem_target_id',
                 'h.sem_item_id',
                 'h.field_name',
+                'h.action_type',
                 'h.original_value',
                 'h.old_value',
                 'h.new_value',
@@ -143,20 +144,27 @@ class PrintCheckpointController extends Controller
                 }
             }
 
-            $isDeletedTarget = $targetRecords->contains(fn ($r) => $r->field_name === 'deleted');
-            $isNewlyAdded = $targetRecords->contains(fn ($r) => $r->field_name === 'created' && (empty($r->sem_item_id) || $r->sem_item_id == 0));
+            // Check if the entire target was deleted
+            $isTargetInDatabase = in_array((int) $semTargetId, $activeTargetIds, true);
+            $hasTargetLevelDeletedRecord = $targetRecords->contains(function ($r) {
+                return (empty($r->sem_item_id) || (int) $r->sem_item_id === 0)
+                    && ($r->field_name === 'deleted' || $r->new_value === 'For Deletion');
+            });
+
+            $isDeletedTarget = (! $isTargetInDatabase) || $hasTargetLevelDeletedRecord;
+            $isNewlyAdded = (! $isDeletedTarget) && $targetRecords->contains(fn ($r) => $r->field_name === 'created' && (empty($r->sem_item_id) || (int) $r->sem_item_id === 0));
             $firstRec = $targetRecords->first();
 
             $actRec = $targetRecords->firstWhere('field_name', 'activity');
             $activityTitle = (string) ($firstRec->current_activity ?: ($actRec ? ($actRec->old_value ?: ($actRec->original_value ?: 'Target Entry')) : 'Target Entry'));
 
             // 1. Target Level Fields (sem_item_id null or 0)
-            $targetLevelRecords = $targetRecords->filter(fn ($r) => empty($r->sem_item_id) || $r->sem_item_id == 0);
+            $targetLevelRecords = $targetRecords->filter(fn ($r) => empty($r->sem_item_id) || (int) $r->sem_item_id === 0);
             $targetFields = [];
 
             foreach ($targetLevelRecords as $h) {
                 $fieldName = (string) $h->field_name;
-                if ($fieldName === 'deleted') {
+                if ($fieldName === 'deleted' || $fieldName === 'created') {
                     continue;
                 }
 
@@ -198,7 +206,7 @@ class PrintCheckpointController extends Controller
             }
 
             // 2. Sub-Target Item Groups (grouped by sem_item_id)
-            $itemLevelRecords = $targetRecords->filter(fn ($r) => ! empty($r->sem_item_id) && $r->sem_item_id > 0);
+            $itemLevelRecords = $targetRecords->filter(fn ($r) => ! empty($r->sem_item_id) && (int) $r->sem_item_id > 0);
             $itemGroupsRaw = $itemLevelRecords->groupBy(fn ($r) => (int) $r->sem_item_id);
 
             $itemGroups = [];
@@ -207,7 +215,12 @@ class PrintCheckpointController extends Controller
 
             foreach ($itemGroupsRaw as $itemId => $iRecords) {
                 $iFirstRec = $iRecords->first();
-                $isSubItemCreated = $iRecords->contains(fn ($r) => $r->field_name === 'created');
+                $isSubItemDeleted = $isDeletedTarget || $iRecords->contains(function ($r) {
+                    return $r->action_type === 'deleted'
+                        || $r->new_value === 'For Deletion'
+                        || ($r->field_name === 'deleted' && ! empty($r->sem_item_id));
+                });
+                $isSubItemCreated = (! $isSubItemDeleted) && $iRecords->contains(fn ($r) => $r->field_name === 'created' || $r->action_type === 'newly_added' || $r->action_type === 'added_sub_target');
 
                 $iFields = [];
 
@@ -228,7 +241,7 @@ class PrintCheckpointController extends Controller
                         ];
                     }
 
-                    if (! $isDeletedTarget && filled($iFirstRec->current_quantity)) {
+                    if (filled($iFirstRec->current_quantity)) {
                         $iFields[] = (object) [
                             'field_name' => 'rg_quantity',
                             'field_label' => 'Efficiency',
@@ -238,7 +251,7 @@ class PrintCheckpointController extends Controller
                         ];
                     }
 
-                    if (! $isDeletedTarget && filled($iFirstRec->current_quality)) {
+                    if (filled($iFirstRec->current_quality)) {
                         $iFields[] = (object) [
                             'field_name' => 'rg_quality',
                             'field_label' => 'Quality',
@@ -248,7 +261,7 @@ class PrintCheckpointController extends Controller
                         ];
                     }
 
-                    if (! $isDeletedTarget && filled($iFirstRec->current_timeliness)) {
+                    if (filled($iFirstRec->current_timeliness)) {
                         $iFields[] = (object) [
                             'field_name' => 'rg_timeliness',
                             'field_label' => 'Timeliness',
@@ -258,7 +271,7 @@ class PrintCheckpointController extends Controller
                         ];
                     }
 
-                    if (! $isDeletedTarget && filled($iFirstRec->current_movs)) {
+                    if (filled($iFirstRec->current_movs)) {
                         $iFields[] = (object) [
                             'field_name' => 'rg_movs',
                             'field_label' => 'MOVs',
@@ -268,7 +281,7 @@ class PrintCheckpointController extends Controller
                         ];
                     }
 
-                    if (! $isDeletedTarget && filled($iFirstRec->current_remarks)) {
+                    if (filled($iFirstRec->current_remarks)) {
                         $iFields[] = (object) [
                             'field_name' => 'rg_remarks',
                             'field_label' => 'Remarks',
@@ -277,10 +290,50 @@ class PrintCheckpointController extends Controller
                             'new_value' => $iFirstRec->current_remarks,
                         ];
                     }
+                } elseif ($isSubItemDeleted) {
+                    // Deleted sub-target: show all original indicator values on the left, and 'For Deletion' for description on the right
+                    $descRec = $iRecords->firstWhere('field_name', 'description');
+                    $descOld = $descRec ? ($descRec->old_value ?: ($descRec->original_value ?: $iFirstRec->current_description)) : ($iFirstRec->current_description ?: '-');
+
+                    $iFields[] = (object) [
+                        'field_name' => 'description',
+                        'field_label' => 'Success Indicator (Measure + Target)',
+                        'order_rank' => 2,
+                        'old_value' => $descOld ?: '-',
+                        'new_value' => 'For Deletion',
+                    ];
+
+                    $fieldNamesMap = [
+                        'rg_quantity' => ['Efficiency', 3],
+                        'rg_quality' => ['Quality', 4],
+                        'rg_timeliness' => ['Timeliness', 5],
+                        'rg_movs' => ['MOVs', 6],
+                        'rg_remarks' => ['Remarks', 7],
+                    ];
+
+                    foreach ($fieldNamesMap as $fn => $meta) {
+                        $rec = $iRecords->firstWhere('field_name', $fn);
+                        $val = $rec ? ($rec->old_value ?: ($rec->original_value ?: null)) : null;
+                        if (! filled($val)) {
+                            $colName = 'current_' . str_replace('rg_', '', $fn);
+                            $val = $iFirstRec->{$colName} ?? null;
+                        }
+
+                        if (filled($val)) {
+                            $iFields[] = (object) [
+                                'field_name' => $fn,
+                                'field_label' => $meta[0],
+                                'order_rank' => $meta[1],
+                                'old_value' => $val,
+                                'new_value' => '-',
+                            ];
+                        }
+                    }
                 } else {
+                    // Normal updated sub-target: only include modified fields
                     foreach ($iRecords as $h) {
                         $fieldName = (string) $h->field_name;
-                        if ($isDeletedTarget && $fieldName !== 'description') {
+                        if ($fieldName === 'deleted' || $fieldName === 'created') {
                             continue;
                         }
 
@@ -288,7 +341,7 @@ class PrintCheckpointController extends Controller
                         $orderRank = $fieldOrder[$fieldName] ?? 99;
 
                         $oldVal = $h->old_value ?: ($h->original_value ?: '-');
-                        $newVal = $isDeletedTarget ? 'For Deletion' : ($h->new_value ?: '-');
+                        $newVal = $h->new_value ?: '-';
 
                         $iFields[] = (object) [
                             'field_name' => $fieldName,
@@ -302,20 +355,29 @@ class PrintCheckpointController extends Controller
                     usort($iFields, fn ($a, $b) => $a->order_rank <=> $b->order_rank);
                 }
 
-                if ($isDeletedTarget) {
-                    $iFields = array_values(array_filter($iFields, fn ($f) => $f->field_name === 'description'));
-                }
-
                 if ($totalSubItems > 1) {
-                    $itemLabel = '#'.$itemCounter.($isSubItemCreated ? ' (Newly Added Sub-Target)' : '');
+                    if ($isSubItemDeleted) {
+                        $itemLabel = '#' . $itemCounter . ' (Deleted Sub-Target)';
+                    } elseif ($isSubItemCreated) {
+                        $itemLabel = '#' . $itemCounter . ' (Newly Added Sub-Target)';
+                    } else {
+                        $itemLabel = '#' . $itemCounter;
+                    }
                 } else {
-                    $itemLabel = $isSubItemCreated ? '(Newly Added Sub-Target)' : '';
+                    if ($isSubItemDeleted) {
+                        $itemLabel = '(Deleted Sub-Target)';
+                    } elseif ($isSubItemCreated) {
+                        $itemLabel = '(Newly Added Sub-Target)';
+                    } else {
+                        $itemLabel = '';
+                    }
                 }
 
                 $itemGroups[] = (object) [
                     'item_id' => $itemId,
                     'item_label' => $itemLabel,
                     'is_created' => $isSubItemCreated,
+                    'is_deleted' => $isSubItemDeleted,
                     'fields' => $iFields,
                 ];
 

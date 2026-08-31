@@ -1,5 +1,6 @@
 import { Head, useForm } from '@inertiajs/react';
 import AppLayout from '../../Layouts/AppLayout';
+import { Settings as SettingsIcon, Save } from 'lucide-react';
 
 type Props = {
   appName: string;
@@ -24,49 +25,68 @@ export default function ApplicationSettings({ appName, user, settings, navigatio
 
   return (
     <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
-      <Head title="Application Settings" />
-      <div className="space-y-6 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] sm:p-8">
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-700">Administration</p>
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Application Settings</h2>
-          <p className="max-w-2xl text-sm leading-6 text-slate-600">Manage the application identity and Annual Target categories.</p>
-        </div>
+      <Head title="Application Settings - Administration" />
 
-        <form onSubmit={submit} className="max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 p-6">
-          <div className="space-y-6">
+      <div className="space-y-3 max-w-2xl">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-2xs space-y-3">
+          {/* HEADER */}
+          <div className="flex items-center gap-2.5 border-b border-border/80 pb-3">
+            <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+              <SettingsIcon className="size-4.5" />
+            </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700" htmlFor="appName">App Name</label>
+              <h1 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                <span>Application Settings</span>
+              </h1>
+              <p className="text-[11px] text-muted-foreground">
+                Manage system title, branding, and Annual Target configurations.
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={submit} className="space-y-3 pt-1">
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="appName">
+                Application Title
+              </label>
               <input
                 id="appName"
                 value={form.data.appName}
                 onChange={(e) => form.setData('appName', e.target.value)}
-                className="h-11 w-full rounded-2xl border border-slate-300 px-4 text-sm"
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                 maxLength={255}
                 required
               />
-              <p className="mt-1 text-xs text-slate-500">Displayed in the application header and browser title.</p>
+              <p className="text-[10px] text-muted-foreground">Displayed in the header, navbar branding, and browser title bar.</p>
             </div>
 
-            <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+            <label className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/20 p-2.5 cursor-pointer hover:bg-muted/40 transition">
               <input
                 type="checkbox"
                 checked={form.data.includeStrategicFunction}
                 onChange={(e) => form.setData('includeStrategicFunction', e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-slate-300"
+                className="mt-0.5 size-3.5 rounded border-input text-emerald-600 focus:ring-emerald-500"
               />
-              <span>
-                <span className="block text-sm font-medium text-slate-800">Include Strategic Function</span>
-                <span className="block text-xs text-slate-500">Show Strategic Function in the Annual Target table and category dropdowns.</span>
-              </span>
+              <div className="text-xs">
+                <span className="font-semibold text-foreground block">Include Strategic Function</span>
+                <span className="text-[11px] text-muted-foreground block">
+                  Show Strategic Function category in the Annual Target matrices, rating tables, and dropdowns.
+                </span>
+              </div>
             </label>
-          </div>
 
-          <div className="mt-6 flex justify-end">
-            <button type="submit" className="h-11 rounded-2xl bg-slate-950 px-5 text-sm font-medium text-white">
-              Save Settings
-            </button>
-          </div>
-        </form>
+            <div className="flex justify-end pt-2 border-t border-border">
+              <button
+                type="submit"
+                disabled={form.processing}
+                className="inline-flex items-center gap-1.5 h-8 rounded-lg bg-emerald-600 px-3.5 text-xs font-semibold text-white hover:bg-emerald-700 transition shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <Save className="size-3.5" />
+                <span>{form.processing ? 'Saving...' : 'Save Settings'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </AppLayout>
   );

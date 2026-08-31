@@ -55,6 +55,35 @@
             line-height: 1.25;
         }
 
+        .table-checkpoint td.cell-seamless {
+            padding: 0 !important;
+        }
+
+        .inner-checkpoint-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+            table-layout: fixed;
+        }
+
+        .inner-checkpoint-table td {
+            border: none !important;
+            border-bottom: 1px solid #1e293b !important;
+            border-right: 1px solid #1e293b !important;
+            padding: 4px 6px !important;
+            vertical-align: top !important;
+            font-size: 9px !important;
+            line-height: 1.25 !important;
+        }
+
+        .inner-checkpoint-table tr:last-child td {
+            border-bottom: none !important;
+        }
+
+        .inner-checkpoint-table td:last-child {
+            border-right: none !important;
+        }
+
         .label-italic {
             font-weight: 700;
             font-style: italic;
@@ -150,76 +179,84 @@
                                 {{ $rowIndex++ }}
                             </td>
 
-                            <!-- Original Success Indicator (Target & Item Groups) -->
-                            <td class="align-top">
-                                <div class="space-y-3">
-                                    @if (!empty($row->target_fields))
-                                        <div class="space-y-1.5">
-                                            @foreach ($row->target_fields as $field)
-                                                <div>
-                                                    <span class="label-italic">{{ $field->field_label }}</span><br>
-                                                    <span
-                                                        class="text-slate-900 print:text-black">{!! nl2br(e($field->old_value)) !!}</span>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
+                            <!-- Aligned Original Success Indicator & Proposed Amendment -->
+                            <td colspan="2" class="cell-seamless align-top">
+                                <table class="inner-checkpoint-table">
+                                    <tbody>
+                                        @if (!empty($row->target_fields))
+                                            <tr>
+                                                <td style="width: 50%;">
+                                                    <div class="space-y-1.5">
+                                                        @foreach ($row->target_fields as $field)
+                                                            <div>
+                                                                <span class="label-italic">{{ $field->field_label }}</span><br>
+                                                                <span
+                                                                    class="text-slate-900 print:text-black">{!! nl2br(e($field->old_value)) !!}</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </td>
+                                                <td style="width: 50%;">
+                                                    <div class="space-y-1.5">
+                                                        @foreach ($row->target_fields as $field)
+                                                            <div>
+                                                                <span class="label-italic">{{ $field->field_label }}</span><br>
+                                                                <span
+                                                                    class="text-slate-900 print:text-black @if($field->new_value === 'For Deletion') text-red-600 font-bold @endif">{!! nl2br(e($field->new_value)) !!}</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endif
 
-                                    @foreach ($row->item_groups as $itemGroup)
-                                        <div
-                                            class="space-y-1.5 @if(count($row->item_groups) > 1 && (!$loop->first || !empty($row->target_fields))) pt-2 border-t border-slate-200 print:border-slate-400 @endif">
-                                            @if (!empty($itemGroup->item_label))
-                                                <div
-                                                    class="text-[11px] font-bold uppercase tracking-wider text-slate-700 print:text-black">
-                                                    {{ $itemGroup->item_label }}
-                                                </div>
-                                            @endif
-                                            @foreach ($itemGroup->fields as $field)
-                                                <div>
-                                                    <span class="label-italic">{{ $field->field_label }}</span><br>
-                                                    <span
-                                                        class="text-slate-900 print:text-black">{!! nl2br(e($field->old_value)) !!}</span>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </td>
+                                        @foreach ($row->item_groups as $itemGroup)
+                                            <tr>
+                                                <td style="width: 50%;">
+                                                    <div class="space-y-1.5">
+                                                        @if (!empty($itemGroup->item_label))
+                                                            <div
+                                                                class="text-[10px] font-bold uppercase tracking-wider @if($itemGroup->is_deleted ?? false) text-red-600 print:text-black @else text-slate-700 print:text-black @endif">
+                                                                {{ $itemGroup->item_label }}
+                                                            </div>
+                                                        @endif
+                                                        @foreach ($itemGroup->fields as $field)
+                                                            <div>
+                                                                <span class="label-italic">{{ $field->field_label }}</span><br>
+                                                                <span
+                                                                    class="text-slate-900 print:text-black">{!! nl2br(e($field->old_value)) !!}</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </td>
+                                                <td style="width: 50%;">
+                                                    <div class="space-y-1.5">
+                                                        @if (!empty($itemGroup->item_label))
+                                                            <div
+                                                                class="text-[10px] font-bold uppercase tracking-wider @if($itemGroup->is_deleted ?? false) text-red-600 print:text-black @else text-slate-700 print:text-black @endif">
+                                                                {{ $itemGroup->item_label }}
+                                                            </div>
+                                                        @endif
+                                                        @foreach ($itemGroup->fields as $field)
+                                                            <div>
+                                                                <span class="label-italic">{{ $field->field_label }}</span><br>
+                                                                <span
+                                                                    class="text-slate-900 print:text-black @if($field->new_value === 'For Deletion') text-red-600 font-bold @endif">{!! nl2br(e($field->new_value)) !!}</span>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
 
-                            <!-- Proposed Amendment (Target & Item Groups) -->
-                            <td class="align-top">
-                                <div class="space-y-3">
-                                    @if (!empty($row->target_fields))
-                                        <div class="space-y-1.5">
-                                            @foreach ($row->target_fields as $field)
-                                                <div>
-                                                    <span class="label-italic">{{ $field->field_label }}</span><br>
-                                                    <span
-                                                        class="text-slate-900 print:text-black">{!! nl2br(e($field->new_value)) !!}</span>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
-
-                                    @foreach ($row->item_groups as $itemGroup)
-                                        <div
-                                            class="space-y-1.5 @if(count($row->item_groups) > 1 && (!$loop->first || !empty($row->target_fields))) pt-2 border-t border-slate-200 print:border-slate-400 @endif">
-                                            @if (!empty($itemGroup->item_label))
-                                                <div
-                                                    class="text-[11px] font-bold uppercase tracking-wider text-slate-700 print:text-black">
-                                                    {{ $itemGroup->item_label }}
-                                                </div>
-                                            @endif
-                                            @foreach ($itemGroup->fields as $field)
-                                                <div>
-                                                    <span class="label-italic">{{ $field->field_label }}</span><br>
-                                                    <span
-                                                        class="text-slate-900 print:text-black">{!! nl2br(e($field->new_value)) !!}</span>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @endforeach
-                                </div>
+                                        @if (empty($row->target_fields) && empty($row->item_groups))
+                                            <tr>
+                                                <td style="width: 50%;">-</td>
+                                                <td style="width: 50%;">-</td>
+                                            </tr>
+                                        @endif
+                                    </tbody>
+                                </table>
                             </td>
 
                             <!-- Justification -->
@@ -254,16 +291,7 @@
                         @endif
                     @endforelse
 
-                    <!-- Single Merged Separator Row for Deleted Targets -->
                     @if ($deletedRows->isNotEmpty())
-                        <tr
-                            class="bg-slate-100 dark:bg-zinc-800 font-bold border-y border-black text-red-900 dark:text-red-300">
-                            <td colspan="5"
-                                class="py-1.5 px-3 text-center uppercase tracking-wide text-xs text-red-900 dark:text-red-300">
-                                --- DELETED TARGETS ---
-                            </td>
-                        </tr>
-
                         @foreach ($deletedRows as $row)
                             <tr>
                                 <!-- Row Number -->
@@ -271,76 +299,84 @@
                                     {{ $rowIndex++ }}
                                 </td>
 
-                                <!-- Original Success Indicator -->
-                                <td class="align-top">
-                                    <div class="space-y-3">
-                                        @if (!empty($row->target_fields))
-                                            <div class="space-y-1.5">
-                                                @foreach ($row->target_fields as $field)
-                                                    <div>
-                                                        <span class="label-italic">{{ $field->field_label }}</span><br>
-                                                        <span
-                                                            class="text-slate-900 print:text-black">{!! nl2br(e($field->old_value)) !!}</span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
+                                <!-- Aligned Original Success Indicator & Proposed Amendment (Deleted) -->
+                                <td colspan="2" class="cell-seamless align-top">
+                                    <table class="inner-checkpoint-table">
+                                        <tbody>
+                                            @if (!empty($row->target_fields))
+                                                <tr>
+                                                    <td style="width: 50%;">
+                                                        <div class="space-y-1.5">
+                                                            @foreach ($row->target_fields as $field)
+                                                                <div>
+                                                                    <span class="label-italic">{{ $field->field_label }}</span><br>
+                                                                    <span
+                                                                        class="text-slate-900 print:text-black">{!! nl2br(e($field->old_value)) !!}</span>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 50%;">
+                                                        <div class="space-y-1.5">
+                                                            @foreach ($row->target_fields as $field)
+                                                                <div>
+                                                                    <span class="label-italic">{{ $field->field_label }}</span><br>
+                                                                    <span
+                                                                        class="text-slate-900 print:text-black @if($field->new_value === 'For Deletion') text-red-600 font-bold @endif">{!! nl2br(e($field->new_value)) !!}</span>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endif
 
-                                        @foreach ($row->item_groups as $itemGroup)
-                                            <div
-                                                class="space-y-1.5 @if(count($row->item_groups) > 1 && (!$loop->first || !empty($row->target_fields))) pt-2 border-t border-slate-200 print:border-slate-400 @endif">
-                                                @if (!empty($itemGroup->item_label))
-                                                    <div
-                                                        class="text-[11px] font-bold uppercase tracking-wider text-slate-700 print:text-black">
-                                                        {{ $itemGroup->item_label }}
-                                                    </div>
-                                                @endif
-                                                @foreach ($itemGroup->fields as $field)
-                                                    <div>
-                                                        <span class="label-italic">{{ $field->field_label }}</span><br>
-                                                        <span
-                                                            class="text-slate-900 print:text-black">{!! nl2br(e($field->old_value)) !!}</span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </td>
+                                            @foreach ($row->item_groups as $itemGroup)
+                                                <tr>
+                                                    <td style="width: 50%;">
+                                                        <div class="space-y-1.5">
+                                                            @if (!empty($itemGroup->item_label))
+                                                                <div
+                                                                    class="text-[10px] font-bold uppercase tracking-wider @if($itemGroup->is_deleted ?? false) text-red-600 print:text-black @else text-slate-700 print:text-black @endif">
+                                                                    {{ $itemGroup->item_label }}
+                                                                </div>
+                                                            @endif
+                                                            @foreach ($itemGroup->fields as $field)
+                                                                <div>
+                                                                    <span class="label-italic">{{ $field->field_label }}</span><br>
+                                                                    <span
+                                                                        class="text-slate-900 print:text-black">{!! nl2br(e($field->old_value)) !!}</span>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </td>
+                                                    <td style="width: 50%;">
+                                                        <div class="space-y-1.5">
+                                                            @if (!empty($itemGroup->item_label))
+                                                                <div
+                                                                    class="text-[10px] font-bold uppercase tracking-wider @if($itemGroup->is_deleted ?? false) text-red-600 print:text-black @else text-slate-700 print:text-black @endif">
+                                                                    {{ $itemGroup->item_label }}
+                                                                </div>
+                                                            @endif
+                                                            @foreach ($itemGroup->fields as $field)
+                                                                <div>
+                                                                    <span class="label-italic">{{ $field->field_label }}</span><br>
+                                                                    <span
+                                                                        class="text-slate-900 print:text-black @if($field->new_value === 'For Deletion') text-red-600 font-bold @endif">{!! nl2br(e($field->new_value)) !!}</span>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
 
-                                <!-- Proposed Amendment -->
-                                <td class="align-top">
-                                    <div class="space-y-3">
-                                        @if (!empty($row->target_fields))
-                                            <div class="space-y-1.5">
-                                                @foreach ($row->target_fields as $field)
-                                                    <div>
-                                                        <span class="label-italic">{{ $field->field_label }}</span><br>
-                                                        <span
-                                                            class="text-slate-900 print:text-black">{!! nl2br(e($field->new_value)) !!}</span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endif
-
-                                        @foreach ($row->item_groups as $itemGroup)
-                                            <div
-                                                class="space-y-1.5 @if(count($row->item_groups) > 1 && (!$loop->first || !empty($row->target_fields))) pt-2 border-t border-slate-200 print:border-slate-400 @endif">
-                                                @if (!empty($itemGroup->item_label))
-                                                    <div
-                                                        class="text-[11px] font-bold uppercase tracking-wider text-slate-700 print:text-black">
-                                                        {{ $itemGroup->item_label }}
-                                                    </div>
-                                                @endif
-                                                @foreach ($itemGroup->fields as $field)
-                                                    <div>
-                                                        <span class="label-italic">{{ $field->field_label }}</span><br>
-                                                        <span
-                                                            class="text-slate-900 print:text-black">{!! nl2br(e($field->new_value)) !!}</span>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        @endforeach
-                                    </div>
+                                            @if (empty($row->target_fields) && empty($row->item_groups))
+                                                <tr>
+                                                    <td style="width: 50%;">-</td>
+                                                    <td style="width: 50%;">-</td>
+                                                </tr>
+                                            @endif
+                                        </tbody>
+                                    </table>
                                 </td>
 
                                 <!-- Justification -->

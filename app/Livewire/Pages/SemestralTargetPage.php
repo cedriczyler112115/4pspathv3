@@ -413,6 +413,7 @@ class SemestralTargetPage extends Component
                 'h.sem_target_id',
                 'h.sem_item_id',
                 'h.field_name',
+                'h.action_type',
                 'h.original_value',
                 'h.old_value',
                 'h.new_value',
@@ -465,17 +466,24 @@ class SemestralTargetPage extends Component
                 }
             }
 
-            $isDeletedTarget = $targetRecords->contains(fn ($r) => $r->field_name === 'deleted');
-            $isNewlyAdded = $targetRecords->contains(fn ($r) => $r->field_name === 'created' && (empty($r->sem_item_id) || $r->sem_item_id == 0));
+            // Check if the entire target was deleted
+            $isTargetInDatabase = in_array((int) $semTargetId, $activeTargetIds, true);
+            $hasTargetLevelDeletedRecord = $targetRecords->contains(function ($r) {
+                return (empty($r->sem_item_id) || (int) $r->sem_item_id === 0)
+                    && ($r->field_name === 'deleted' || $r->new_value === 'For Deletion');
+            });
+
+            $isDeletedTarget = (! $isTargetInDatabase) || $hasTargetLevelDeletedRecord;
+            $isNewlyAdded = (! $isDeletedTarget) && $targetRecords->contains(fn ($r) => $r->field_name === 'created' && (empty($r->sem_item_id) || (int) $r->sem_item_id === 0));
             $firstRec = $targetRecords->first();
             $actRec = $targetRecords->firstWhere('field_name', 'activity');
             $activityTitle = (string) ($firstRec->current_activity ?: ($actRec ? ($actRec->old_value ?: ($actRec->original_value ?: 'Target Entry')) : 'Target Entry'));
 
-            $targetLevelRecords = $targetRecords->filter(fn ($r) => empty($r->sem_item_id) || $r->sem_item_id == 0);
+            $targetLevelRecords = $targetRecords->filter(fn ($r) => empty($r->sem_item_id) || (int) $r->sem_item_id === 0);
             $targetFields = [];
             foreach ($targetLevelRecords as $h) {
                 $fieldName = (string) $h->field_name;
-                if ($fieldName === 'deleted') {
+                if ($fieldName === 'deleted' || $fieldName === 'created') {
                     continue;
                 }
                 $label = $fieldLabels[$fieldName] ?? ucwords(str_replace('_', ' ', $fieldName));
@@ -510,14 +518,19 @@ class SemestralTargetPage extends Component
                 $targetFields = array_values(array_filter($targetFields, fn ($f) => in_array($f->field_name, ['kra_category', 'activity'], true)));
             }
 
-            $itemLevelRecords = $targetRecords->filter(fn ($r) => !empty($r->sem_item_id) && $r->sem_item_id > 0);
+            $itemLevelRecords = $targetRecords->filter(fn ($r) => !empty($r->sem_item_id) && (int) $r->sem_item_id > 0);
             $itemGroupsRaw = $itemLevelRecords->groupBy(fn ($r) => (int) $r->sem_item_id);
             $itemGroups = [];
             $itemCounter = 1;
             $totalSubItems = count($itemGroupsRaw);
             foreach ($itemGroupsRaw as $itemId => $iRecords) {
                 $iFirstRec = $iRecords->first();
-                $isSubItemCreated = $iRecords->contains(fn ($r) => $r->field_name === 'created');
+                $isSubItemDeleted = $isDeletedTarget || $iRecords->contains(function ($r) {
+                    return $r->action_type === 'deleted'
+                        || $r->new_value === 'For Deletion'
+                        || ($r->field_name === 'deleted' && ! empty($r->sem_item_id));
+                });
+                $isSubItemCreated = (! $isSubItemDeleted) && $iRecords->contains(fn ($r) => $r->field_name === 'created' || $r->action_type === 'newly_added' || $r->action_type === 'added_sub_target');
                 $iFields = [];
                 if ($isSubItemCreated) {
                     $desc = $iFirstRec->current_description;
@@ -536,7 +549,7 @@ class SemestralTargetPage extends Component
                     }
                     foreach (['quantity' => 'rg_quantity', 'quality' => 'rg_quality', 'timeliness' => 'rg_timeliness', 'movs' => 'rg_movs', 'remarks' => 'rg_remarks'] as $prop => $fieldName) {
                         $current = $iFirstRec->{'current_'.$prop} ?? null;
-                        if (! $isDeletedTarget && filled($current)) {
+                        if (filled($current)) {
                             $iFields[] = (object) [
                                 'field_name' => $fieldName,
                                 'field_label' => $fieldLabels[$fieldName] ?? ucwords(str_replace('_', ' ', $fieldName)),
@@ -546,16 +559,54 @@ class SemestralTargetPage extends Component
                             ];
                         }
                     }
+                } elseif ($isSubItemDeleted) {
+                    $descRec = $iRecords->firstWhere('field_name', 'description');
+                    $descOld = $descRec ? ($descRec->old_value ?: ($descRec->original_value ?: $iFirstRec->current_description)) : ($iFirstRec->current_description ?: '-');
+
+                    $iFields[] = (object) [
+                        'field_name' => 'description',
+                        'field_label' => 'Success Indicator (Measure + Target)',
+                        'order_rank' => 2,
+                        'old_value' => $descOld ?: '-',
+                        'new_value' => 'For Deletion',
+                    ];
+
+                    $fieldNamesMap = [
+                        'rg_quantity' => ['Efficiency', 3],
+                        'rg_quality' => ['Quality', 4],
+                        'rg_timeliness' => ['Timeliness', 5],
+                        'rg_movs' => ['MOVs', 6],
+                        'rg_remarks' => ['Remarks', 7],
+                    ];
+
+                    foreach ($fieldNamesMap as $fn => $meta) {
+                        $rec = $iRecords->firstWhere('field_name', $fn);
+                        $val = $rec ? ($rec->old_value ?: ($rec->original_value ?: null)) : null;
+                        if (! filled($val)) {
+                            $colName = 'current_' . str_replace('rg_', '', $fn);
+                            $val = $iFirstRec->{$colName} ?? null;
+                        }
+
+                        if (filled($val)) {
+                            $iFields[] = (object) [
+                                'field_name' => $fn,
+                                'field_label' => $meta[0],
+                                'order_rank' => $meta[1],
+                                'old_value' => $val,
+                                'new_value' => '-',
+                            ];
+                        }
+                    }
                 } else {
                     foreach ($iRecords as $h) {
                         $fieldName = (string) $h->field_name;
-                        if ($isDeletedTarget && $fieldName !== 'description') {
+                        if ($fieldName === 'deleted' || $fieldName === 'created') {
                             continue;
                         }
                         $label = $fieldLabels[$fieldName] ?? ucwords(str_replace('_', ' ', $fieldName));
                         $orderRank = $fieldOrder[$fieldName] ?? 99;
                         $oldVal = $h->old_value ?: ($h->original_value ?: '-');
-                        $newVal = $isDeletedTarget ? 'For Deletion' : ($h->new_value ?: '-');
+                        $newVal = $h->new_value ?: '-';
                         $iFields[] = (object) [
                             'field_name' => $fieldName,
                             'field_label' => $label,
@@ -567,15 +618,29 @@ class SemestralTargetPage extends Component
                     usort($iFields, fn ($a, $b) => $a->order_rank <=> $b->order_rank);
                 }
 
-                if ($isDeletedTarget) {
-                    $iFields = array_values(array_filter($iFields, fn ($f) => $f->field_name === 'description'));
+                if ($totalSubItems > 1) {
+                    if ($isSubItemDeleted) {
+                        $itemLabel = '#' . $itemCounter . ' (Deleted Sub-Target)';
+                    } elseif ($isSubItemCreated) {
+                        $itemLabel = '#' . $itemCounter . ' (Newly Added Sub-Target)';
+                    } else {
+                        $itemLabel = '#' . $itemCounter;
+                    }
+                } else {
+                    if ($isSubItemDeleted) {
+                        $itemLabel = '(Deleted Sub-Target)';
+                    } elseif ($isSubItemCreated) {
+                        $itemLabel = '(Newly Added Sub-Target)';
+                    } else {
+                        $itemLabel = '';
+                    }
                 }
 
-                $itemLabel = $totalSubItems > 1 ? '#'.$itemCounter.($isSubItemCreated ? ' (Newly Added Sub-Target)' : '') : ($isSubItemCreated ? '(Newly Added Sub-Target)' : '');
                 $itemGroups[] = (object) [
                     'item_id' => $itemId,
                     'item_label' => $itemLabel,
                     'is_created' => $isSubItemCreated,
+                    'is_deleted' => $isSubItemDeleted,
                     'fields' => $iFields,
                 ];
                 $itemCounter++;

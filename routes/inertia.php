@@ -44,6 +44,8 @@ if (class_exists(\Inertia\Inertia::class)) {
             Route::post('/ipcrf/annualtarget/copy-all-harmonized', [AnnualTargetController::class, 'copyAllHarmonizedTargetGroups'])->name('inertia.annualtarget.copy-all-harmonized');
             Route::redirect('/myratings', '/inertia/ipcrf/myratings');
             Route::get('/ipcrf/myratings', [RatingsController::class, 'index'])->name('inertia.myratings');
+            Route::get('/ipcrf/myratings/semestral-target/print-ipcrf', [\App\Http\Controllers\PrintIpcrfController::class, 'show'])->name('inertia.myratings.semestral-target.print-ipcrf');
+            Route::get('/ipcrf/myratings/semestral-target/print-checkpoint', [\App\Http\Controllers\PrintCheckpointController::class, 'show'])->name('inertia.myratings.semestral-target.print-checkpoint');
             Route::get('/ipcrf/myratings/{ratingId}/sem-target', [RatingsController::class, 'show'])->name('inertia.myratings.sem-target');
             Route::patch('/ipcrf/myratings/{ratingId}/accomplishment/{itemId}', [RatingsController::class, 'updateAccomplishment'])->name('inertia.myratings.accomplishment.update');
             Route::post('/ipcrf/myratings/{ratingId}/target', [RatingsController::class, 'storeTarget'])->name('inertia.myratings.target.store');
@@ -52,6 +54,7 @@ if (class_exists(\Inertia\Inertia::class)) {
             Route::delete('/ipcrf/myratings/{ratingId}/target/{targetId}', [RatingsController::class, 'destroyTarget'])->name('inertia.myratings.target.destroy');
             Route::get('/ipcrf/myratings/{ratingId}/target/{targetId}/history', [RatingsController::class, 'getEditHistory'])->name('inertia.myratings.target.history');
             Route::delete('/ipcrf/myratings/{ratingId}/target/{targetId}/history', [RatingsController::class, 'discardEditHistory'])->name('inertia.myratings.target.history.discard');
+            Route::post('/ipcrf/myratings/{ratingId}/target/{targetId}/restore', [RatingsController::class, 'restoreDeletedTarget'])->name('inertia.myratings.target.restore');
             Route::delete('/ipcrf/myratings/{ratingId}/subtarget/{itemId}', [RatingsController::class, 'destroySubTarget'])->name('inertia.myratings.subtarget.destroy');
             Route::post('/ipcrf/myratings/{ratingId}/toggle-status', [RatingsController::class, 'toggleStatus'])->name('inertia.myratings.toggle-status');
             Route::post('/ipcrf/myratings/{ratingId}/areas-improvement', [RatingsController::class, 'storeAreaOfImprovement'])->name('inertia.myratings.areas-improvement.store');
@@ -59,6 +62,11 @@ if (class_exists(\Inertia\Inertia::class)) {
             Route::post('/ipcrf/myratings/{ratingId}/documentation', [RatingsController::class, 'storeDocumentation'])->name('inertia.myratings.documentation.store');
             Route::delete('/ipcrf/myratings/{ratingId}/documentation', [RatingsController::class, 'destroyDocumentation'])->name('inertia.myratings.documentation.destroy');
             Route::post('/ipcrf/myratings/{ratingId}/target/reorder', [RatingsController::class, 'reorderTargets'])->name('inertia.myratings.target.reorder');
+            Route::get('/ipcrf/myratings/{ratingId}/attachments/{itemId}', [RatingsController::class, 'getItemAttachments'])->name('inertia.myratings.attachments.get');
+            Route::post('/ipcrf/myratings/{ratingId}/attachments/{itemId}', [RatingsController::class, 'uploadItemAttachments'])->name('inertia.myratings.attachments.upload');
+            Route::post('/ipcrf/myratings/{ratingId}/attachments/{itemId}/delete', [RatingsController::class, 'deleteItemAttachment'])->name('inertia.myratings.attachments.delete');
+            Route::get('/ipcrf/myratings/{ratingId}/staff-movs/{itemId}', [RatingsController::class, 'getStaffMovSources'])->name('inertia.myratings.staff-movs.get');
+            Route::post('/ipcrf/myratings/{ratingId}/copy-staff-movs/{destItemId}', [RatingsController::class, 'copyStaffMovsToItem'])->name('inertia.myratings.copy-staff-movs');
             Route::post('/ipcrf/myratings/{ratingId}/copy-movs', [RatingsController::class, 'copyStaffMovs'])->name('inertia.myratings.copy-movs');
             Route::delete('/ipcrf/myratings/{ratingId}', [RatingsController::class, 'destroy'])->name('inertia.myratings.destroy');
             Route::get('/settings/profile', [ProfileController::class, 'edit'])->name('inertia.settings.profile');

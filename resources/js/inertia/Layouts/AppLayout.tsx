@@ -1,13 +1,9 @@
 import type { PropsWithChildren } from 'react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
   LayoutDashboard,
-  MapPin,
   FolderKanban,
-  Wrench,
-  FileText,
-  ShoppingCart,
   FileSpreadsheet,
   HardHat,
   ShieldCheck,
@@ -16,15 +12,22 @@ import {
   Settings,
   UserCircle,
   Menu,
+  X,
   Search,
   HelpCircle,
-  Sparkles,
   Sun,
   Moon,
   ChevronDown,
+  ChevronRight,
+  LogOut,
+  Sliders,
+  Sparkles,
+  Home,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
-import Sidebar from '../Components/Sidebar';
+import Sidebar, { findBreadcrumbTrail } from '../Components/Sidebar';
 import ToastContainer from '../Components/ToastContainer';
 
 type AppLayoutProps = PropsWithChildren<{
@@ -37,7 +40,7 @@ type AppLayoutProps = PropsWithChildren<{
 }>;
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { auth, appName = 'TALACOGON E-BUILD SYSTEM', navigation } = usePage<{
+  const { auth, appName = '4Ps PATH v3', navigation } = usePage<{
     auth?: { user?: { name: string; email: string } };
     appName?: string;
     navigation?: { sidebar?: any[] };
@@ -46,164 +49,406 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const user = auth?.user;
   const sidebarTree = navigation?.sidebar ?? [];
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [activePath, setActivePath] = useState(typeof window !== 'undefined' ? window.location.pathname : '/inertia/dashboard');
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const navItems = [
-    { label: 'Dashboard', icon: LayoutDashboard, href: '/inertia/dashboard', badge: null },
-    { label: 'Annual Target', icon: FolderKanban, href: '/inertia/ipcrf/annualtarget', badge: null },
-    { label: 'My Ratings', icon: BarChart3, href: '/inertia/ipcrf/myratings', badge: null },
-    { label: 'Harmonized IPC', icon: FileSpreadsheet, href: '/inertia/rpmo-management/harmonized-ipc', badge: null },
-    { label: 'Harmonized Staff', icon: HardHat, href: '/inertia/libraries/harmonized-staff', badge: null },
-    { label: 'Users Management', icon: ShieldCheck, href: '/inertia/administration/users', badge: null },
-    { label: 'Settings', icon: Settings, href: '/inertia/administration/settings', badge: null },
-    { label: 'My Account', icon: UserCircle, href: '/inertia/settings/profile', badge: null },
+  const currentPath = typeof window !== 'undefined' ? window.location.pathname.replace(/\/+$/, '') || '/' : '/inertia/dashboard';
+
+  // Synchronize dark mode state with document
+  useEffect(() => {
+    const isDark =
+      document.documentElement.classList.contains('dark') ||
+      window.localStorage.getItem('flux.appearance') === 'dark' ||
+      window.localStorage.getItem('lgu_appearance') === 'dark';
+    setIsDarkMode(isDark);
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    const nextMode = !isDarkMode;
+    setIsDarkMode(nextMode);
+    if (nextMode) {
+      document.documentElement.classList.add('dark');
+      window.localStorage.setItem('flux.appearance', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      window.localStorage.setItem('flux.appearance', 'light');
+    }
+  };
+
+  // Close user dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const defaultNavItems = [
+    { label: 'Dashboard', icon: LayoutDashboard, href: '/inertia/dashboard' },
+    { label: 'Annual Target', icon: FolderKanban, href: '/inertia/ipcrf/annualtarget' },
+    { label: 'My Ratings', icon: BarChart3, href: '/inertia/ipcrf/myratings' },
+    { label: 'Harmonized IPC', icon: FileSpreadsheet, href: '/inertia/rpmo-management/harmonized-ipc' },
+    { label: 'Harmonized Staff', icon: HardHat, href: '/inertia/libraries/harmonized-staff' },
+    { label: 'Users Management', icon: ShieldCheck, href: '/inertia/administration/users' },
+    { label: 'Settings', icon: Settings, href: '/inertia/administration/settings' },
+    { label: 'My Account', icon: UserCircle, href: '/inertia/settings/profile' },
   ];
 
+  // Dynamic hierarchical breadcrumb generator matching sidebar nodes
+  const getBreadcrumbTrail = (): Array<{ label: string; href?: string | null }> => {
+    if (sidebarTree && sidebarTree.length > 0) {
+      const treeTrail = findBreadcrumbTrail(sidebarTree, currentPath);
+      if (treeTrail && treeTrail.length > 0) {
+        return treeTrail;
+      }
+    }
+
+    const path = currentPath.replace('/inertia', '') || '/dashboard';
+    const parts = path.split('/').filter(Boolean);
+    if (parts.length === 0) return [{ label: 'Dashboard', href: '/inertia/dashboard' }];
+
+    let accHref = '/inertia';
+    return parts.map((p, idx) => {
+      accHref += `/${p}`;
+      return {
+        label: p
+          .split('-')
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' '),
+        href: idx < parts.length - 1 ? accHref : null,
+      };
+    });
+  };
+
+  const breadcrumbs = getBreadcrumbTrail();
+  const userInitials = (user?.name || 'Admin')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
-    <div className={`min-h-screen ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-[#fcfbf7] text-slate-900'} flex`}>
-      {/* LEFT SIDEBAR NAVIGATION */}
+    <div className="min-h-screen bg-background text-foreground flex text-xs sm:text-sm antialiased selection:bg-emerald-500 selection:text-white">
+      {/* MOBILE BACKDROP OVERLAY */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs lg:hidden animate-in fade-in"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* COMPACT EXPANDABLE SIDEBAR */}
       <aside
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } transition-all duration-300 ease-in-out flex flex-col justify-between bg-[#0b1812] text-slate-200 border-r border-[#162a20] shrink-0 sticky top-0 h-screen z-30`}
+        className={`fixed lg:sticky top-0 z-50 lg:z-30 h-screen shrink-0 flex flex-col justify-between border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 ease-in-out select-none shadow-xs ${
+          sidebarOpen ? 'w-56' : 'w-14'
+        } ${
+          mobileMenuOpen
+            ? 'translate-x-0 !w-56 shadow-2xl'
+            : '-translate-x-full lg:translate-x-0'
+        }`}
       >
-        <div className="flex flex-col h-full overflow-y-auto custom-scrollbar">
-          {/* LOGO BRANDING */}
-          <div className="p-4 border-b border-[#182c22] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-[#1b3528] border border-[#2f5742] flex items-center justify-center text-emerald-400 shadow-inner shrink-0">
-                <div className="h-7 w-7 rounded-full bg-emerald-950 border border-emerald-500/30 flex items-center justify-center font-black text-xs text-emerald-300">
-                  TE
-                </div>
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* COMPACT SIDEBAR BRAND HEADER */}
+          <div className="h-11 shrink-0 border-b border-sidebar-border px-2.5 flex items-center justify-between gap-1.5">
+            <Link
+              href="/inertia/dashboard"
+              className="flex items-center gap-2 min-w-0 group cursor-pointer"
+            >
+              <div className="size-6.5 shrink-0 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-black text-[10px] shadow-xs group-hover:scale-105 transition-transform">
+                4P
               </div>
               {sidebarOpen && (
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-black tracking-wider uppercase text-slate-100">TALACOGON</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-xs font-extrabold text-emerald-400 tracking-tight">E-BUILD</span>
-                    <span className="bg-emerald-800/80 text-[9px] font-extrabold px-1.5 py-0.2 rounded text-emerald-200 tracking-wider">SYSTEM</span>
-                  </div>
+                <div className="flex flex-col min-w-0 truncate">
+                  <span className="font-extrabold text-xs tracking-tight text-sidebar-foreground truncate leading-tight">
+                    {appName}
+                  </span>
+                  <span className="text-[9px] font-medium text-muted-foreground truncate">
+                    Performance Assessment
+                  </span>
                 </div>
               )}
-            </div>
+            </Link>
+
             <button
               type="button"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-slate-400 hover:text-slate-100 p-1.5 rounded-lg hover:bg-[#162a20] transition"
+              onClick={() => {
+                if (window.innerWidth < 1024) {
+                  setMobileMenuOpen(false);
+                } else {
+                  setSidebarOpen(!sidebarOpen);
+                }
+              }}
+              title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+              className="size-7 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground flex items-center justify-center transition-colors cursor-pointer"
             >
-              <Menu className="w-5 h-5" />
+              {mobileMenuOpen ? (
+                <X className="size-3.5 lg:hidden" />
+              ) : sidebarOpen ? (
+                <PanelLeftClose className="size-3.5" />
+              ) : (
+                <PanelLeftOpen className="size-3.5" />
+              )}
             </button>
           </div>
 
-          {/* SIDEBAR NAVIGATION ITEMS */}
-          <nav className="p-3 space-y-1.5 flex-1">
+          {/* SIDEBAR QUICK SEARCH SHORTCUT */}
+          {sidebarOpen && (
+            <div className="px-2 pt-2 pb-0.5">
+              <Link
+                href="/inertia/search"
+                className="flex items-center justify-between w-full h-7 px-2 rounded-lg border border-sidebar-border bg-sidebar-accent/50 text-muted-foreground text-xs hover:bg-sidebar-accent hover:text-sidebar-foreground transition cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5">
+                  <Search className="size-3" />
+                  <span className="text-[10px]">Quick search...</span>
+                </div>
+                <kbd className="rounded bg-sidebar px-1 py-0.2 text-[8px] font-mono border border-sidebar-border text-muted-foreground">
+                  ⌘K
+                </kbd>
+              </Link>
+            </div>
+          )}
+
+          {/* SIDEBAR NAVIGATION ITEMS CONTAINER */}
+          <nav className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5 custom-scrollbar">
             {sidebarTree && sidebarTree.length > 0 ? (
-              <Sidebar nodes={sidebarTree} />
+              <Sidebar nodes={sidebarTree} isCollapsed={!sidebarOpen} />
             ) : (
-              navItems.map((item) => {
+              defaultNavItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = activePath === item.href || (item.href !== '/inertia/dashboard' && activePath.startsWith(item.href + '/'));
+                const isActive =
+                  currentPath === item.href ||
+                  (item.href !== '/inertia/dashboard' && currentPath.startsWith(item.href + '/'));
 
                 return (
                   <Link
                     key={item.label}
                     href={item.href}
-                    onClick={() => setActivePath(item.href)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                    title={!sidebarOpen ? item.label : undefined}
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.25 text-xs font-medium transition-all duration-150 ${
                       isActive
-                        ? 'bg-[#2b3915] text-[#dcfce7] border border-[#4d6325] shadow-md'
-                        : 'text-slate-300 hover:bg-[#16271e] hover:text-white'
+                        ? 'bg-emerald-600 text-white font-semibold shadow-xs'
+                        : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#a3e635]' : 'text-slate-400'}`} />
+                    <Icon className={`size-3.5 shrink-0 ${isActive ? 'text-white' : 'text-muted-foreground'}`} />
                     {sidebarOpen && <span className="truncate flex-1">{item.label}</span>}
-                    {sidebarOpen && item.badge && (
-                      <span className="bg-emerald-900/60 text-emerald-300 text-[10px] px-2 py-0.5 rounded-full border border-emerald-700/50">
-                        {item.badge}
-                      </span>
-                    )}
                   </Link>
                 );
               })
             )}
           </nav>
 
-          {/* SIDEBAR FOOTER BRANDING */}
-          {sidebarOpen && (
-            <div className="p-4 border-t border-[#162a20] bg-[#07110c]/80 text-[9px] text-slate-400 leading-snug">
-              <p className="font-extrabold text-slate-300 uppercase tracking-wider">
-                ELECTRONIC BUILDING UNIFIED INFORMATION & LIFECYCLE DATABASE
-              </p>
-              <p className="text-[#a3e635] font-medium mt-1">One Project. One Record. One Digital Journey</p>
-            </div>
-          )}
+          {/* SIDEBAR FOOTER PROFILE CARD */}
+          <div className="shrink-0 border-t border-sidebar-border p-2 bg-sidebar/70">
+            {sidebarOpen ? (
+              <div className="rounded-lg border border-sidebar-border/80 bg-sidebar-accent/40 p-1.5 flex items-center justify-between gap-1.5 shadow-2xs">
+                <Link
+                  href="/inertia/settings/profile"
+                  className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition cursor-pointer"
+                >
+                  <div className="relative size-7 shrink-0 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
+                    {userInitials}
+                    <span className="absolute bottom-0 right-0 size-1.5 rounded-full bg-emerald-400 ring-1 ring-sidebar" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate text-[11px] font-bold text-sidebar-foreground leading-tight">
+                      {user?.name || 'Administrator'}
+                    </span>
+                    <span className="truncate text-[9px] text-muted-foreground">
+                      {user?.email || 'User Account'}
+                    </span>
+                  </div>
+                </Link>
+
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <Link
+                    href="/inertia/settings/profile"
+                    title="Profile Settings"
+                    className="size-6 rounded-md hover:bg-sidebar-accent text-muted-foreground hover:text-sidebar-foreground flex items-center justify-center transition"
+                  >
+                    <Settings className="size-3" />
+                  </Link>
+                  <Link
+                    href="/logout"
+                    title="Log Out"
+                    className="size-6 rounded-md hover:bg-rose-500/10 text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition"
+                  >
+                    <LogOut className="size-3" />
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <Link
+                  href="/inertia/settings/profile"
+                  title={user?.name || 'User Profile'}
+                  className="relative size-8 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-[10px] shadow-xs hover:scale-105 transition-transform cursor-pointer"
+                >
+                  {userInitials}
+                  <span className="absolute bottom-0 right-0 size-2 rounded-full bg-emerald-400 ring-1.5 ring-sidebar" />
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </aside>
 
-      {/* RIGHT MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* TOP HEADER NAVBAR */}
-        <header className="sticky top-0 z-20 bg-[#fbfbfa]/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200/70 dark:border-slate-800 px-6 py-3.5 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">HOME / DASHBOARD</div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50">Dashboard</h1>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Global Search Bar */}
-            <div className="relative hidden md:block">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Global search"
-                className="h-9 w-64 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 pl-9 pr-4 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/40 text-slate-800 dark:text-slate-100"
-              />
-            </div>
-
-            {/* Quick Action Icons */}
-            <button type="button" className="p-2 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 relative">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500" />
-            </button>
-
-            <button type="button" className="p-2 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50">
-              <Sparkles className="w-4 h-4" />
-            </button>
-
-            <button type="button" className="p-2 rounded-full border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50">
-              <HelpCircle className="w-4 h-4" />
-            </button>
-
-            {/* User Profile Pill Dropdown */}
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 shadow-sm">
-              <div className="h-6 w-6 rounded-full bg-[#1b3528] text-emerald-300 font-bold flex items-center justify-center text-[10px]">
-                AD
-              </div>
-              <span>{user?.name || 'Administrator'}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-            </div>
-
-            {/* Dark Mode Toggle Pill */}
+      {/* RIGHT MAIN CONTENT WRAPPER */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* COMPACT TOP HEADER NAVBAR */}
+        <header className="sticky top-0 z-20 h-11 shrink-0 border-b border-border bg-background/90 backdrop-blur-md px-2.5 sm:px-4 flex items-center justify-between gap-2 shadow-2xs">
+          {/* LEFT: Mobile Toggle + Rich Breadcrumbs */}
+          <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="flex items-center gap-1.5 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden size-7 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center transition cursor-pointer"
             >
-              {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-600" />}
-              <span>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+              <Menu className="size-4" />
             </button>
+
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-[11px] sm:text-xs font-medium text-muted-foreground truncate">
+              <Link
+                href="/inertia/dashboard"
+                className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition p-0.5 rounded hover:bg-muted"
+                title="Dashboard Home"
+              >
+                <Home className="size-3.5 shrink-0" />
+                <span className="hidden sm:inline">Home</span>
+              </Link>
+
+              {breadcrumbs.map((crumb, idx) => {
+                const isLast = idx === breadcrumbs.length - 1;
+                return (
+                  <div key={idx} className="flex items-center gap-1 min-w-0">
+                    <ChevronRight className="size-3 text-muted-foreground/50 shrink-0" />
+                    {crumb.href && !isLast ? (
+                      <Link
+                        href={crumb.href}
+                        className="hover:text-foreground transition truncate px-1 py-0.5 rounded hover:bg-muted"
+                      >
+                        {crumb.label}
+                      </Link>
+                    ) : (
+                      <span
+                        className={
+                          isLast
+                            ? 'font-bold text-foreground truncate px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                            : 'truncate'
+                        }
+                      >
+                        {crumb.label}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* RIGHT: Quick Search, Dark Mode Toggle, User Menu */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Quick Search */}
+            <Link
+              href="/inertia/search"
+              className="hidden md:flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-input bg-muted/30 text-muted-foreground text-xs hover:bg-muted/70 hover:text-foreground transition"
+            >
+              <Search className="size-3" />
+              <span className="text-[10px]">Search users...</span>
+              <kbd className="ml-1.5 rounded border border-border bg-background px-1 text-[8px] font-mono text-muted-foreground">
+                /
+              </kbd>
+            </Link>
+
+            {/* Dark/Light Mode Toggle */}
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className="size-7 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition cursor-pointer"
+            >
+              {isDarkMode ? <Sun className="size-3.5 text-amber-400" /> : <Moon className="size-3.5 text-slate-600 dark:text-slate-300" />}
+            </button>
+
+            {/* User Dropdown Pill */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-1.5 h-7 pl-1 pr-2 rounded-lg hover:bg-muted text-foreground transition text-xs font-semibold border border-transparent hover:border-border cursor-pointer"
+              >
+                <div className="size-5 rounded-full bg-emerald-800 text-white flex items-center justify-center text-[9px] font-bold shadow-xs">
+                  {userInitials}
+                </div>
+                <span className="hidden sm:inline max-w-[120px] truncate text-xs">
+                  {user?.name || 'User'}
+                </span>
+                <ChevronDown className="size-3 text-muted-foreground" />
+              </button>
+
+              {/* DROPDOWN MENU */}
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-1 w-48 rounded-lg border border-border bg-popover p-1 shadow-xl text-popover-foreground z-50 text-xs animate-in fade-in-50 zoom-in-95">
+                  <div className="px-2 py-1.5 border-b border-border/60 mb-1">
+                    <p className="font-bold truncate text-foreground">{user?.name || 'Administrator'}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{user?.email || ''}</p>
+                  </div>
+                  <Link
+                    href="/inertia/settings/profile"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.25 hover:bg-muted transition font-medium"
+                  >
+                    <UserCircle className="size-3.5 text-muted-foreground" />
+                    <span>My Profile</span>
+                  </Link>
+                  <Link
+                    href="/inertia/settings/security"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.25 hover:bg-muted transition font-medium"
+                  >
+                    <ShieldCheck className="size-3.5 text-muted-foreground" />
+                    <span>Security</span>
+                  </Link>
+                  <Link
+                    href="/inertia/settings/appearance"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.25 hover:bg-muted transition font-medium"
+                  >
+                    <Sliders className="size-3.5 text-muted-foreground" />
+                    <span>Appearance</span>
+                  </Link>
+                  <div className="my-1 border-t border-border/60" />
+                  <Link
+                    href="/logout"
+                    className="flex items-center gap-2 rounded-md px-2 py-1.25 text-destructive hover:bg-destructive/10 transition font-semibold"
+                  >
+                    <LogOut className="size-3.5" />
+                    <span>Log Out</span>
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
-        {/* MAIN BODY CONTENT */}
-        <main className="p-6 space-y-6 flex-1 bg-[#fbfbfa] dark:bg-slate-950">
+        {/* MAIN COMPACT CONTENT AREA */}
+        <main className="w-full max-w-full flex-1 min-w-0 p-2.5 sm:p-3 space-y-2.5 sm:space-y-3">
           {children}
         </main>
       </div>
+
       <ToastContainer />
     </div>
   );
 }
+

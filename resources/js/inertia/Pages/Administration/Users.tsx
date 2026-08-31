@@ -1,7 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Users as UsersIcon, Search, RotateCcw, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 type UserRow = {
   id: number;
@@ -71,38 +71,36 @@ export default function Users({
   perPageOptions,
   navigation,
 }: Props) {
-  // Filter Form
   const filterForm = useForm({
-    search: filters.search,
-    division: filters.division,
-    section: filters.section,
-    status: filters.status,
-    perPage: String(filters.perPage),
+    search: filters.search || '',
+    division: filters.division || '',
+    section: filters.section || '',
+    status: filters.status || '',
+    perPage: String(filters.perPage || 10),
   });
 
-  // Edit Modal Form
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<number | null>(null);
-
-  const editForm = useForm({
-    editLastName: '',
-    editFirstName: '',
-    editMiddleName: '',
-    editExtensionName: '',
-    editPosition: '',
-    editDesignation: '',
-    editDivision: '',
-    editSection: '',
-    editSupervisorId: '',
-    editUserLevelId: '',
-    editContactNumber: '',
-    editIsSupervisor: false,
-  });
-
-  // Delete Modal
   const [deletingUser, setDeletingUser] = useState<{ id: number; name: string } | null>(null);
 
-  const submitFilters = (overrides = {}) => {
+  const editForm = useForm({
+    lastName: '',
+    firstName: '',
+    middleName: '',
+    extensionName: '',
+    email: '',
+    contactNumber: '',
+    position: '',
+    designation: '',
+    editDivision: '',
+    editSection: '',
+    supervisor: '',
+    userLevel: '',
+    isSupervisor: false,
+    status: '1',
+  });
+
+  const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
     const data = { ...filterForm.data, ...overrides };
     router.get('/inertia/administration/users', data, {
       preserveState: true,
@@ -110,33 +108,46 @@ export default function Users({
     });
   };
 
-  const openEditModal = (u: UserRow) => {
-    setEditingUserId(u.id);
+  const resetFilters = () => {
+    filterForm.setData({
+      search: '',
+      division: '',
+      section: '',
+      status: '',
+      perPage: '10',
+    });
+    router.get('/inertia/administration/users', {}, { replace: true });
+  };
+
+  const openEditModal = (row: UserRow) => {
+    setEditingUser(row);
     editForm.setData({
-      editLastName: u.lastName,
-      editFirstName: u.firstName,
-      editMiddleName: u.middleName,
-      editExtensionName: u.extensionName,
-      editPosition: u.position || '',
-      editDesignation: u.designation || '',
-      editDivision: u.divisionId,
-      editSection: u.sectionId,
-      editSupervisorId: u.supervisorId,
-      editUserLevelId: u.userLevelId,
-      editContactNumber: u.contactNumber || '',
-      editIsSupervisor: u.isSupervisor,
+      lastName: row.lastName || '',
+      firstName: row.firstName || '',
+      middleName: row.middleName || '',
+      extensionName: row.extensionName || '',
+      email: row.email || '',
+      contactNumber: row.contactNumber || '',
+      position: row.position || '',
+      designation: row.designation || '',
+      editDivision: row.divisionId ? String(row.divisionId) : '',
+      editSection: row.sectionId ? String(row.sectionId) : '',
+      supervisor: row.supervisorId ? String(row.supervisorId) : '',
+      userLevel: row.userLevelId ? String(row.userLevelId) : '',
+      isSupervisor: Boolean(row.isSupervisor),
+      status: String(row.isStatus ?? 1),
     });
     setShowEditModal(true);
   };
 
-  const handleUpdateUser = (e: React.FormEvent) => {
+  const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingUserId) return;
+    if (!editingUser) return;
 
-    editForm.patch(`/inertia/administration/users/${editingUserId}`, {
+    editForm.patch(`/inertia/administration/users/${editingUser.id}`, {
       onSuccess: () => {
         setShowEditModal(false);
-        setEditingUserId(null);
+        setEditingUser(null);
       },
     });
   };
@@ -153,213 +164,240 @@ export default function Users({
     <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
       <Head title="Administration Users" />
 
-      <section className="w-full space-y-6">
-        {/* Livewire Header Style */}
-        <div className="mb-6">
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
-            Administration Users
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Browse and review users registered in the system.
-          </p>
-        </div>
-
-        {/* Outer Card Container */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm space-y-4">
-          {/* Filters Bar */}
-          <div className="mb-4 flex flex-col gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Search
-                </label>
-                <input
-                  type="text"
-                  value={filterForm.data.search}
-                  onChange={(e) => {
-                    filterForm.setData('search', e.target.value);
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
-                  placeholder="Full name, position, or designation"
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                />
+      <div className="space-y-3">
+        {/* TOP FILTER & ACTION CARD */}
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-2xs">
+          {/* HEADER */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-3 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <UsersIcon className="size-4.5" />
               </div>
-
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Division
-                </label>
-                <select
-                  value={filterForm.data.division}
-                  onChange={(e) => {
-                    filterForm.setData({ ...filterForm.data, division: e.target.value, section: '' });
-                    submitFilters({ division: e.target.value, section: '' });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  <option value="">All divisions</option>
-                  {divisions.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
+                <h1 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <span>Administration Users</span>
+                  <span className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold px-2 py-0.2 border border-emerald-500/20">
+                    {users.total} Total Users
+                  </span>
+                </h1>
+                <p className="text-[11px] text-muted-foreground">
+                  Browse, review, and manage user accounts, permissions, and divisional assignments.
+                </p>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Section
-                </label>
-                <select
-                  value={filterForm.data.section}
-                  onChange={(e) => {
-                    filterForm.setData('section', e.target.value);
-                    submitFilters({ section: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  <option value="">All sections</option>
-                  {filterSectionOptions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                  Status
-                </label>
-                <select
-                  value={filterForm.data.status}
-                  onChange={(e) => {
-                    filterForm.setData('status', e.target.value);
-                    submitFilters({ status: e.target.value });
-                  }}
-                  className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm focus:border-emerald-500 focus:outline-none dark:text-slate-100"
-                >
-                  {statusOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* ACTIONS */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
+                title="Reset all filters"
+              >
+                <RotateCcw className="size-3" />
+                <span>Reset</span>
+              </button>
             </div>
           </div>
 
-          {/* Table Matching Livewire Bordered Grid Exact Layout */}
-          <div className="w-full overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full border-separate border-spacing-0 text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                <tr>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-2 py-3 whitespace-nowrap text-center first:rounded-tl-xl">
-                    #
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
-                    Full Name
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
-                    Email
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
-                    Contact Number
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
-                    Position
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
-                    Division
-                  </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
-                    User Level
-                  </th>
-                  <th className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
-                    Status
-                  </th>
-                  <th className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 text-right whitespace-nowrap last:rounded-tr-xl">
-                    Action
-                  </th>
+          {/* FILTERS FORM */}
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+            {/* Search Input */}
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-[11px] font-semibold text-muted-foreground">Search Users</label>
+              <div className="relative">
+                <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={filterForm.data.search}
+                  onChange={(e) => filterForm.setData('search', e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
+                  placeholder="Full name, position, email, designation..."
+                  className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
+                />
+                {filterForm.data.search && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      filterForm.setData('search', '');
+                      submitFilters({ search: '' });
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Division */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Division</label>
+              <select
+                value={filterForm.data.division}
+                onChange={(e) => {
+                  filterForm.setData({ ...filterForm.data, division: e.target.value, section: '' });
+                  submitFilters({ division: e.target.value, section: '' });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All Divisions ({divisions.length})</option>
+                {divisions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Section */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Section</label>
+              <select
+                value={filterForm.data.section}
+                onChange={(e) => {
+                  filterForm.setData('section', e.target.value);
+                  submitFilters({ section: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All Sections ({filterSectionOptions.length})</option>
+                {filterSectionOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Status</label>
+              <select
+                value={filterForm.data.status}
+                onChange={(e) => {
+                  filterForm.setData('status', e.target.value);
+                  submitFilters({ status: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                {statusOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* RESULTS TABLE CARD */}
+        <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[950px] border-collapse text-xs text-left">
+              <thead>
+                <tr className="bg-muted/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="px-3 py-2 text-center w-12 border-r border-border">#</th>
+                  <th className="px-3 py-2 border-r border-border">Full Name</th>
+                  <th className="px-3 py-2 border-r border-border">Email</th>
+                  <th className="px-3 py-2 border-r border-border">Contact</th>
+                  <th className="px-3 py-2 border-r border-border">Position</th>
+                  <th className="px-3 py-2 border-r border-border">Division / Section</th>
+                  <th className="px-3 py-2 border-r border-border text-center">User Level</th>
+                  <th className="px-3 py-2 border-r border-border text-center w-24">Status</th>
+                  <th className="px-3 py-2 text-center w-28">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-border">
                 {users.data.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-3 py-8 text-center text-slate-500 dark:text-slate-400">
-                      No users found.
+                    <td colSpan={9} className="px-4 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="size-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                          <UsersIcon className="size-5" />
+                        </div>
+                        <p className="text-xs font-bold text-foreground">No users found</p>
+                        <p className="text-[11px] text-muted-foreground max-w-sm">
+                          No administration user accounts matched your search criteria.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
                   users.data.map((row, index) => (
-                    <tr key={row.id} className="border-t border-slate-200 dark:border-slate-800 text-sm hover:bg-slate-50/50 dark:hover:bg-slate-800/40">
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-2 py-3 text-center text-slate-500 whitespace-nowrap">
+                    <tr key={row.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="px-3 py-2 text-center font-mono text-[11px] text-muted-foreground border-r border-border">
                         {(users.from ?? 1) + index}
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 font-medium text-slate-900 dark:text-slate-100">
+                      <td className="px-3 py-2 font-bold text-foreground border-r border-border">
                         {row.fullName.toUpperCase()}
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-slate-700 dark:text-slate-300">
-                        {row.email}
+                      <td className="px-3 py-2 text-muted-foreground border-r border-border font-mono text-[11px]">
+                        {row.email ? (
+                          <a href={`mailto:${row.email}`} className="text-emerald-700 dark:text-emerald-400 hover:underline">
+                            {row.email}
+                          </a>
+                        ) : '—'}
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap text-slate-700 dark:text-slate-300">
-                        {row.contactNumber || ' - '}
+                      <td className="px-3 py-2 whitespace-nowrap text-muted-foreground border-r border-border font-mono text-[11px]">
+                        {row.contactNumber || '—'}
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 truncate max-w-[180px] text-slate-700 dark:text-slate-300">
-                        {row.position ? (row.position.length > 25 ? `${row.position.substring(0, 25)}...` : row.position) : ' - '}
+                      <td className="px-3 py-2 text-foreground border-r border-border truncate max-w-[160px]" title={row.position || ''}>
+                        {row.position || '—'}
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 truncate max-w-[120px] text-slate-700 dark:text-slate-300">
-                        {row.divisionName ? (row.divisionName.length > 12 ? `${row.divisionName.substring(0, 12)}...` : row.divisionName) : ' - '}
+                      <td className="px-3 py-2 border-r border-border">
+                        <div className="text-[11px] font-semibold text-foreground truncate max-w-[150px]">{row.divisionName || '—'}</div>
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[150px]">{row.sectionName || ''}</div>
                       </td>
 
-                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap text-center border-r border-border">
                         {row.userLevelName ? (
-                          <span className="inline-flex items-center rounded-full bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                          <span className="inline-flex items-center rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-300 font-mono text-[10px] font-bold px-2 py-0.2 border border-violet-500/20">
                             {row.userLevelName}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-400">—</span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
 
-                      <td className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap">
+                      <td className="px-3 py-2 whitespace-nowrap text-center border-r border-border">
                         <button
                           type="button"
                           onClick={() =>
                             router.patch(`/inertia/administration/users/${row.id}/toggle-status`, {}, { preserveScroll: true })
                           }
-                          className={`rounded-full px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
+                          className={`rounded-full font-mono text-[10px] font-bold px-2.5 py-0.5 transition cursor-pointer border ${
                             row.isStatus === 1
-                              ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15 dark:text-emerald-400'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 hover:bg-emerald-500/20'
+                              : 'bg-muted text-muted-foreground border-border hover:bg-muted/80'
                           }`}
                         >
                           {row.isStatus === 1 ? 'Active' : 'Inactive'}
                         </button>
                       </td>
 
-                      <td className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
+                      <td className="px-3 py-2 text-center">
+                        <div className="inline-flex items-center justify-center gap-1">
                           <button
                             type="button"
                             onClick={() => openEditModal(row)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                            title="Edit User"
+                            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                           >
-                            <Pencil className="w-3.5 h-3.5" />
-                            <span>Edit</span>
+                            <Pencil className="size-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setDeletingUser({ id: row.id, name: row.fullName })}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/10 transition"
+                            title="Delete User"
+                            className="p-1 rounded-md text-rose-600 hover:bg-rose-500/10 transition cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            <span>Delete</span>
+                            <Trash2 className="size-3.5" />
                           </button>
                         </div>
                       </td>
@@ -370,22 +408,20 @@ export default function Users({
             </table>
           </div>
 
-          {/* Livewire Pagination Style Matching vendor.pagination.users-pagination */}
-          {users.lastPage > 1 ? (
-            <nav
-              role="navigation"
-              aria-label="Pagination Navigation"
-              className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-2"
-            >
-              <div className="text-sm text-slate-500 dark:text-slate-400">
-                Showing {users.from ?? 0} to {users.to ?? 0} of {users.total} records
+          {/* PAGINATION FOOTER */}
+          {users.lastPage > 1 && (
+            <div className="border-t border-border px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-muted/20">
+              <div className="text-[11px] text-muted-foreground">
+                Showing <span className="font-bold text-foreground">{users.from ?? 0}</span> to{' '}
+                <span className="font-bold text-foreground">{users.to ?? 0}</span> of{' '}
+                <span className="font-bold text-foreground">{users.total}</span> users
               </div>
 
-              <div className="flex flex-wrap items-center gap-1.5">
-                {/* Previous Button */}
+              <div className="flex items-center gap-1 flex-wrap">
+                {/* Previous */}
                 {users.currentPage === 1 ? (
-                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm text-slate-400 select-none">
-                    Previous
+                  <span className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none">
+                    <ChevronLeft className="size-3.5" />
                   </span>
                 ) : (
                   <button
@@ -397,25 +433,15 @@ export default function Users({
                         { replace: true, preserveState: true }
                       )
                     }
-                    className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-colors"
+                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
                   >
-                    Previous
+                    <ChevronLeft className="size-3.5" />
                   </button>
                 )}
 
-                {/* Page Numbers */}
+                {/* Pages */}
                 {Array.from({ length: users.lastPage }, (_, i) => i + 1).map((page) => {
-                  if (page === users.currentPage) {
-                    return (
-                      <span
-                        key={page}
-                        aria-current="page"
-                        className="inline-flex min-w-10 cursor-pointer items-center justify-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs"
-                      >
-                        {page}
-                      </span>
-                    );
-                  }
+                  const isActive = page === users.currentPage;
                   return (
                     <button
                       key={page}
@@ -427,17 +453,21 @@ export default function Users({
                           { replace: true, preserveState: true }
                         )
                       }
-                      className="inline-flex min-w-10 cursor-pointer items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-colors"
+                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
+                        isActive
+                          ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                          : 'border border-input bg-background text-foreground hover:bg-muted'
+                      }`}
                     >
                       {page}
                     </button>
                   );
                 })}
 
-                {/* Next Button */}
+                {/* Next */}
                 {users.currentPage === users.lastPage ? (
-                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm text-slate-400 select-none">
-                    Next
+                  <span className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none">
+                    <ChevronRight className="size-3.5" />
                   </span>
                 ) : (
                   <button
@@ -449,102 +479,132 @@ export default function Users({
                         { replace: true, preserveState: true }
                       )
                     }
-                    className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 dark:hover:bg-emerald-950/30 dark:hover:text-emerald-400 transition-colors"
+                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
                   >
-                    Next
+                    <ChevronRight className="size-3.5" />
                   </button>
                 )}
               </div>
-            </nav>
-          ) : null}
+            </div>
+          )}
         </div>
 
-        {/* Modal: Edit User (Matching Flux Modal Overlay) */}
+        {/* Modal: Edit User */}
         {showEditModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Edit user</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Update the selected user profile details.
-                </p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Edit User Profile</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Update the selected user profile details, roles, and assignments.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
 
-              <form onSubmit={handleUpdateUser} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+              <form onSubmit={handleEditSubmit} className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Lastname
                     </label>
                     <input
-                      value={editForm.data.editLastName}
-                      onChange={(e) => editForm.setData('editLastName', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                      value={editForm.data.lastName}
+                      onChange={(e) => editForm.setData('lastName', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Firstname
                     </label>
                     <input
-                      value={editForm.data.editFirstName}
-                      onChange={(e) => editForm.setData('editFirstName', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                      value={editForm.data.firstName}
+                      onChange={(e) => editForm.setData('firstName', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                       required
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Middlename
                     </label>
                     <input
-                      value={editForm.data.editMiddleName}
-                      onChange={(e) => editForm.setData('editMiddleName', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
-                      required
+                      value={editForm.data.middleName}
+                      onChange={(e) => editForm.setData('middleName', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Extension Name
                     </label>
                     <input
-                      value={editForm.data.editExtensionName}
-                      onChange={(e) => editForm.setData('editExtensionName', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                      value={editForm.data.extensionName}
+                      onChange={(e) => editForm.setData('extensionName', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={editForm.data.email}
+                      onChange={(e) => editForm.setData('email', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
+                      Contact Number
+                    </label>
+                    <input
+                      value={editForm.data.contactNumber}
+                      onChange={(e) => editForm.setData('contactNumber', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Position
                     </label>
                     <input
-                      value={editForm.data.editPosition}
-                      onChange={(e) => editForm.setData('editPosition', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
-                      required
+                      value={editForm.data.position}
+                      onChange={(e) => editForm.setData('position', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Designation
                     </label>
                     <input
-                      value={editForm.data.editDesignation}
-                      onChange={(e) => editForm.setData('editDesignation', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
-                      required
+                      value={editForm.data.designation}
+                      onChange={(e) => editForm.setData('designation', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Division
                     </label>
                     <select
@@ -552,7 +612,7 @@ export default function Users({
                       onChange={(e) => {
                         editForm.setData({ ...editForm.data, editDivision: e.target.value, editSection: '' });
                       }}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       required
                     >
                       <option value="">Select division</option>
@@ -564,14 +624,14 @@ export default function Users({
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Section
                     </label>
                     <select
                       value={editForm.data.editSection}
                       onChange={(e) => editForm.setData('editSection', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       required
                     >
                       <option value="">Select section</option>
@@ -583,14 +643,14 @@ export default function Users({
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       User Level
                     </label>
                     <select
-                      value={editForm.data.editUserLevelId}
-                      onChange={(e) => editForm.setData('editUserLevelId', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
+                      value={editForm.data.userLevel}
+                      onChange={(e) => editForm.setData('userLevel', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                     >
                       <option value="">Select user level</option>
                       {userLevels.map((ul) => (
@@ -601,15 +661,14 @@ export default function Users({
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-muted-foreground">
                       Supervisor
                     </label>
                     <select
-                      value={editForm.data.editSupervisorId}
-                      onChange={(e) => editForm.setData('editSupervisorId', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
-                      required
+                      value={editForm.data.supervisor}
+                      onChange={(e) => editForm.setData('supervisor', e.target.value)}
+                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                     >
                       <option value="">Select supervisor</option>
                       {supervisors.map((sp) => (
@@ -620,50 +679,35 @@ export default function Users({
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
-                      Contact Number
-                    </label>
-                    <input
-                      value={editForm.data.editContactNumber}
-                      onChange={(e) => editForm.setData('editContactNumber', e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-sm text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:outline-none"
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">
-                      Is Supervisor
-                    </label>
-                    <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5">
+                  <div className="space-y-1 sm:col-span-2">
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
                       <input
                         type="checkbox"
-                        checked={editForm.data.editIsSupervisor}
-                        onChange={(e) => editForm.setData('editIsSupervisor', e.target.checked)}
-                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                        checked={editForm.data.isSupervisor}
+                        onChange={(e) => editForm.setData('isSupervisor', e.target.checked)}
+                        className="size-3.5 rounded border-input text-emerald-600 focus:ring-emerald-500"
                       />
-                      <span className="text-sm text-slate-700 dark:text-slate-200 font-medium">
-                        Make as Supervisor
+                      <span className="text-xs text-foreground font-medium">
+                        User has Supervisor privileges
                       </span>
                     </label>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex justify-end gap-2 pt-3 border-t border-border">
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                    className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={editForm.processing}
-                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition"
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition"
                   >
-                    Save changes
+                    Save Changes
                   </button>
                 </div>
               </form>
@@ -671,50 +715,55 @@ export default function Users({
           </div>
         ) : null}
 
-        {/* Modal: Delete User (Matching Livewire Delete Modal) */}
+        {/* Modal: Delete User */}
         {deletingUser ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
-              <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Delete user</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  This will permanently remove the selected user from the list.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 px-4 py-3 text-sm text-slate-500 dark:text-slate-400 space-y-1">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between">
                 <div>
-                  Selected user: <span className="font-semibold text-slate-900 dark:text-slate-100">{deletingUser.name || '-'}</span>
+                  <h3 className="text-sm font-bold text-foreground">Delete User</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    This will permanently remove the user account from the system.
+                  </p>
                 </div>
-                <div>
-                  Selected user ID: <span className="font-semibold text-slate-900 dark:text-slate-100">{deletingUser.id || '-'}</span>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setDeletingUser(null)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition"
+                  className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/40 px-3.5 py-2.5 text-xs text-muted-foreground space-y-1">
+                <div>
+                  User: <span className="font-bold text-foreground">{deletingUser.name || '-'}</span>
+                </div>
+                <div>
+                  User ID: <span className="font-mono font-bold text-foreground">{deletingUser.id || '-'}</span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setDeletingUser(null)}
+                  className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    router.delete(`/inertia/administration/users/${deletingUser.id}`, {
-                      onSuccess: () => setDeletingUser(null),
-                    });
-                  }}
-                  className="rounded-xl bg-red-600 hover:bg-red-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition"
+                  onClick={handleDeleteSubmit}
+                  className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition"
                 >
-                  Delete
+                  Confirm &amp; Delete
                 </button>
               </div>
             </div>
           </div>
         ) : null}
-      </section>
+      </div>
     </AppLayout>
   );
 }

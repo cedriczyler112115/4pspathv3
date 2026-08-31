@@ -30,7 +30,7 @@ class SearchController extends Controller
             'filters' => $filters,
             'users' => $users,
             'divisions' => $directory->divisions(),
-            'sections' => $directory->sections($filters['division']),
+            'sections' => $directory->sections('', true),
         ]);
     }
 }

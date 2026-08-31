@@ -4,7 +4,8 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "serve": "php -d \"upload_tmp_dir=C:/laravelapps/4pspathv3/storage/framework/temp\" -d \"upload_max_filesize=50M\" -d \"post_max_size=100M\" -d \"memory_limit=512M\" artisan serve --port=3000"
     },
     "dependencies": {
         "@base-ui/react": "^1.6.0",

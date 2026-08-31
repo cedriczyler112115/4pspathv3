@@ -224,7 +224,7 @@ data-theme="{{ $htmlTheme }}" @endif>
                 </div>
             </header>
 
-            <main class="w-full max-w-full flex-1 min-w-0 px-3 py-2 sm:px-4 sm:py-3 lg:px-6 lg:py-4">
+            <main class="w-full max-w-full flex-1 min-w-0 p-2 sm:p-2.5 md:p-3 space-y-2.5 sm:space-y-3">
                 {{ $slot }}
             </main>
         </div>
