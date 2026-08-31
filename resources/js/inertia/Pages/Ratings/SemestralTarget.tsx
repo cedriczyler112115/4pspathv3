@@ -91,6 +91,7 @@ type IndicatorItem = {
   actEfficiency: number | null;
   actTimeliness: number | null;
   averageScore: number | null;
+  verified?: number;
 };
 
 type IndicatorGroup = {
@@ -1949,7 +1950,7 @@ export default function SemestralTarget({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
                       <table className="w-full text-left text-xs border-collapse">
                         {isLocked ? (
                           <colgroup>
@@ -1977,17 +1978,17 @@ export default function SemestralTarget({
                           </colgroup>
                         )}
 
-                        <thead className="bg-slate-100 dark:bg-slate-800/80 uppercase font-semibold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800">
+                        <thead className="bg-muted/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                           <tr>
-                            <th className="px-3 py-3 text-center border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">Action</th>
-                            <th className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">Key Result Area</th>
-                            <th className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">Success Indicator</th>
-                            {isLocked && <th className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">Actual Accomplishments</th>}
-                            <th className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">EFFICIENCY</th>
-                            <th className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">QUALITY</th>
-                            <th className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">TIMELINESS</th>
-                            {isLocked && <th className="px-3 py-3 text-center border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">AVE</th>}
-                            <th className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">MOVS</th>
+                            <th className="px-3 py-3 text-center border-r border-border whitespace-nowrap">Action</th>
+                            <th className="px-3 py-3 border-r border-border whitespace-nowrap">Key Result Area</th>
+                            <th className="px-3 py-3 border-r border-border whitespace-nowrap">Success Indicator</th>
+                            {isLocked && <th className="px-3 py-3 border-r border-border whitespace-nowrap">Actual Accomplishments</th>}
+                            <th className="px-3 py-3 border-r border-border whitespace-nowrap">EFFICIENCY</th>
+                            <th className="px-3 py-3 border-r border-border whitespace-nowrap">QUALITY</th>
+                            <th className="px-3 py-3 border-r border-border whitespace-nowrap">TIMELINESS</th>
+                            {isLocked && <th className="px-3 py-3 text-center border-r border-border whitespace-nowrap">AVE</th>}
+                            <th className="px-3 py-3 border-r border-border whitespace-nowrap">MOVS</th>
                             <th className="px-3 py-3 whitespace-nowrap">REMARKS</th>
                           </tr>
                         </thead>
@@ -1997,10 +1998,10 @@ export default function SemestralTarget({
                           if (catGroups.length === 0) return null;
 
                           return (
-                            <tbody key={catId} className="divide-y divide-slate-200 dark:divide-slate-800">
-                              <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 font-bold">
+                            <tbody key={catId} className="divide-y divide-border">
+                              <tr className="bg-muted/80 border-b border-border font-bold">
                                 <td colSpan={isLocked ? 10 : 8} className="px-3 py-2">
-                                  <span className="text-xs uppercase tracking-wide text-emerald-800 dark:text-emerald-400">
+                                  <span className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-400 font-bold">
                                     {getKraLabel(catId)}
                                   </span>
                                 </td>
@@ -2033,81 +2034,90 @@ export default function SemestralTarget({
                                               isFirstRow
                                             )
                                           }
-                                          className={`hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition align-top border-b border-slate-200 dark:border-slate-800 ${isEditingThisGroup
-                                              ? 'bg-sky-50/80 dark:bg-sky-950/50'
+                                          className={`hover:bg-muted/30 transition-colors align-top border-b border-border ${isEditingThisGroup
+                                              ? 'bg-sky-50/80 dark:bg-sky-950/40'
                                               : contextMenu && contextMenu.itemId === item.itemId
-                                                ? 'bg-sky-50 dark:bg-sky-950/60'
+                                                ? 'bg-sky-50 dark:bg-sky-950/50'
                                                 : ''
                                             }`}
                                         >
                                           {isFirstRow && (
                                             <td
                                               rowSpan={totalSubRows}
-                                              className="px-2 py-3 text-center border-r border-slate-200 dark:border-slate-800 align-top"
+                                              className="px-2 py-3 text-center border-r border-border align-top h-1"
                                             >
-                                              <div className="flex flex-col items-center gap-2">
-                                                {isEditingThisGroup ? (
-                                                  <div className="flex flex-col items-center gap-1.5">
-                                                    <button
-                                                      type="button"
-                                                      onClick={handleRequestSaveEditGroup}
-                                                      className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition"
-                                                      title="Save Changes"
-                                                    >
-                                                      <Check className="w-4 h-4 stroke-[3]" />
-                                                    </button>
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => setEditingGroup(null)}
-                                                      className="w-8 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-md transition"
-                                                      title="Cancel"
-                                                    >
-                                                      <X className="w-4 h-4 stroke-[3]" />
-                                                    </button>
-                                                  </div>
-                                                ) : isPendingThisGroup ? (
-                                                  <div className="flex flex-col items-center gap-1.5">
-                                                    <button
-                                                      type="button"
-                                                      onClick={handleSavePendingSubTarget}
-                                                      className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition"
-                                                      title="Save Sub-Target"
-                                                    >
-                                                      <Check className="w-4 h-4 stroke-[3]" />
-                                                    </button>
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => setPendingSubTargetGroup(null)}
-                                                      className="w-8 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-md transition"
-                                                      title="Cancel"
-                                                    >
-                                                      <X className="w-4 h-4 stroke-[3]" />
-                                                    </button>
-                                                  </div>
-                                                ) : (
-                                                  <>
-                                                    <div
-                                                      draggable={isFirstRow && !isEditingThisGroup}
-                                                      onDragStart={() => isFirstRow && !isEditingThisGroup && handleDragStart(group.indicatorId)}
-                                                      className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
-                                                      title="Drag to reorder"
-                                                    >
-                                                      <GripVertical className="w-4 h-4" />
+                                              <div className="flex h-full min-h-[120px] flex-col justify-between items-center">
+                                                <div className="flex flex-col items-center gap-2">
+                                                  {isEditingThisGroup ? (
+                                                    <div className="flex flex-col items-center gap-1.5">
+                                                      <button
+                                                        type="button"
+                                                        onClick={handleRequestSaveEditGroup}
+                                                        className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition"
+                                                        title="Save Changes"
+                                                      >
+                                                        <Check className="w-4 h-4 stroke-[3]" />
+                                                      </button>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setEditingGroup(null)}
+                                                        className="w-8 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-md transition"
+                                                        title="Cancel"
+                                                      >
+                                                        <X className="w-4 h-4 stroke-[3]" />
+                                                      </button>
                                                     </div>
-                                                    {isVerified && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
-                                                    {(historyTargetIds.includes(group.indicatorId) ||
-                                                      group.items.some((i) => historyItemIds.includes(i.itemId))) && (
-                                                        <button
-                                                          type="button"
-                                                          onClick={() => handleOpenEditHistory(group.indicatorId)}
-                                                          className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/60 rounded-md p-1 cursor-pointer transition-colors"
-                                                          title="Show Edit History"
-                                                        >
-                                                          <Clock className="w-4 h-4" />
-                                                        </button>
-                                                      )}
-                                                  </>
-                                                )}
+                                                  ) : isPendingThisGroup ? (
+                                                    <div className="flex flex-col items-center gap-1.5">
+                                                      <button
+                                                        type="button"
+                                                        onClick={handleSavePendingSubTarget}
+                                                        className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md transition"
+                                                        title="Save Sub-Target"
+                                                      >
+                                                        <Check className="w-4 h-4 stroke-[3]" />
+                                                      </button>
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => setPendingSubTargetGroup(null)}
+                                                        className="w-8 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-md transition"
+                                                        title="Cancel"
+                                                      >
+                                                        <X className="w-4 h-4 stroke-[3]" />
+                                                      </button>
+                                                    </div>
+                                                  ) : (
+                                                    <>
+                                                      <div
+                                                        draggable={isFirstRow && !isEditingThisGroup}
+                                                        onDragStart={() => isFirstRow && !isEditingThisGroup && handleDragStart(group.indicatorId)}
+                                                        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1"
+                                                        title="Drag to reorder"
+                                                      >
+                                                        <GripVertical className="w-4 h-4" />
+                                                      </div>
+                                                      {isVerified && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                                                      {(historyTargetIds.includes(group.indicatorId) ||
+                                                        group.items.some((i) => historyItemIds.includes(i.itemId))) && (
+                                                          <button
+                                                            type="button"
+                                                            onClick={() => handleOpenEditHistory(group.indicatorId)}
+                                                            className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-950/60 rounded-md p-1 cursor-pointer transition-colors"
+                                                            title="Show Edit History"
+                                                          >
+                                                            <Clock className="w-4 h-4" />
+                                                          </button>
+                                                        )}
+                                                    </>
+                                                  )}
+                                                </div>
+
+                                                {/* Target ID at the bottom of the Action column */}
+                                                <div className="pt-2 mt-auto text-center">
+                                                  <span className="text-[10px] font-semibold italic text-muted-foreground select-none">
+                                                    <strong><em>{group.indicatorId}</em></strong>
+                                                  </span>
+                                                </div>
                                               </div>
                                             </td>
                                           )}
@@ -2115,7 +2125,7 @@ export default function SemestralTarget({
                                           {isFirstRow && (
                                             <td
                                               rowSpan={totalSubRows}
-                                              className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 text-xs font-normal text-slate-900 dark:text-slate-100 align-top"
+                                              className="px-3 py-3 border-r border-border text-xs font-normal text-foreground align-top"
                                             >
                                               {isEditingThisGroup ? (
                                                 <div className="space-y-2">
@@ -2125,7 +2135,7 @@ export default function SemestralTarget({
                                                     onChange={(e) =>
                                                       setEditingGroup({ ...editingGroup, activity: e.target.value })
                                                     }
-                                                    className="w-full rounded-lg border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/40 shadow-inner"
+                                                    className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                                   />
                                                   <select
                                                     value={editingGroup.kraCategory}
@@ -2135,7 +2145,7 @@ export default function SemestralTarget({
                                                         kraCategory: Number(e.target.value),
                                                       })
                                                     }
-                                                    className="w-full rounded-lg border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 p-1.5 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
+                                                    className="w-full rounded-lg border border-input bg-background p-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                                   >
                                                     {includeStrategicFunction && (
                                                       <option value={1}>Strategic Function</option>
@@ -2151,7 +2161,7 @@ export default function SemestralTarget({
                                           )}
 
                                           {/* Success Indicator / Description */}
-                                          <td className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 align-top">
+                                          <td className="px-3 py-3 border-r border-border text-foreground align-top">
                                             {isEditingThisGroup && itemEditIdx !== -1 ? (
                                               <AutoResizingTextarea
                                                 rows={2}
@@ -2161,7 +2171,7 @@ export default function SemestralTarget({
                                                   newItems[itemEditIdx].description = e.target.value;
                                                   setEditingGroup({ ...editingGroup, items: newItems });
                                                 }}
-                                                className="w-full rounded-lg border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/40 shadow-inner"
+                                                className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                               />
                                             ) : (
                                               <FormattedText value={item.description} />
@@ -2170,11 +2180,19 @@ export default function SemestralTarget({
 
                                           {/* Actual Accomplishments */}
                                           {isLocked && (
-                                            <td className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 align-top text-xs">
-                                              <div className="flex h-full min-h-[200px] flex-col justify-between">
-                                                <div className="min-h-[200px] space-y-2">
+                                            <td className="px-3 py-3 border-r border-border align-top text-xs h-1 relative">
+                                              {Boolean(item.verified) && (
+                                                <div
+                                                  className="absolute top-2.5 right-2.5 inline-flex items-center text-emerald-600 dark:text-emerald-400"
+                                                  title="Verified by supervisor"
+                                                >
+                                                  <CheckCircle2 className="size-4" />
+                                                </div>
+                                              )}
+                                              <div className="flex h-full min-h-[140px] flex-col justify-between">
+                                                <div className={`min-h-[140px] space-y-2 ${Boolean(item.verified) ? 'pr-6' : ''}`}>
                                                   {isReadOnly ? (
-                                                    <div className="text-xs text-slate-900 dark:text-slate-100 leading-normal whitespace-pre-line min-h-[200px]">
+                                                    <div className="text-xs text-foreground leading-normal whitespace-pre-line min-h-[140px]">
                                                       {itemValues[item.itemId]?.actualAccomplishment || item.actualAccomplishment || '-'}
                                                     </div>
                                                   ) : (
@@ -2184,20 +2202,17 @@ export default function SemestralTarget({
                                                       onChange={(e) => scheduleSave(item.itemId, 'actualAccomplishment', e.target.value)}
                                                       onBlur={(e) => saveField(item.itemId, 'actualAccomplishment', e.target.value)}
                                                       placeholder="Actual accomplishment..."
-                                                      className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs leading-4 text-slate-900 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
-                                                      style={{ minHeight: '200px' }}
+                                                      className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[140px]"
+                                                      style={{ minHeight: '140px' }}
                                                     />
                                                   )}
                                                 </div>
-                                                <div className="flex items-center justify-between gap-3 border-t border-slate-200 dark:border-slate-800/80 pt-2 mt-2">
+                                                <div className="flex items-center justify-between gap-3 border-t border-border pt-2 mt-auto">
                                                   <div className="flex flex-col leading-none">
-                                                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                    <span className="text-[10px] text-muted-foreground">
                                                       {(itemAttachmentCounts[item.itemId] ?? item.attachmentCount ?? 0) === 1
                                                         ? '1 file uploaded'
                                                         : `${itemAttachmentCounts[item.itemId] ?? item.attachmentCount ?? 0} files uploaded`}
-                                                    </span>
-                                                    <span className="text-[10px] font-semibold italic text-slate-400 dark:text-slate-500">
-                                                      <strong><em>{item.itemId}</em></strong>
                                                     </span>
                                                   </div>
                                                   {isReadOnly ? (
@@ -2225,7 +2240,7 @@ export default function SemestralTarget({
                                           )}
 
                                           {/* RG Efficiency */}
-                                          <td className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 align-top text-xs">
+                                          <td className="px-3 py-3 border-r border-border align-top text-xs">
                                             {isEditingThisGroup && itemEditIdx !== -1 ? (
                                               <AutoResizingTextarea
                                                 rows={2}
@@ -2235,12 +2250,12 @@ export default function SemestralTarget({
                                                   newItems[itemEditIdx].efficiencyTarget = e.target.value;
                                                   setEditingGroup({ ...editingGroup, items: newItems });
                                                 }}
-                                                className="w-full rounded-lg border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/40 shadow-inner"
+                                                className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                               />
                                             ) : isLocked ? (
                                               <div className="space-y-1">
                                                 {isReadOnly ? (
-                                                  <div className="w-full text-center text-xs font-bold text-slate-900 dark:text-slate-100 py-1 mb-1 rounded-md bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                                                  <div className="w-full text-center text-xs font-bold text-foreground py-1 mb-1 rounded-md bg-muted/60 border border-border">
                                                     {itemValues[item.itemId]?.actEfficiency || (item.actEfficiency ? String(item.actEfficiency) : 'N/A')}
                                                   </div>
                                                 ) : (
@@ -2251,20 +2266,20 @@ export default function SemestralTarget({
                                                     onInput={(e) => handleScoreInput(e as any, item.itemId, 'actEfficiency')}
                                                     onBlur={(e) => handleScoreBlur(e, item.itemId, 'actEfficiency')}
                                                     placeholder="Score (1-5 or N/A)"
-                                                    className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-center text-xs font-semibold text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
+                                                    className="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
                                                   />
                                                 )}
                                                 {renderTargetTextWithShowMore(item.efficiencyTarget, item.itemId, 'efficiency')}
                                               </div>
                                             ) : (
-                                              <div className="font-medium text-slate-800 dark:text-slate-200">
+                                              <div className="font-medium text-foreground">
                                                 <FormattedText value={item.efficiencyTarget} />
                                               </div>
                                             )}
                                           </td>
 
                                           {/* RG Quality */}
-                                          <td className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 align-top text-xs">
+                                          <td className="px-3 py-3 border-r border-border align-top text-xs">
                                             {isEditingThisGroup && itemEditIdx !== -1 ? (
                                               <AutoResizingTextarea
                                                 rows={2}
@@ -2274,12 +2289,12 @@ export default function SemestralTarget({
                                                   newItems[itemEditIdx].qualityTarget = e.target.value;
                                                   setEditingGroup({ ...editingGroup, items: newItems });
                                                 }}
-                                                className="w-full rounded-lg border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/40 shadow-inner"
+                                                className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                               />
                                             ) : isLocked ? (
                                               <div className="space-y-1">
                                                 {isReadOnly ? (
-                                                  <div className="w-full text-center text-xs font-bold text-slate-900 dark:text-slate-100 py-1 mb-1 rounded-md bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                                                  <div className="w-full text-center text-xs font-bold text-foreground py-1 mb-1 rounded-md bg-muted/60 border border-border">
                                                     {itemValues[item.itemId]?.actQuality || (item.actQuality ? String(item.actQuality) : 'N/A')}
                                                   </div>
                                                 ) : (
@@ -2291,20 +2306,20 @@ export default function SemestralTarget({
                                                     onChange={(e) => handleScoreInput(e as any, item.itemId, 'actQuality')}
                                                     onBlur={(e) => handleScoreBlur(e, item.itemId, 'actQuality')}
                                                     placeholder="Score (1-5 or N/A)"
-                                                    className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-center text-xs font-semibold text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
+                                                    className="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
                                                   />
                                                 )}
                                                 {renderTargetTextWithShowMore(item.qualityTarget, item.itemId, 'quality')}
                                               </div>
                                             ) : (
-                                              <div className="font-medium text-slate-800 dark:text-slate-200">
+                                              <div className="font-medium text-foreground">
                                                 <FormattedText value={item.qualityTarget} />
                                               </div>
                                             )}
                                           </td>
 
                                           {/* RG Timeliness */}
-                                          <td className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 align-top text-xs">
+                                          <td className="px-3 py-3 border-r border-border align-top text-xs">
                                             {isEditingThisGroup && itemEditIdx !== -1 ? (
                                               <AutoResizingTextarea
                                                 rows={2}
@@ -2314,12 +2329,12 @@ export default function SemestralTarget({
                                                   newItems[itemEditIdx].timelinessTarget = e.target.value;
                                                   setEditingGroup({ ...editingGroup, items: newItems });
                                                 }}
-                                                className="w-full rounded-lg border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/40 shadow-inner"
+                                                className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                               />
                                             ) : isLocked ? (
                                               <div className="space-y-1">
                                                 {isReadOnly ? (
-                                                  <div className="w-full text-center text-xs font-bold text-slate-900 dark:text-slate-100 py-1 mb-1 rounded-md bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                                                  <div className="w-full text-center text-xs font-bold text-foreground py-1 mb-1 rounded-md bg-muted/60 border border-border">
                                                     {itemValues[item.itemId]?.actTimeliness || (item.actTimeliness ? String(item.actTimeliness) : 'N/A')}
                                                   </div>
                                                 ) : (
@@ -2331,13 +2346,13 @@ export default function SemestralTarget({
                                                     onChange={(e) => handleScoreInput(e as any, item.itemId, 'actTimeliness')}
                                                     onBlur={(e) => handleScoreBlur(e, item.itemId, 'actTimeliness')}
                                                     placeholder="Score (1-5 or N/A)"
-                                                    className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1 text-center text-xs font-semibold text-slate-900 dark:text-slate-100 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
+                                                    className="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
                                                   />
                                                 )}
                                                 {renderTargetTextWithShowMore(item.timelinessTarget, item.itemId, 'timeliness')}
                                               </div>
                                             ) : (
-                                              <div className="font-medium text-slate-800 dark:text-slate-200">
+                                              <div className="font-medium text-foreground">
                                                 <FormattedText value={item.timelinessTarget} />
                                               </div>
                                             )}
@@ -2345,7 +2360,7 @@ export default function SemestralTarget({
 
                                           {/* AVE */}
                                           {isLocked && (
-                                            <td className="px-3 py-3 text-center border-r border-slate-200 dark:border-slate-800 font-mono font-bold text-emerald-600 dark:text-emerald-400 align-top text-xs">
+                                            <td className="px-3 py-3 text-center border-r border-border font-mono font-bold text-emerald-600 dark:text-emerald-400 align-top text-xs">
                                               {computeItemAverage(
                                                 itemValues[item.itemId]?.actEfficiency ?? item.actEfficiency,
                                                 itemValues[item.itemId]?.actQuality ?? item.actQuality,
@@ -2355,7 +2370,7 @@ export default function SemestralTarget({
                                           )}
 
                                           {/* RG MOVs */}
-                                          <td className="px-3 py-3 border-r border-slate-200 dark:border-slate-800 align-top text-xs text-slate-700 dark:text-slate-300">
+                                          <td className="px-3 py-3 border-r border-border align-top text-xs text-foreground">
                                             {isEditingThisGroup && itemEditIdx !== -1 ? (
                                               <AutoResizingTextarea
                                                 rows={2}
@@ -2365,11 +2380,11 @@ export default function SemestralTarget({
                                                   newItems[itemEditIdx].movs = e.target.value;
                                                   setEditingGroup({ ...editingGroup, items: newItems });
                                                 }}
-                                                className="w-full rounded-lg border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/40 shadow-inner leading-normal"
+                                                className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner leading-normal"
                                               />
                                             ) : isLocked ? (
                                               isReadOnly ? (
-                                                <div className="text-xs text-slate-900 dark:text-slate-100 leading-normal whitespace-pre-line min-h-[200px]">
+                                                <div className="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]">
                                                   {itemValues[item.itemId]?.movs || item.movs || '-'}
                                                 </div>
                                               ) : (
@@ -2379,7 +2394,7 @@ export default function SemestralTarget({
                                                   onChange={(e) => scheduleSave(item.itemId, 'movs', e.target.value)}
                                                   onBlur={(e) => saveField(item.itemId, 'movs', e.target.value)}
                                                   placeholder="MOVs..."
-                                                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs leading-4 text-slate-900 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
+                                                  className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
                                                   style={{ minHeight: '200px' }}
                                                 />
                                               )
@@ -2391,7 +2406,7 @@ export default function SemestralTarget({
                                           </td>
 
                                           {/* RG Remarks */}
-                                          <td className="px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300">
+                                          <td className="px-3 py-3 align-top text-xs text-foreground">
                                             {isEditingThisGroup && itemEditIdx !== -1 ? (
                                               <AutoResizingTextarea
                                                 rows={2}
@@ -2401,11 +2416,11 @@ export default function SemestralTarget({
                                                   newItems[itemEditIdx].remarks = e.target.value;
                                                   setEditingGroup({ ...editingGroup, items: newItems });
                                                 }}
-                                                className="w-full rounded-lg border border-sky-300 dark:border-sky-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/40 shadow-inner leading-normal"
+                                                className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner leading-normal"
                                               />
                                             ) : isLocked ? (
                                               isReadOnly ? (
-                                                <div className="text-xs text-slate-900 dark:text-slate-100 leading-normal whitespace-pre-line min-h-[200px]">
+                                                <div className="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]">
                                                   {itemValues[item.itemId]?.remarks || item.remarks || '-'}
                                                 </div>
                                               ) : (
@@ -2415,7 +2430,7 @@ export default function SemestralTarget({
                                                   onChange={(e) => scheduleSave(item.itemId, 'remarks', e.target.value)}
                                                   onBlur={(e) => saveField(item.itemId, 'remarks', e.target.value)}
                                                   placeholder="Remarks..."
-                                                  className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs leading-4 text-slate-900 dark:text-slate-100 shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
+                                                  className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
                                                   style={{ minHeight: '200px' }}
                                                 />
                                               )
@@ -2431,52 +2446,52 @@ export default function SemestralTarget({
 
                                     {/* Inline Pending Row for Sub-Target Creation */}
                                     {isPendingThisGroup && (
-                                      <tr className="bg-amber-50/60 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900 align-top">
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-800">
+                                      <tr className="bg-amber-50/60 dark:bg-amber-950/40 border-b border-border align-top">
+                                        <td className="p-2 border-r border-border">
                                           <AutoResizingTextarea
                                             rows={2}
                                             value={pendingForm.description}
                                             onChange={(e) => setPendingForm({ ...pendingForm, description: e.target.value })}
                                             placeholder="Success Indicator Description..."
-                                            className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 shadow-inner"
+                                            className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                           />
                                         </td>
-                                        {isLocked && <td className="p-2 border-r border-slate-200 dark:border-slate-800"></td>}
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-800">
+                                        {isLocked && <td className="p-2 border-r border-border"></td>}
+                                        <td className="p-2 border-r border-border">
                                           <AutoResizingTextarea
                                             rows={2}
                                             value={pendingForm.efficiency}
                                             onChange={(e) => setPendingForm({ ...pendingForm, efficiency: e.target.value })}
                                             placeholder="RG Efficiency..."
-                                            className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 shadow-inner"
+                                            className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                           />
                                         </td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-800">
+                                        <td className="p-2 border-r border-border">
                                           <AutoResizingTextarea
                                             rows={2}
                                             value={pendingForm.quality}
                                             onChange={(e) => setPendingForm({ ...pendingForm, quality: e.target.value })}
                                             placeholder="RG Quality..."
-                                            className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 shadow-inner"
+                                            className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                           />
                                         </td>
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-800">
+                                        <td className="p-2 border-r border-border">
                                           <AutoResizingTextarea
                                             rows={2}
                                             value={pendingForm.timeliness}
                                             onChange={(e) => setPendingForm({ ...pendingForm, timeliness: e.target.value })}
                                             placeholder="RG Timeliness..."
-                                            className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 shadow-inner"
+                                            className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                           />
                                         </td>
-                                        {isLocked && <td className="p-2 border-r border-slate-200 dark:border-slate-800"></td>}
-                                        <td className="p-2 border-r border-slate-200 dark:border-slate-800">
+                                        {isLocked && <td className="p-2 border-r border-border"></td>}
+                                        <td className="p-2 border-r border-border">
                                           <AutoResizingTextarea
                                             rows={2}
                                             value={pendingForm.movs}
                                             onChange={(e) => setPendingForm({ ...pendingForm, movs: e.target.value })}
                                             placeholder="RG MOVs..."
-                                            className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 shadow-inner"
+                                            className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                           />
                                         </td>
                                         <td className="p-2">
@@ -2485,7 +2500,7 @@ export default function SemestralTarget({
                                             value={pendingForm.remarks}
                                             onChange={(e) => setPendingForm({ ...pendingForm, remarks: e.target.value })}
                                             placeholder="RG Remarks..."
-                                            className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-2 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 shadow-inner"
+                                            className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                           />
                                         </td>
                                       </tr>
@@ -2500,8 +2515,8 @@ export default function SemestralTarget({
                     </div>
 
                     {/* Pagination Controls Footer */}
-                    <div className="flex flex-col items-center justify-between gap-3 sm:flex-row pt-4 border-t border-slate-200 dark:border-slate-800">
-                      <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <div className="flex flex-col items-center justify-between gap-3 sm:flex-row pt-4 border-t border-border">
+                      <div className="text-xs text-muted-foreground font-medium">
                         {totalTargets > 0 ? (
                           isAllMode ? (
                             `Showing all ${totalTargets} targets`
@@ -2519,7 +2534,7 @@ export default function SemestralTarget({
                             type="button"
                             onClick={() => setCurrentPage(1)}
                             disabled={pageToUse <= 1}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition"
                           >
                             First
                           </button>
@@ -2527,7 +2542,7 @@ export default function SemestralTarget({
                             type="button"
                             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                             disabled={pageToUse <= 1}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition"
                           >
                             Previous
                           </button>
@@ -2538,8 +2553,8 @@ export default function SemestralTarget({
                               type="button"
                               onClick={() => setCurrentPage(page)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${page === pageToUse
-                                  ? 'bg-emerald-600 text-white shadow-sm'
-                                  : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'text-foreground hover:bg-muted'
                                 }`}
                             >
                               {page}
@@ -2550,7 +2565,7 @@ export default function SemestralTarget({
                             type="button"
                             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                             disabled={pageToUse >= totalPages}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition"
                           >
                             Next
                           </button>
@@ -2558,7 +2573,7 @@ export default function SemestralTarget({
                             type="button"
                             onClick={() => setCurrentPage(totalPages)}
                             disabled={pageToUse >= totalPages}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition"
                           >
                             Last
                           </button>
@@ -2580,48 +2595,48 @@ export default function SemestralTarget({
                       value={deletedSearch}
                       onChange={(e) => setDeletedSearch(e.target.value)}
                       placeholder="Search deleted target, justification..."
-                      className="w-full h-9 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+                      className="w-full h-9 rounded-xl border border-input bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
                   {deletedSearch && (
                     <button
                       type="button"
                       onClick={() => setDeletedSearch('')}
-                      className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-600 hover:bg-slate-100"
+                      className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                       Clear
                     </button>
                   )}
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
                   <table className="w-full text-xs text-left border-collapse">
-                    <thead className="bg-slate-50 dark:bg-slate-800/80 font-semibold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                    <thead className="bg-muted/60 font-semibold uppercase text-[11px] text-muted-foreground border-b border-border">
                       <tr>
-                        <th className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800">KRA Category</th>
-                        <th className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800">Key Result Area (Activity)</th>
-                        <th className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800">Success Indicator (Description)</th>
-                        <th className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800 whitespace-nowrap">Deleted Date & User</th>
-                        <th className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800">Justification</th>
+                        <th className="px-3 py-2.5 border-r border-border">KRA Category</th>
+                        <th className="px-3 py-2.5 border-r border-border">Key Result Area (Activity)</th>
+                        <th className="px-3 py-2.5 border-r border-border">Success Indicator (Description)</th>
+                        <th className="px-3 py-2.5 border-r border-border whitespace-nowrap">Deleted Date & User</th>
+                        <th className="px-3 py-2.5 border-r border-border">Justification</th>
                         <th className="px-3 py-2.5 text-center">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                    <tbody className="divide-y divide-border">
                       {filteredDeletedTargets.length > 0 ? (
                         filteredDeletedTargets.map((item) => (
-                          <tr key={item.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition align-top">
-                            <td className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800 font-semibold text-slate-800 dark:text-slate-200">{item.kra_category_label}</td>
-                            <td className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800 font-bold text-slate-900 dark:text-slate-100">
+                          <tr key={item.id} className="hover:bg-muted/30 transition-colors align-top">
+                            <td className="px-3 py-2.5 border-r border-border font-semibold text-foreground">{item.kra_category_label}</td>
+                            <td className="px-3 py-2.5 border-r border-border font-bold text-foreground">
                               <FormattedText value={item.activity} />
                             </td>
-                            <td className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 leading-relaxed">
+                            <td className="px-3 py-2.5 border-r border-border text-foreground leading-relaxed">
                               <FormattedText value={item.description} />
                             </td>
-                            <td className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800 text-slate-500 whitespace-nowrap">
+                            <td className="px-3 py-2.5 border-r border-border text-muted-foreground whitespace-nowrap">
                               <div>{item.deleted_at}</div>
-                              <div className="text-[10px] font-semibold text-slate-600 dark:text-slate-400">{item.user_name}</div>
+                              <div className="text-[10px] font-semibold text-muted-foreground">{item.user_name}</div>
                             </td>
-                            <td className="px-3 py-2.5 border-r border-slate-200 dark:border-slate-800 italic text-slate-700 dark:text-slate-300">
+                            <td className="px-3 py-2.5 border-r border-border italic text-muted-foreground">
                               <FormattedText value={item.justification} />
                             </td>
                             <td className="px-3 py-2.5 text-center whitespace-nowrap">
@@ -2642,7 +2657,7 @@ export default function SemestralTarget({
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={6} className="px-3 py-8 text-center text-slate-500">
+                          <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
                             No deleted targets found.
                           </td>
                         </tr>
@@ -2673,7 +2688,7 @@ export default function SemestralTarget({
                       </button>
                     </div>
                   ) : (
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                    <div className="text-xs text-muted-foreground">
                       Individual Performance Checkpoint Form Changes & Amendments
                     </div>
                   )}
@@ -2689,18 +2704,18 @@ export default function SemestralTarget({
                   </a>
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs border-collapse text-left">
                       <thead>
-                        <tr className="bg-[#3e7d99] text-white font-bold uppercase tracking-wider text-[11px]">
-                          <th className="px-3 py-2.5 text-center w-[5%] border border-[#1e4f66]">NO.</th>
-                          <th className="px-3 py-2.5 w-[38%] border border-[#1e4f66]">ORIGINAL SUCCESS INDICATOR</th>
-                          <th className="px-3 py-2.5 w-[38%] border border-[#1e4f66]">PROPOSED AMENDMENT</th>
-                          <th className="px-3 py-2.5 w-[19%] border border-[#1e4f66]">JUSTIFICATION</th>
+                        <tr className="bg-muted/60 text-muted-foreground font-bold uppercase tracking-wider text-[11px] border-b border-border">
+                          <th className="px-3 py-2.5 text-center w-[5%] border-r border-border">NO.</th>
+                          <th className="px-3 py-2.5 w-[38%] border-r border-border">ORIGINAL SUCCESS INDICATOR</th>
+                          <th className="px-3 py-2.5 w-[38%] border-r border-border">PROPOSED AMENDMENT</th>
+                          <th className="px-3 py-2.5 w-[19%]">JUSTIFICATION</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                      <tbody className="divide-y divide-border">
                         {(() => {
                           const filteredRows = checkpointChanges.filter((c: any) => {
                             if (!checkpointItemId && !checkpointTargetId) return true;
@@ -2714,7 +2729,7 @@ export default function SemestralTarget({
                           if (filteredRows.length === 0) {
                             return (
                               <tr>
-                                <td colSpan={4} className="px-4 py-12 text-center text-sm font-medium text-slate-400 dark:text-slate-500">
+                                <td colSpan={4} className="px-4 py-12 text-center text-sm font-medium text-muted-foreground">
                                   No checkpoint entries or target amendments recorded in edit history.
                                 </td>
                               </tr>
@@ -2724,38 +2739,38 @@ export default function SemestralTarget({
                           return filteredRows.map((row: CheckpointChange, rIdx: number) => (
                             <React.Fragment key={row.sem_target_id || rIdx}>
                               {row.is_new_target && (
-                                <tr className="bg-slate-100 dark:bg-slate-800 font-bold border-y border-slate-300 dark:border-slate-700">
-                                  <td colSpan={4} className="py-1.5 px-3 text-center uppercase tracking-wide text-[11px] text-slate-800 dark:text-slate-200">
+                                <tr className="bg-muted/80 font-bold border-y border-border">
+                                  <td colSpan={4} className="py-1.5 px-3 text-center uppercase tracking-wide text-[11px] text-foreground">
                                     {`--- NEW TARGET ADDED: ${row.activity_title || 'NEW ENTRY'} ---`}
                                   </td>
                                 </tr>
                               )}
-                              <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition align-top">
+                              <tr className="hover:bg-muted/30 transition-colors align-top">
                                 {/* Row Number */}
-                                <td className="px-3 py-3 text-center font-bold text-slate-700 dark:text-slate-300 border-r border-slate-200 dark:border-slate-800">
+                                <td className="px-3 py-3 text-center font-bold text-foreground border-r border-border">
                                   {rIdx + 1}
                                 </td>
 
                                 {/* Seamless Inner Table comparing Original vs Proposed */}
-                                <td colSpan={2} className="p-0 align-top border-r border-slate-200 dark:border-slate-800">
+                                <td colSpan={2} className="p-0 align-top border-r border-border">
                                   <table className="w-full border-collapse table-fixed">
                                     <tbody>
                                       {/* Target-level fields */}
                                       {row.target_fields && row.target_fields.length > 0 && (
-                                        <tr className="border-b border-slate-200 dark:border-slate-800">
-                                          <td className="w-1/2 p-2.5 align-top border-r border-slate-200 dark:border-slate-800 space-y-1.5">
+                                        <tr className="border-b border-border">
+                                          <td className="w-1/2 p-2.5 align-top border-r border-border space-y-1.5">
                                             {row.target_fields.map((f, fi) => (
                                               <div key={fi}>
-                                                <span className="font-bold italic text-slate-700 dark:text-slate-300">{f.field_label}</span>
-                                                <div className="text-slate-900 dark:text-slate-100 whitespace-pre-line leading-relaxed">{f.old_value}</div>
+                                                <span className="font-bold italic text-foreground">{f.field_label}</span>
+                                                <div className="text-foreground whitespace-pre-line leading-relaxed">{f.old_value}</div>
                                               </div>
                                             ))}
                                           </td>
                                           <td className="w-1/2 p-2.5 align-top space-y-1.5">
                                             {row.target_fields.map((f, fi) => (
                                               <div key={fi}>
-                                                <span className="font-bold italic text-slate-700 dark:text-slate-300">{f.field_label}</span>
-                                                <div className={`whitespace-pre-line leading-relaxed ${f.new_value === 'For Deletion' ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-900 dark:text-slate-100'}`}>
+                                                <span className="font-bold italic text-foreground">{f.field_label}</span>
+                                                <div className={`whitespace-pre-line leading-relaxed ${f.new_value === 'For Deletion' ? 'text-red-600 dark:text-red-400 font-bold' : 'text-foreground'}`}>
                                                   {f.new_value}
                                                 </div>
                                               </div>
@@ -2766,30 +2781,30 @@ export default function SemestralTarget({
 
                                       {/* Sub-target item groups */}
                                       {(row.item_groups || []).map((itemGroup, igIdx) => (
-                                        <tr key={igIdx} className="border-b border-slate-200 dark:border-slate-800 last:border-b-0">
-                                          <td className="w-1/2 p-2.5 align-top border-r border-slate-200 dark:border-slate-800 space-y-1.5">
+                                        <tr key={igIdx} className="border-b border-border last:border-b-0">
+                                          <td className="w-1/2 p-2.5 align-top border-r border-border space-y-1.5">
                                             {itemGroup.item_label && (
-                                              <div className={`text-[10px] font-bold uppercase tracking-wider ${itemGroup.is_deleted ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                                              <div className={`text-[10px] font-bold uppercase tracking-wider ${itemGroup.is_deleted ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
                                                 {itemGroup.item_label}
                                               </div>
                                             )}
                                             {itemGroup.fields.map((f, fi) => (
                                               <div key={fi}>
-                                                <span className="font-bold italic text-slate-700 dark:text-slate-300">{f.field_label}</span>
-                                                <div className="text-slate-900 dark:text-slate-100 whitespace-pre-line leading-relaxed">{f.old_value}</div>
+                                                <span className="font-bold italic text-foreground">{f.field_label}</span>
+                                                <div className="text-foreground whitespace-pre-line leading-relaxed">{f.old_value}</div>
                                               </div>
                                             ))}
                                           </td>
                                           <td className="w-1/2 p-2.5 align-top space-y-1.5">
                                             {itemGroup.item_label && (
-                                              <div className={`text-[10px] font-bold uppercase tracking-wider ${itemGroup.is_deleted ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                                              <div className={`text-[10px] font-bold uppercase tracking-wider ${itemGroup.is_deleted ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
                                                 {itemGroup.item_label}
                                               </div>
                                             )}
                                             {itemGroup.fields.map((f, fi) => (
                                               <div key={fi}>
-                                                <span className="font-bold italic text-slate-700 dark:text-slate-300">{f.field_label}</span>
-                                                <div className={`whitespace-pre-line leading-relaxed ${f.new_value === 'For Deletion' ? 'text-red-600 dark:text-red-400 font-bold' : 'text-slate-900 dark:text-slate-100'}`}>
+                                                <span className="font-bold italic text-foreground">{f.field_label}</span>
+                                                <div className={`whitespace-pre-line leading-relaxed ${f.new_value === 'For Deletion' ? 'text-red-600 dark:text-red-400' : 'text-foreground'}`}>
                                                   {f.new_value}
                                                 </div>
                                               </div>
@@ -2800,8 +2815,8 @@ export default function SemestralTarget({
 
                                       {(!row.target_fields || row.target_fields.length === 0) && (!row.item_groups || row.item_groups.length === 0) && (
                                         <tr>
-                                          <td className="w-1/2 p-2.5 align-top border-r border-slate-200 dark:border-slate-800 text-slate-400">-</td>
-                                          <td className="w-1/2 p-2.5 align-top text-slate-400">-</td>
+                                          <td className="w-1/2 p-2.5 align-top border-r border-border text-muted-foreground">-</td>
+                                          <td className="w-1/2 p-2.5 align-top text-muted-foreground">-</td>
                                         </tr>
                                       )}
                                     </tbody>
@@ -2809,7 +2824,7 @@ export default function SemestralTarget({
                                 </td>
 
                                 {/* Justification */}
-                                <td className="px-3 py-3 align-top text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line">
+                                <td className="px-3 py-3 align-top text-foreground leading-relaxed whitespace-pre-line">
                                   {row.justification || '-'}
                                 </td>
                               </tr>
@@ -2848,10 +2863,10 @@ export default function SemestralTarget({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      <h3 className="text-sm font-bold text-foreground">
                         Areas of Improvement & Development Plan
                       </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-muted-foreground">
                         Professional development goals, learning activities, and required support resources.
                       </p>
                     </div>
@@ -2859,7 +2874,7 @@ export default function SemestralTarget({
                       <button
                         type="button"
                         onClick={() => setShowAreaModal(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-semibold hover:bg-slate-800 dark:hover:bg-slate-200 transition cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition cursor-pointer"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Add Development Plan Item</span>
@@ -2867,38 +2882,38 @@ export default function SemestralTarget({
                     )}
                   </div>
 
-                  <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                  <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
                     <div className="overflow-x-auto">
                       <table className="w-full text-xs border-collapse text-left">
                         <thead>
-                          <tr className="bg-slate-50 dark:bg-slate-800/80 font-bold uppercase tracking-wider text-[11px] text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800">
-                            <th className="px-3 py-2.5 text-center w-[5%] border-r border-slate-200 dark:border-slate-800">#</th>
-                            <th className="px-3 py-2.5 w-[25%] border-r border-slate-200 dark:border-slate-800">Aim / Areas of Improvement</th>
-                            <th className="px-3 py-2.5 w-[25%] border-r border-slate-200 dark:border-slate-800">Development Activities</th>
-                            <th className="px-3 py-2.5 w-[22%] border-r border-slate-200 dark:border-slate-800">Support / Resources Needed</th>
-                            <th className="px-3 py-2.5 w-[18%] border-r border-slate-200 dark:border-slate-800">Progress / Intervention</th>
+                          <tr className="bg-muted/60 font-bold uppercase tracking-wider text-[11px] text-muted-foreground border-b border-border">
+                            <th className="px-3 py-2.5 text-center w-[5%] border-r border-border">#</th>
+                            <th className="px-3 py-2.5 w-[25%] border-r border-border">Aim / Areas of Improvement</th>
+                            <th className="px-3 py-2.5 w-[25%] border-r border-border">Development Activities</th>
+                            <th className="px-3 py-2.5 w-[22%] border-r border-border">Support / Resources Needed</th>
+                            <th className="px-3 py-2.5 w-[18%] border-r border-border">Progress / Intervention</th>
                             {!isLocked && (
                               <th className="px-3 py-2.5 text-center w-[5%]">Action</th>
                             )}
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                        <tbody className="divide-y divide-border">
                           {areasOfImprovement.length > 0 ? (
                             areasOfImprovement.map((area, idx) => (
-                              <tr key={area.id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition align-top">
-                                <td className="px-3 py-3 text-center font-bold text-slate-500 border-r border-slate-200 dark:border-slate-800">
+                              <tr key={area.id || idx} className="hover:bg-muted/30 transition-colors align-top">
+                                <td className="px-3 py-3 text-center font-bold text-muted-foreground border-r border-border">
                                   {idx + 1}
                                 </td>
-                                <td className="px-3 py-3 font-semibold text-slate-900 dark:text-slate-100 border-r border-slate-200 dark:border-slate-800 leading-relaxed whitespace-pre-line">
+                                <td className="px-3 py-3 font-semibold text-foreground border-r border-border leading-relaxed whitespace-pre-line">
                                   {area.areas_improvement || '-'}
                                 </td>
-                                <td className="px-3 py-3 text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800 leading-relaxed whitespace-pre-line">
+                                <td className="px-3 py-3 text-foreground border-r border-border leading-relaxed whitespace-pre-line">
                                   {area.development_activities || '-'}
                                 </td>
-                                <td className="px-3 py-3 text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800 leading-relaxed whitespace-pre-line">
+                                <td className="px-3 py-3 text-foreground border-r border-border leading-relaxed whitespace-pre-line">
                                   {area.support_resources || '-'}
                                 </td>
-                                <td className="px-3 py-3 text-slate-800 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800 leading-relaxed whitespace-pre-line">
+                                <td className="px-3 py-3 text-foreground border-r border-border leading-relaxed whitespace-pre-line">
                                   {area.progress_intervention || '-'}
                                 </td>
                                 {!isLocked && (
@@ -2929,7 +2944,7 @@ export default function SemestralTarget({
                             ))
                           ) : (
                             <tr>
-                              <td colSpan={isLocked ? 5 : 6} className="px-4 py-8 text-center text-xs text-slate-500">
+                              <td colSpan={isLocked ? 5 : 6} className="px-4 py-8 text-center text-xs text-muted-foreground">
                                 No development plan items recorded yet. Click + Add Development Plan Item to record professional goals.
                               </td>
                             </tr>
@@ -2942,14 +2957,14 @@ export default function SemestralTarget({
 
                 {/* Recommendations & Strengths */}
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm space-y-2">
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600">Rater's Comments, Recommendations & Commendations</h4>
-                    <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: rating.recommendation || '-' }} />
+                    <div className="text-xs text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: rating.recommendation || '-' }} />
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm space-y-2">
+                  <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600">Strengths</h4>
-                    <div className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: rating.strengths || '-' }} />
+                    <div className="text-xs text-foreground leading-relaxed" dangerouslySetInnerHTML={{ __html: rating.strengths || '-' }} />
                   </div>
                 </div>
               </div>
@@ -2963,10 +2978,10 @@ export default function SemestralTarget({
                     <Folder className="size-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    <h3 className="text-sm font-bold text-foreground">
                       Semestral Documentation & Attachments
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-muted-foreground">
                       Supporting documents, guidelines, and reference files for this semester.
                     </p>
                   </div>
@@ -2993,7 +3008,7 @@ export default function SemestralTarget({
                     className={`rounded-2xl border border-dashed p-6 transition text-center ${
                       isDragOverDoc
                         ? 'border-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10'
-                        : 'border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30'
+                        : 'border-border bg-muted/20'
                     }`}
                   >
                     <div className="flex flex-col items-center justify-center gap-3 text-center">
@@ -3001,10 +3016,10 @@ export default function SemestralTarget({
                         <UploadCloud className="size-7" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h4 className="text-sm font-semibold text-foreground">
                           Drag and drop files here
                         </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
+                        <p className="text-xs text-muted-foreground max-w-xl">
                           Accepted files: PDF, images, PowerPoint presentations, Word, and video files. You can upload multiple files at once.
                         </p>
                       </div>
@@ -3031,11 +3046,11 @@ export default function SemestralTarget({
 
                       {isUploadingDoc && (
                         <div className="w-full max-w-xl space-y-2 pt-2">
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                          <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                             <span>Uploading files...</span>
                             <span>{docUploadProgress}%</span>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-700">
+                          <div className="h-2 overflow-hidden rounded-full bg-muted">
                             <div
                               className="h-full rounded-full bg-emerald-600 transition-[width] duration-150"
                               style={{ width: `${docUploadProgress}%` }}
@@ -3048,7 +3063,7 @@ export default function SemestralTarget({
 
                   {/* Uploaded Files Grid matching Livewire exact layout */}
                   <div>
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
                       Attached Documents ({documentationFiles.length})
                     </h4>
                     {documentationFiles.length > 0 ? (
@@ -3058,9 +3073,9 @@ export default function SemestralTarget({
                             key={idx}
                             type="button"
                             onClick={() => setPreviewFile(file)}
-                            className="group w-full min-w-0 overflow-hidden rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/60 hover:shadow-md cursor-pointer"
+                            className="group w-full min-w-0 overflow-hidden rounded-md border border-border bg-card text-left shadow-2xs transition hover:-translate-y-0.5 hover:border-emerald-500/60 hover:shadow-md cursor-pointer"
                           >
-                            <div className="relative aspect-square w-full overflow-hidden bg-slate-100 dark:bg-zinc-800">
+                            <div className="relative aspect-square w-full overflow-hidden bg-muted">
                               {file.type === 'image' ? (
                                 <img
                                   src={file.url}
@@ -3091,10 +3106,10 @@ export default function SemestralTarget({
                               </div>
                             </div>
                             <div className="space-y-0 p-1">
-                              <div className="truncate text-[8px] font-medium leading-[10px] text-slate-800 dark:text-slate-200">
+                              <div className="truncate text-[8px] font-medium leading-[10px] text-foreground">
                                 {file.name}
                               </div>
-                              <div className="mt-0.5 truncate text-[7px] leading-2 text-slate-500 dark:text-slate-400">
+                              <div className="mt-0.5 truncate text-[7px] leading-2 text-muted-foreground">
                                 {file.modified_at}
                               </div>
                             </div>
@@ -3102,14 +3117,14 @@ export default function SemestralTarget({
                         ))}
                       </div>
                     ) : (
-                      <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 py-12 text-center">
+                      <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 py-12 text-center">
                         <div className="size-12 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                           <Folder className="size-6" />
                         </div>
-                        <h4 className="mt-3 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <h4 className="mt-3 text-sm font-semibold text-foreground">
                           No Documentation Uploaded
                         </h4>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-sm">
+                        <p className="mt-1 text-xs text-muted-foreground max-w-sm">
                           Additional semestral resources, MOVs summaries, and reference documentation will appear here.
                         </p>
                       </div>

@@ -31,6 +31,16 @@ class ApplicationSetting extends Model
         return filter_var(static::valueFor($key, $default ? '1' : '0'), FILTER_VALIDATE_BOOL);
     }
 
+    public static function defaultYear(): string
+    {
+        return (string) static::valueFor('default_year', (string) now()->year);
+    }
+
+    public static function defaultSemester(): string
+    {
+        return (string) static::valueFor('default_semester', '1');
+    }
+
     public static function put(string $key, mixed $value, string $type, ?string $description = null): void
     {
         static::query()->updateOrCreate(

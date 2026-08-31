@@ -77,6 +77,7 @@ class RatingsController extends Controller
                 'stii.quantity_score',
                 'stii.timeliness_score',
                 'stii.average',
+                'stii.verified',
             ])
             ->orderBy('sti.kra_category')
             ->orderBy('sti.display_order')
@@ -122,6 +123,7 @@ class RatingsController extends Controller
                 'averageScore' => $row->average ? (float) $row->average : null,
                 'attachmentCount' => $attachmentCounts[(int) $row->item_id] ?? 0,
                 'hasAttachments' => ($attachmentCounts[(int) $row->item_id] ?? 0) > 0,
+                'verified' => (int) ($row->verified ?? 0),
             ];
         }
 
@@ -278,7 +280,7 @@ class RatingsController extends Controller
         return back()->with('success', __('Documentation file deleted successfully.'));
     }
 
-    private function getDeletedTargets(int $ratingId): array
+    protected function getDeletedTargets(int $ratingId): array
     {
         $rating = DB::table('ipc_semester')->where('id', $ratingId)->first();
         if (!$rating) {
@@ -400,7 +402,7 @@ class RatingsController extends Controller
         })->all();
     }
 
-    private function getCheckpointChanges(int $ratingId): array
+    protected function getCheckpointChanges(int $ratingId): array
     {
         $activeTargetIds = DB::table('ipc_sem_targets_indicator')
             ->where('semester_id', $ratingId)
@@ -738,7 +740,7 @@ class RatingsController extends Controller
         return $checkpointRows;
     }
 
-    private function getDocumentationFiles(): array
+    protected function getDocumentationFiles(): array
     {
         $dir = public_path('documentation');
         if (! File::exists($dir)) {
@@ -784,13 +786,20 @@ class RatingsController extends Controller
         $userId = Auth::id();
         abort_if($userId === null, 403);
 
-        $sem = DB::table('ipc_semester')
-            ->where('id', $ratingId)
-            ->where('user_id', $userId)
+        $sem = DB::table('ipc_semester as sem')
+            ->leftJoin('users as u', 'sem.user_id', '=', 'u.id')
+            ->where('sem.id', $ratingId)
+            ->where(function ($q) use ($userId) {
+                $q->where('sem.user_id', $userId)
+                  ->orWhere('u.supervisor_id', $userId);
+            })
+            ->select('sem.*')
             ->first();
 
         abort_if($sem === null, 404);
-        if ((int) ($sem->lock ?? 0) >= 2 || ! empty($sem->date_verified)) {
+
+        $isSupervisor = ((int) $sem->user_id !== (int) $userId);
+        if (! $isSupervisor && ((int) ($sem->lock ?? 0) >= 2 || ! empty($sem->date_verified))) {
             return back()->with('error', __('Ratings are locked and cannot be edited.'));
         }
 
@@ -1748,16 +1757,95 @@ class RatingsController extends Controller
         $userId = Auth::id();
         abort_if($userId === null, 403);
 
-        $sem = DB::table('ipc_semester')
-            ->where('id', $ratingId)
-            ->where('user_id', $userId)
+        $sem = DB::table('ipc_semester as sem')
+            ->leftJoin('users as u', 'sem.user_id', '=', 'u.id')
+            ->where('sem.id', $ratingId)
+            ->where(function ($q) use ($userId) {
+                $q->where('sem.user_id', $userId)
+                  ->orWhere('u.supervisor_id', $userId);
+            })
+            ->select('sem.*')
             ->first();
 
         abort_if($sem === null, 404);
 
-        $action = $request->input('action'); // 'lock', 'ready', 'unlock'
+        $action = $request->input('action'); // 'lock', 'ready', 'unlock', 'verify', 'unverify'
 
-        if ($action === 'lock') {
+        if ($action === 'verify') {
+            $now = Carbon::now('Asia/Manila');
+
+            DB::transaction(function () use ($ratingId, $userId, $now) {
+                DB::table('ipc_semester')
+                    ->where('id', $ratingId)
+                    ->update([
+                        'lock' => 3,
+                        'date_verified' => $now,
+                    ]);
+
+                // Update all indicators for this semester
+                DB::table('ipc_sem_targets_indicator')
+                    ->where('semester_id', $ratingId)
+                    ->update([
+                        'verified' => 1,
+                        'verified_by' => $userId,
+                        'date_verified' => $now,
+                    ]);
+
+                // Update all items for this semester's targets
+                $targetIds = DB::table('ipc_sem_targets_indicator')
+                    ->where('semester_id', $ratingId)
+                    ->pluck('id')
+                    ->all();
+
+                if (!empty($targetIds)) {
+                    DB::table('ipc_sem_targets_indicator_itemlist')
+                        ->whereIn('sem_target_id', $targetIds)
+                        ->update([
+                            'verified' => 1,
+                            'verified_by' => $userId,
+                            'date_verified' => $now,
+                        ]);
+                }
+            });
+
+            return back()->with('success', __('Staff semestral performance rating verified successfully.'));
+        } elseif ($action === 'unverify') {
+            DB::transaction(function () use ($ratingId) {
+                DB::table('ipc_semester')
+                    ->where('id', $ratingId)
+                    ->update([
+                        'lock' => 2,
+                        'date_verified' => null,
+                    ]);
+
+                // Reset all indicators for this semester
+                DB::table('ipc_sem_targets_indicator')
+                    ->where('semester_id', $ratingId)
+                    ->update([
+                        'verified' => null,
+                        'verified_by' => null,
+                        'date_verified' => null,
+                    ]);
+
+                // Reset all items for this semester's targets
+                $targetIds = DB::table('ipc_sem_targets_indicator')
+                    ->where('semester_id', $ratingId)
+                    ->pluck('id')
+                    ->all();
+
+                if (!empty($targetIds)) {
+                    DB::table('ipc_sem_targets_indicator_itemlist')
+                        ->whereIn('sem_target_id', $targetIds)
+                        ->update([
+                            'verified' => null,
+                            'verified_by' => null,
+                            'date_verified' => null,
+                        ]);
+                }
+            });
+
+            return back()->with('success', __('Verification status cancelled.'));
+        } elseif ($action === 'lock') {
             DB::table('ipc_semester')
                 ->where('id', $ratingId)
                 ->update([
@@ -1834,6 +1922,51 @@ class RatingsController extends Controller
         return back()->with('success', __('Area of Improvement removed.'));
     }
 
+    public function updateAreaOfImprovement(Request $request, int $ratingId, int $id): RedirectResponse
+    {
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        $validated = $request->validate([
+            'areas_improvement' => ['required', 'string'],
+            'development_activities' => ['required', 'string'],
+            'support_resources' => ['required', 'string'],
+            'progress_intervention' => ['nullable', 'string'],
+        ]);
+
+        DB::table('ipc_areas_improvement')
+            ->where('id', $id)
+            ->where('semester_id', $ratingId)
+            ->update([
+                'areas_improvement' => $validated['areas_improvement'],
+                'development_activities' => $validated['development_activities'],
+                'support_resources' => $validated['support_resources'],
+                'progress_intervention' => $validated['progress_intervention'] ?? '',
+            ]);
+
+        return back()->with('success', __('Area of Improvement updated.'));
+    }
+
+    public function updateFeedback(Request $request, int $ratingId): RedirectResponse
+    {
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        $validated = $request->validate([
+            'recommendation' => ['nullable', 'string'],
+            'strengths' => ['nullable', 'string'],
+        ]);
+
+        DB::table('ipc_semester')
+            ->where('id', $ratingId)
+            ->update([
+                'recommendation' => $validated['recommendation'] ?? '',
+                'strengths' => $validated['strengths'] ?? '',
+            ]);
+
+        return back()->with('success', __('Feedback saved successfully.'));
+    }
+
     public function reorderTargets(Request $request, int $ratingId): RedirectResponse
     {
         $userId = Auth::id();
@@ -1859,8 +1992,8 @@ class RatingsController extends Controller
     {
         $filters = [
             'search' => (string) $request->string('search'),
-            'year' => (string) $request->string('year'),
-            'semester' => (string) $request->string('semester'),
+            'year' => $request->has('year') ? (string) $request->string('year') : ApplicationSetting::defaultYear(),
+            'semester' => $request->has('semester') ? (string) $request->string('semester') : ApplicationSetting::defaultSemester(),
             'perPage' => (int) ($request->integer('perPage') ?: 10),
         ];
 
@@ -2074,7 +2207,7 @@ class RatingsController extends Controller
         }
     }
 
-    private function recalculateSemesterRating(int $ratingId): void
+    protected function recalculateSemesterRating(int $ratingId): void
     {
         $includeStrategic = ApplicationSetting::boolean('include_strategic_function', true);
 

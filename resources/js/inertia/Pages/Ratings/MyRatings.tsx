@@ -318,7 +318,7 @@ export default function MyRatings({
                   <th className="px-3 py-2 border-r border-border w-36">Adjectival</th>
                   <th className="px-3 py-2 border-r border-border text-center">Status</th>
                   <th className="px-3 py-2 border-r border-border">Date Created</th>
-                  <th className="px-3 py-2 text-center w-20">Action</th>
+                  <th className="px-3 py-2 text-left w-20">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -371,8 +371,8 @@ export default function MyRatings({
                         <td className="px-3 py-2 text-muted-foreground font-mono text-[11px] border-r border-border">
                           {formatDate(rating.dateCreated)}
                         </td>
-                        <td className="px-3 py-2 text-center">
-                          <div className="inline-flex items-center gap-1 justify-center">
+                        <td className="px-3 py-2 text-left">
+                          <div className="inline-flex items-center gap-1">
                             <Link
                               href={`/inertia/ipcrf/myratings/${rating.id}/sem-target`}
                               title="View Semestral Target"

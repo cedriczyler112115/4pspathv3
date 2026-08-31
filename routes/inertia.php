@@ -9,11 +9,14 @@ use App\Http\Controllers\Inertia\RpmoManagement\HarmonizedIpcController;
 use App\Http\Controllers\Inertia\Settings\SidebarMenuController;
 use App\Http\Controllers\Inertia\Settings\AppearanceController;
 use App\Http\Controllers\Inertia\Settings\ProfileController;
+use App\Http\Controllers\Inertia\Settings\MyStaffController;
 use App\Http\Controllers\Inertia\Settings\SecurityController;
 use App\Http\Controllers\Inertia\Administration\UsersController;
 use App\Http\Controllers\Inertia\AnnualTargetController;
 use App\Http\Controllers\Inertia\SearchController;
 use App\Http\Controllers\Inertia\RatingsController;
+use App\Http\Controllers\Inertia\VerificationController;
+use App\Http\Controllers\Inertia\Verification\SemestralVerificationController;
 use Illuminate\Support\Facades\Route;
 
 if (class_exists(\Inertia\Inertia::class)) {
@@ -42,6 +45,9 @@ if (class_exists(\Inertia\Inertia::class)) {
             Route::post('/ipcrf/annualtarget/copy-harmonized', [AnnualTargetController::class, 'copyHarmonizedTargetGroup'])->name('inertia.annualtarget.copy-harmonized');
             Route::post('/ipcrf/annualtarget/copy-all-staff', [AnnualTargetController::class, 'copyAllStaffTargetGroups'])->name('inertia.annualtarget.copy-all-staff');
             Route::post('/ipcrf/annualtarget/copy-all-harmonized', [AnnualTargetController::class, 'copyAllHarmonizedTargetGroups'])->name('inertia.annualtarget.copy-all-harmonized');
+            Route::get('/verification', [VerificationController::class, 'index'])->name('inertia.verification');
+            Route::get('/verification/semestral-verification', [SemestralVerificationController::class, 'index'])->name('inertia.verification.semestral-verification');
+            Route::get('/verification/{ratingId}/semestral-verification', [SemestralVerificationController::class, 'show'])->name('inertia.verification.semestral-verification.show');
             Route::redirect('/myratings', '/inertia/ipcrf/myratings');
             Route::get('/ipcrf/myratings', [RatingsController::class, 'index'])->name('inertia.myratings');
             Route::get('/ipcrf/myratings/semestral-target/print-ipcrf', [\App\Http\Controllers\PrintIpcrfController::class, 'show'])->name('inertia.myratings.semestral-target.print-ipcrf');
@@ -58,7 +64,9 @@ if (class_exists(\Inertia\Inertia::class)) {
             Route::delete('/ipcrf/myratings/{ratingId}/subtarget/{itemId}', [RatingsController::class, 'destroySubTarget'])->name('inertia.myratings.subtarget.destroy');
             Route::post('/ipcrf/myratings/{ratingId}/toggle-status', [RatingsController::class, 'toggleStatus'])->name('inertia.myratings.toggle-status');
             Route::post('/ipcrf/myratings/{ratingId}/areas-improvement', [RatingsController::class, 'storeAreaOfImprovement'])->name('inertia.myratings.areas-improvement.store');
+            Route::put('/ipcrf/myratings/{ratingId}/areas-improvement/{id}', [RatingsController::class, 'updateAreaOfImprovement'])->name('inertia.myratings.areas-improvement.update');
             Route::delete('/ipcrf/myratings/{ratingId}/areas-improvement/{id}', [RatingsController::class, 'destroyAreaOfImprovement'])->name('inertia.myratings.areas-improvement.destroy');
+            Route::post('/ipcrf/myratings/{ratingId}/feedback', [RatingsController::class, 'updateFeedback'])->name('inertia.myratings.feedback.update');
             Route::post('/ipcrf/myratings/{ratingId}/documentation', [RatingsController::class, 'storeDocumentation'])->name('inertia.myratings.documentation.store');
             Route::delete('/ipcrf/myratings/{ratingId}/documentation', [RatingsController::class, 'destroyDocumentation'])->name('inertia.myratings.documentation.destroy');
             Route::post('/ipcrf/myratings/{ratingId}/target/reorder', [RatingsController::class, 'reorderTargets'])->name('inertia.myratings.target.reorder');
@@ -71,6 +79,7 @@ if (class_exists(\Inertia\Inertia::class)) {
             Route::delete('/ipcrf/myratings/{ratingId}', [RatingsController::class, 'destroy'])->name('inertia.myratings.destroy');
             Route::get('/settings/profile', [ProfileController::class, 'edit'])->name('inertia.settings.profile');
             Route::patch('/settings/profile', [ProfileController::class, 'update']);
+            Route::get('/settings/mystaff', [MyStaffController::class, 'index'])->name('inertia.settings.mystaff');
             Route::get('/settings/security', [SecurityController::class, 'edit'])->name('inertia.settings.security');
             Route::patch('/settings/security', [SecurityController::class, 'update']);
             Route::get('/settings/appearance', [AppearanceController::class, 'edit'])->name('inertia.settings.appearance');

@@ -27,6 +27,7 @@ trait ProfileValidationRules
             'section_id' => ['nullable', 'integer', Rule::exists('lib_section', 'id')],
             'contact_number' => $this->nullableTextRule(100),
             'supervisor_id' => ['nullable', 'integer', Rule::exists(User::class, 'id')],
+            'is_supervisor' => ['nullable', 'boolean'],
         ];
     }
 

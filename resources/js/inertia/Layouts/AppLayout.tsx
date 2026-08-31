@@ -200,24 +200,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </button>
           </div>
 
-          {/* SIDEBAR QUICK SEARCH SHORTCUT */}
-          {sidebarOpen && (
-            <div className="px-2 pt-2 pb-0.5">
-              <Link
-                href="/inertia/search"
-                className="flex items-center justify-between w-full h-7 px-2 rounded-lg border border-sidebar-border bg-sidebar-accent/50 text-muted-foreground text-xs hover:bg-sidebar-accent hover:text-sidebar-foreground transition cursor-pointer"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Search className="size-3" />
-                  <span className="text-[10px]">Quick search...</span>
-                </div>
-                <kbd className="rounded bg-sidebar px-1 py-0.2 text-[8px] font-mono border border-sidebar-border text-muted-foreground">
-                  ⌘K
-                </kbd>
-              </Link>
-            </div>
-          )}
-
           {/* SIDEBAR NAVIGATION ITEMS CONTAINER */}
           <nav className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5 custom-scrollbar">
             {sidebarTree && sidebarTree.length > 0 ? (

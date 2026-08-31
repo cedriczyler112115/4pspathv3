@@ -27,6 +27,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ipcrf/myratings/semestral-target/print-ipcrf', [\App\Http\Controllers\PrintIpcrfController::class, 'show'])->name('myratings.semestral-target.print-ipcrf');
     Route::get('ipcrf/myratings/semestral-target/print-checkpoint', [\App\Http\Controllers\PrintCheckpointController::class, 'show'])->name('myratings.semestral-target.print-checkpoint');
     Route::redirect('myratings', 'ipcrf/myratings');
+    Route::redirect('verification', '/inertia/verification');
+    Route::redirect('ipcrf/verification', '/inertia/verification');
     Route::get('rpmo-management/harmonized-ipc', \App\Livewire\Pages\RpmoManagement\HarmonizedIpcPage::class)->name('harmonized-ipc.index');
     Route::redirect('harmonized-ipc', 'rpmo-management/harmonized-ipc');
     Route::get('libraries/harmonized-staff', \App\Livewire\Pages\Libraries\HarmonizedStaffPage::class)->name('libraries.harmonized-staff.index');

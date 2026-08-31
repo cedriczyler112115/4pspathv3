@@ -29,6 +29,7 @@ type ProfileProps = {
     section_id?: number | null;
     contact_number?: string | null;
     supervisor_id?: number | null;
+    is_supervisor?: boolean | number | null;
   };
   divisions: Division[];
   sections: Section[];
@@ -49,6 +50,7 @@ export default function Profile({ appName, user, divisions, sections, supervisor
     section_id: user?.section_id ? String(user.section_id) : '',
     contact_number: user?.contact_number ?? '',
     supervisor_id: user?.supervisor_id ? String(user.supervisor_id) : '',
+    is_supervisor: Boolean(user?.is_supervisor),
   });
 
   const filteredSections = form.data.division_id
@@ -213,6 +215,26 @@ export default function Profile({ appName, user, divisions, sections, supervisor
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* SUPERVISOR PRIVILEGES */}
+            <div>
+              <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5 hover:bg-muted/30 transition">
+                <input
+                  type="checkbox"
+                  checked={form.data.is_supervisor}
+                  onChange={(e) => form.setData('is_supervisor', e.target.checked)}
+                  className="size-3.5 rounded border-input text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <div>
+                  <span className="text-xs text-foreground font-medium block">
+                    User has Supervisor privileges
+                  </span>
+                  <span className="text-[11px] text-muted-foreground block">
+                    Enable this if you supervise staff members and review or verify subordinate performance commitments.
+                  </span>
+                </div>
+              </label>
             </div>
 
             <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 flex items-center justify-between text-xs">

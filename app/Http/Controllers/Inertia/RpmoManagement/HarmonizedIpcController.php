@@ -25,7 +25,7 @@ class HarmonizedIpcController extends Controller
 
         $filters = [
             'search' => (string) $request->string('search'),
-            'year' => (string) $request->string('year', (string) now()->year),
+            'year' => (string) $request->string('year', ApplicationSetting::defaultYear()),
             'category' => (string) $request->string('category'),
             'semester' => (string) $request->string('semester'),
             'position' => (string) $request->string('position'),

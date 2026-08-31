@@ -36,6 +36,7 @@ class ProfileController extends Controller
                 'section_id',
                 'contact_number',
                 'supervisor_id',
+                'is_supervisor',
             ]),
             'divisions' => DB::table('lib_division')
                 ->orderBy('division_name')
@@ -58,6 +59,7 @@ class ProfileController extends Controller
 
         $validated = $request->validate($this->profileRules($user->id));
         $validated['supervisor_id'] = $validated['supervisor_id'] ?: null;
+        $validated['is_supervisor'] = (int) ($request->boolean('is_supervisor'));
 
         $updateProfile->execute($user, $validated);
 

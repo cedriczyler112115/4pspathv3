@@ -1,7 +1,7 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
-import { Pencil, Trash2, Users as UsersIcon, Search, RotateCcw, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Pencil, Trash2, Users as UsersIcon, Search, RotateCcw, X } from 'lucide-react';
 
 type UserRow = {
   id: number;
@@ -38,6 +38,7 @@ type Props = {
     search: string;
     division: string;
     section: string;
+    user_level_id: string;
     status: string;
     perPage: number;
   };
@@ -46,8 +47,7 @@ type Props = {
     from: number | null;
     to: number | null;
     total: number;
-    currentPage: number;
-    lastPage: number;
+    links: Array<{ url: string | null; label: string; active: boolean }>;
   };
   divisions: OptionItem[];
   sections: OptionItem[];
@@ -75,6 +75,7 @@ export default function Users({
     search: filters.search || '',
     division: filters.division || '',
     section: filters.section || '',
+    user_level_id: filters.user_level_id || '',
     status: filters.status || '',
     perPage: String(filters.perPage || 10),
   });
@@ -84,20 +85,19 @@ export default function Users({
   const [deletingUser, setDeletingUser] = useState<{ id: number; name: string } | null>(null);
 
   const editForm = useForm({
-    lastName: '',
-    firstName: '',
-    middleName: '',
-    extensionName: '',
+    editLastName: '',
+    editFirstName: '',
+    editMiddleName: '',
+    editExtensionName: '',
     email: '',
-    contactNumber: '',
-    position: '',
-    designation: '',
+    editContactNumber: '',
+    editPosition: '',
+    editDesignation: '',
     editDivision: '',
     editSection: '',
-    supervisor: '',
-    userLevel: '',
-    isSupervisor: false,
-    status: '1',
+    editSupervisorId: '',
+    editUserLevelId: '',
+    editIsSupervisor: false,
   });
 
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
@@ -113,6 +113,7 @@ export default function Users({
       search: '',
       division: '',
       section: '',
+      user_level_id: '',
       status: '',
       perPage: '10',
     });
@@ -122,20 +123,19 @@ export default function Users({
   const openEditModal = (row: UserRow) => {
     setEditingUser(row);
     editForm.setData({
-      lastName: row.lastName || '',
-      firstName: row.firstName || '',
-      middleName: row.middleName || '',
-      extensionName: row.extensionName || '',
+      editLastName: row.lastName || '',
+      editFirstName: row.firstName || '',
+      editMiddleName: row.middleName || '',
+      editExtensionName: row.extensionName || '',
       email: row.email || '',
-      contactNumber: row.contactNumber || '',
-      position: row.position || '',
-      designation: row.designation || '',
+      editContactNumber: row.contactNumber || '',
+      editPosition: row.position || '',
+      editDesignation: row.designation || '',
       editDivision: row.divisionId ? String(row.divisionId) : '',
       editSection: row.sectionId ? String(row.sectionId) : '',
-      supervisor: row.supervisorId ? String(row.supervisorId) : '',
-      userLevel: row.userLevelId ? String(row.userLevelId) : '',
-      isSupervisor: Boolean(row.isSupervisor),
-      status: String(row.isStatus ?? 1),
+      editSupervisorId: row.supervisorId ? String(row.supervisorId) : '',
+      editUserLevelId: row.userLevelId ? String(row.userLevelId) : '',
+      editIsSupervisor: Boolean(row.isSupervisor),
     });
     setShowEditModal(true);
   };
@@ -201,7 +201,7 @@ export default function Users({
           </div>
 
           {/* FILTERS FORM */}
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-6">
             {/* Search Input */}
             <div className="space-y-1 sm:col-span-2">
               <label className="text-[11px] font-semibold text-muted-foreground">Search Users</label>
@@ -265,6 +265,26 @@ export default function Users({
                 {filterSectionOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* User Level */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">User Level</label>
+              <select
+                value={filterForm.data.user_level_id}
+                onChange={(e) => {
+                  filterForm.setData('user_level_id', e.target.value);
+                  submitFilters({ user_level_id: e.target.value });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                <option value="">All User Levels ({userLevels.length})</option>
+                {userLevels.map((ul) => (
+                  <option key={ul.id} value={ul.id}>
+                    {ul.name}
                   </option>
                 ))}
               </select>
@@ -409,84 +429,44 @@ export default function Users({
           </div>
 
           {/* PAGINATION FOOTER */}
-          {users.lastPage > 1 && (
-            <div className="border-t border-border px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-muted/20">
-              <div className="text-[11px] text-muted-foreground">
-                Showing <span className="font-bold text-foreground">{users.from ?? 0}</span> to{' '}
-                <span className="font-bold text-foreground">{users.to ?? 0}</span> of{' '}
-                <span className="font-bold text-foreground">{users.total}</span> users
-              </div>
+          <div className="border-t border-border px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-muted/20">
+            <div className="text-[11px] text-muted-foreground">
+              Showing <span className="font-bold text-foreground">{users.from ?? 0}</span> to{' '}
+              <span className="font-bold text-foreground">{users.to ?? 0}</span> of{' '}
+              <span className="font-bold text-foreground">{users.total}</span> users
+            </div>
 
+            {users.links && users.links.length > 3 && (
               <div className="flex items-center gap-1 flex-wrap">
-                {/* Previous */}
-                {users.currentPage === 1 ? (
-                  <span className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none">
-                    <ChevronLeft className="size-3.5" />
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      router.get(
-                        '/inertia/administration/users',
-                        { ...filterForm.data, page: users.currentPage - 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
-                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
-                  >
-                    <ChevronLeft className="size-3.5" />
-                  </button>
-                )}
+                {users.links.map((link, idx) => {
+                  if (!link.url) {
+                    return (
+                      <span
+                        key={idx}
+                        className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none"
+                        dangerouslySetInnerHTML={{ __html: link.label }}
+                      />
+                    );
+                  }
 
-                {/* Pages */}
-                {Array.from({ length: users.lastPage }, (_, i) => i + 1).map((page) => {
-                  const isActive = page === users.currentPage;
                   return (
-                    <button
-                      key={page}
-                      type="button"
-                      onClick={() =>
-                        router.get(
-                          '/inertia/administration/users',
-                          { ...filterForm.data, page },
-                          { replace: true, preserveState: true }
-                        )
-                      }
+                    <Link
+                      key={idx}
+                      href={link.url}
+                      preserveState
+                      preserveScroll
                       className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
-                        isActive
+                        link.active
                           ? 'bg-emerald-600 text-white font-bold shadow-2xs'
                           : 'border border-input bg-background text-foreground hover:bg-muted'
                       }`}
-                    >
-                      {page}
-                    </button>
+                      dangerouslySetInnerHTML={{ __html: link.label }}
+                    />
                   );
                 })}
-
-                {/* Next */}
-                {users.currentPage === users.lastPage ? (
-                  <span className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none">
-                    <ChevronRight className="size-3.5" />
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      router.get(
-                        '/inertia/administration/users',
-                        { ...filterForm.data, page: users.currentPage + 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
-                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
-                  >
-                    <ChevronRight className="size-3.5" />
-                  </button>
-                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Modal: Edit User */}
@@ -516,8 +496,8 @@ export default function Users({
                       Lastname
                     </label>
                     <input
-                      value={editForm.data.lastName}
-                      onChange={(e) => editForm.setData('lastName', e.target.value)}
+                      value={editForm.data.editLastName}
+                      onChange={(e) => editForm.setData('editLastName', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                       required
                     />
@@ -528,8 +508,8 @@ export default function Users({
                       Firstname
                     </label>
                     <input
-                      value={editForm.data.firstName}
-                      onChange={(e) => editForm.setData('firstName', e.target.value)}
+                      value={editForm.data.editFirstName}
+                      onChange={(e) => editForm.setData('editFirstName', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                       required
                     />
@@ -540,9 +520,10 @@ export default function Users({
                       Middlename
                     </label>
                     <input
-                      value={editForm.data.middleName}
-                      onChange={(e) => editForm.setData('middleName', e.target.value)}
+                      value={editForm.data.editMiddleName}
+                      onChange={(e) => editForm.setData('editMiddleName', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                      required
                     />
                   </div>
 
@@ -551,8 +532,8 @@ export default function Users({
                       Extension Name
                     </label>
                     <input
-                      value={editForm.data.extensionName}
-                      onChange={(e) => editForm.setData('extensionName', e.target.value)}
+                      value={editForm.data.editExtensionName}
+                      onChange={(e) => editForm.setData('editExtensionName', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                     />
                   </div>
@@ -564,9 +545,8 @@ export default function Users({
                     <input
                       type="email"
                       value={editForm.data.email}
-                      onChange={(e) => editForm.setData('email', e.target.value)}
-                      className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
-                      required
+                      disabled
+                      className="h-8 w-full rounded-lg border border-input bg-muted px-2.5 text-xs text-muted-foreground outline-hidden cursor-not-allowed opacity-80"
                     />
                   </div>
 
@@ -575,9 +555,10 @@ export default function Users({
                       Contact Number
                     </label>
                     <input
-                      value={editForm.data.contactNumber}
-                      onChange={(e) => editForm.setData('contactNumber', e.target.value)}
+                      value={editForm.data.editContactNumber}
+                      onChange={(e) => editForm.setData('editContactNumber', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                      required
                     />
                   </div>
 
@@ -586,9 +567,10 @@ export default function Users({
                       Position
                     </label>
                     <input
-                      value={editForm.data.position}
-                      onChange={(e) => editForm.setData('position', e.target.value)}
+                      value={editForm.data.editPosition}
+                      onChange={(e) => editForm.setData('editPosition', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                      required
                     />
                   </div>
 
@@ -597,9 +579,10 @@ export default function Users({
                       Designation
                     </label>
                     <input
-                      value={editForm.data.designation}
-                      onChange={(e) => editForm.setData('designation', e.target.value)}
+                      value={editForm.data.editDesignation}
+                      onChange={(e) => editForm.setData('editDesignation', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                      required
                     />
                   </div>
 
@@ -648,8 +631,8 @@ export default function Users({
                       User Level
                     </label>
                     <select
-                      value={editForm.data.userLevel}
-                      onChange={(e) => editForm.setData('userLevel', e.target.value)}
+                      value={editForm.data.editUserLevelId}
+                      onChange={(e) => editForm.setData('editUserLevelId', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                     >
                       <option value="">Select user level</option>
@@ -666,16 +649,18 @@ export default function Users({
                       Supervisor
                     </label>
                     <select
-                      value={editForm.data.supervisor}
-                      onChange={(e) => editForm.setData('supervisor', e.target.value)}
+                      value={editForm.data.editSupervisorId}
+                      onChange={(e) => editForm.setData('editSupervisorId', e.target.value)}
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                     >
                       <option value="">Select supervisor</option>
-                      {supervisors.map((sp) => (
-                        <option key={sp.id} value={sp.id}>
-                          {sp.name}
-                        </option>
-                      ))}
+                      {supervisors
+                        .filter((sp) => !editingUser || sp.id !== String(editingUser.id))
+                        .map((sp) => (
+                          <option key={sp.id} value={sp.id}>
+                            {sp.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
 
@@ -683,8 +668,8 @@ export default function Users({
                     <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
                       <input
                         type="checkbox"
-                        checked={editForm.data.isSupervisor}
-                        onChange={(e) => editForm.setData('isSupervisor', e.target.checked)}
+                        checked={editForm.data.editIsSupervisor}
+                        onChange={(e) => editForm.setData('editIsSupervisor', e.target.checked)}
                         className="size-3.5 rounded border-input text-emerald-600 focus:ring-emerald-500"
                       />
                       <span className="text-xs text-foreground font-medium">
@@ -698,14 +683,14 @@ export default function Users({
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition"
+                    className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={editForm.processing}
-                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition"
+                    className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
                   >
                     Save Changes
                   </button>

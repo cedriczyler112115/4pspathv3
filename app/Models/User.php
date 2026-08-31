@@ -42,6 +42,7 @@ use Illuminate\Support\Str;
     'section',
     'contact_number',
     'supervisor_id',
+    'is_supervisor',
     'email',
     'password',
     'google_id',
@@ -64,6 +65,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'user_level_id' => 'int',
+            'is_supervisor' => 'boolean',
         ];
     }
 

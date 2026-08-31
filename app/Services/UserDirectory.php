@@ -40,7 +40,7 @@ final class UserDirectory
     }
 
     /** @return LengthAwarePaginator<int, stdClass> */
-    public function administration(string $search, string $divisionId, string $sectionId, string $status, int $perPage): LengthAwarePaginator
+    public function administration(string $search, string $divisionId, string $sectionId, string $status, int $perPage, string $userLevelId = ''): LengthAwarePaginator
     {
         return $this->baseQuery([
             'users.id',
@@ -52,6 +52,10 @@ final class UserDirectory
             'users.contact_number',
             'users.position',
             'users.designation',
+            'users.division_id',
+            'users.section_id',
+            'users.supervisor_id',
+            'users.is_supervisor',
             'users.division',
             'users.section',
             'users.is_status',
@@ -70,8 +74,52 @@ final class UserDirectory
             })
             ->when($divisionId !== '', fn ($query) => $query->where('users.division_id', $divisionId))
             ->when($sectionId !== '', fn ($query) => $query->where('users.section_id', $sectionId))
+            ->when($userLevelId !== '', fn ($query) => $query->where('users.user_level_id', $userLevelId))
             ->when($status !== '', fn ($query) => $query->where('users.is_status', $status))
             ->orderBy('users.id')
+            ->paginate($perPage);
+    }
+
+    /** @return LengthAwarePaginator<int, stdClass> */
+    public function supervisedStaff(int $supervisorId, string $search, string $divisionId, string $sectionId, string $status, int $perPage): LengthAwarePaginator
+    {
+        return $this->baseQuery([
+            'users.id',
+            'users.last_name',
+            'users.first_name',
+            'users.middle_name',
+            'users.extension_name',
+            'users.email',
+            'users.contact_number',
+            'users.position',
+            'users.designation',
+            'users.division_id',
+            'users.section_id',
+            'users.supervisor_id',
+            'users.is_supervisor',
+            'users.division',
+            'users.section',
+            'users.is_status',
+            'users.user_level_id',
+            'user_level.level_name as user_level_name',
+        ])
+            ->where('users.supervisor_id', $supervisorId)
+            ->when($search !== '', function ($query) use ($search): void {
+                $like = '%'.$search.'%';
+
+                $query->where(function ($searchQuery) use ($like): void {
+                    $searchQuery
+                        ->whereRaw("CONCAT_WS(' ', users.last_name, users.first_name, users.middle_name, users.extension_name) LIKE ?", [$like])
+                        ->orWhere('users.position', 'like', $like)
+                        ->orWhere('users.designation', 'like', $like)
+                        ->orWhere('users.email', 'like', $like);
+                });
+            })
+            ->when($divisionId !== '', fn ($query) => $query->where('users.division_id', $divisionId))
+            ->when($sectionId !== '', fn ($query) => $query->where('users.section_id', $sectionId))
+            ->when($status !== '', fn ($query) => $query->where('users.is_status', $status))
+            ->orderBy('users.last_name')
+            ->orderBy('users.first_name')
             ->paginate($perPage);
     }
 

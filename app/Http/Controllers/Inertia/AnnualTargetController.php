@@ -28,7 +28,7 @@ class AnnualTargetController extends Controller
         $isAll = strtolower($rawPerPage) === 'all' || $rawPerPage === '-1';
         $perPageInt = $isAll ? 999999 : max(1, (int) $rawPerPage);
 
-        $selectedYear = $request->filled('year') ? (string) $request->input('year') : (string) now()->year;
+        $selectedYear = $request->filled('year') ? (string) $request->input('year') : ApplicationSetting::defaultYear();
 
         $filters = [
             'search' => (string) $request->input('search', ''),

@@ -55,6 +55,10 @@ const routeMap: Record<string, string> = {
   '/administration/settings': '/inertia/administration/settings',
   '/administration/sidebar-menu': '/inertia/settings/sidebar-menu',
   '/myaccount/profile': '/inertia/settings/profile',
+  '/myaccount/mystaff': '/inertia/settings/mystaff',
+  '/settings/mystaff': '/inertia/settings/mystaff',
+  '/verification': '/inertia/verification',
+  '/ipcrf/verification': '/inertia/verification',
   '/myaccount/security': '/inertia/settings/security',
   '/logout': '/logout',
 };

@@ -8,14 +8,20 @@ type Props = {
   settings: {
     appName: string;
     includeStrategicFunction: boolean;
+    defaultYear: string;
+    defaultSemester: string;
   };
+  years?: string[];
+  semesters?: Array<{ value: string; label: string }>;
   navigation?: { sidebar?: any[] };
 };
 
-export default function ApplicationSettings({ appName, user, settings, navigation }: Props) {
+export default function ApplicationSettings({ appName, user, settings, years = [], semesters = [], navigation }: Props) {
   const form = useForm({
     appName: settings.appName,
     includeStrategicFunction: settings.includeStrategicFunction,
+    defaultYear: settings.defaultYear || '2026',
+    defaultSemester: settings.defaultSemester || '1',
   });
 
   const submit = (e: React.FormEvent) => {
@@ -39,12 +45,12 @@ export default function ApplicationSettings({ appName, user, settings, navigatio
                 <span>Application Settings</span>
               </h1>
               <p className="text-[11px] text-muted-foreground">
-                Manage system title, branding, and Annual Target configurations.
+                Manage system title, branding, default period filters, and target configurations.
               </p>
             </div>
           </div>
 
-          <form onSubmit={submit} className="space-y-3 pt-1">
+          <form onSubmit={submit} className="space-y-4 pt-1">
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="appName">
                 Application Title
@@ -58,6 +64,49 @@ export default function ApplicationSettings({ appName, user, settings, navigatio
                 required
               />
               <p className="text-[10px] text-muted-foreground">Displayed in the header, navbar branding, and browser title bar.</p>
+            </div>
+
+            {/* DEFAULT YEAR & SEMESTER */}
+            <div className="grid gap-3 sm:grid-cols-2 rounded-lg border border-border bg-muted/10 p-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="defaultYear">
+                  Default Target Year
+                </label>
+                <select
+                  id="defaultYear"
+                  value={form.data.defaultYear}
+                  onChange={(e) => form.setData('defaultYear', e.target.value)}
+                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+                  required
+                >
+                  {years.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted-foreground">Default year pre-selected across all filters and target forms.</p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-muted-foreground" htmlFor="defaultSemester">
+                  Default Semester
+                </label>
+                <select
+                  id="defaultSemester"
+                  value={form.data.defaultSemester}
+                  onChange={(e) => form.setData('defaultSemester', e.target.value)}
+                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+                  required
+                >
+                  {semesters.map((sem) => (
+                    <option key={sem.value} value={sem.value}>
+                      {sem.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted-foreground">Default semester pre-selected across all filters and semestral forms.</p>
+              </div>
             </div>
 
             <label className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/20 p-2.5 cursor-pointer hover:bg-muted/40 transition">
