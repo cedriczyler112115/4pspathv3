@@ -7985,3 +7985,117 @@
 [Tue Sep  1 00:22:10 2026] 127.0.0.1:60899 Closing
 [Tue Sep  1 00:22:11 2026] 127.0.0.1:59787 Accepted
 [Tue Sep  1 00:22:11 2026] 127.0.0.1:59787 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:56045 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:56045 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:52396 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:50767 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:52396 [200]: GET /build/assets/app-kZmSukBV.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:50767 [200]: GET /build/assets/app-DVO7lMBh.css
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:50767 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:52396 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:59356 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51021 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:59867 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:64967 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:59356 [200]: GET /build/assets/SemestralVerification-C-cYEM9k.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51021 [200]: GET /build/assets/ToastContainer-CeoZW8u_.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:59867 [200]: GET /build/assets/upload-DA7oIwNd.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:64967 [200]: GET /build/assets/check-DWfWtKhz.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:57986 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:63010 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:57986 [200]: GET /build/assets/chevron-left-D1m9nbiL.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:63010 [200]: GET /build/assets/clock-CVyCf4WG.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:59356 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51021 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:59867 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:64967 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:57986 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:56408 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:63010 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51306 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:54670 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:53156 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:56408 [200]: GET /build/assets/printer-KmOMnQQq.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51306 [200]: GET /build/assets/eye-EMMdYXmw.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:54670 [200]: GET /build/assets/AutoResizingTextarea-BAZ-s3IL.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:53156 [200]: GET /build/assets/pencil-CSGAzmqs.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:56408 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51631 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51306 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:54670 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:53156 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:58442 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51631 [200]: GET /build/assets/plus-6PvcyQQi.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:58442 [200]: GET /build/assets/rotate-ccw-BQFMvSIp.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:49721 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:51631 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:58442 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:50879 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:61036 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:49384 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:49721 [200]: GET /build/assets/save-CaqH-wYj.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:50879 [200]: GET /build/assets/trash-2-NxlfKHHv.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:61036 [200]: GET /build/assets/AppLayout-Da5S6Y6q.js
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:49384 [200]: GET /favicon.ico
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:49721 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:50879 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:61036 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:49384 Closing
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:65222 Accepted
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:65222 [200]: GET /build/assets/geist-latin-wght-normal-BgDaEnEv.woff2
+[Tue Sep  1 00:22:26 2026] 127.0.0.1:65222 Closing
+[Tue Sep  1 00:22:39 2026] 127.0.0.1:61015 Accepted
+[Tue Sep  1 00:22:40 2026] 127.0.0.1:61015 Closing
+[Tue Sep  1 00:22:40 2026] 127.0.0.1:49443 Accepted
+[Tue Sep  1 00:22:40 2026] 127.0.0.1:49443 Closing
+[Tue Sep  1 00:23:07 2026] 127.0.0.1:62816 Accepted
+[Tue Sep  1 00:23:07 2026] 127.0.0.1:62816 Closing
+[Tue Sep  1 00:23:07 2026] 127.0.0.1:53877 Accepted
+[Tue Sep  1 00:23:07 2026] 127.0.0.1:53877 Closing
+[Tue Sep  1 00:23:08 2026] 127.0.0.1:49850 Accepted
+[Tue Sep  1 00:23:09 2026] 127.0.0.1:49850 Closing
+[Tue Sep  1 00:23:09 2026] 127.0.0.1:56128 Accepted
+[Tue Sep  1 00:23:09 2026] 127.0.0.1:56128 Closing
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:49861 Accepted
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:49861 Closing
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:51948 Accepted
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:51948 Closing
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:64219 Accepted
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:60857 Accepted
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:64219 [200]: GET /build/assets/Login-C1T-tOQw.js
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:60857 [200]: GET /build/assets/AuthLayout-BxA4FIod.js
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:64219 Closing
+[Tue Sep  1 00:23:11 2026] 127.0.0.1:60857 Closing
+[Tue Sep  1 00:23:15 2026] 127.0.0.1:61237 Accepted
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:61237 Closing
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:57371 Accepted
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:57371 Closing
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:54329 Accepted
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:54329 [200]: GET /build/assets/Dashboard-CqW6zIX_.js
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:54329 Closing
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:54973 Accepted
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:54973 [200]: GET /build/assets/geist-latin-ext-wght-normal-DC-KSUi6.woff2
+[Tue Sep  1 00:23:16 2026] 127.0.0.1:54973 Closing
+[Tue Sep  1 00:23:18 2026] 127.0.0.1:64077 Accepted
+[Tue Sep  1 00:23:18 2026] 127.0.0.1:64077 Closing
+[Tue Sep  1 00:23:18 2026] 127.0.0.1:53478 Accepted
+[Tue Sep  1 00:23:18 2026] 127.0.0.1:53099 Accepted
+[Tue Sep  1 00:23:18 2026] 127.0.0.1:53478 [200]: GET /build/assets/MyRatings-Bq4olwnu.js
+[Tue Sep  1 00:23:18 2026] 127.0.0.1:53099 [200]: GET /build/assets/flag-D8ROmCf1.js
+[Tue Sep  1 00:23:18 2026] 127.0.0.1:53478 Closing
+[Tue Sep  1 00:23:18 2026] 127.0.0.1:53099 Closing
+[Tue Sep  1 00:23:20 2026] 127.0.0.1:56652 Accepted
+[Tue Sep  1 00:23:20 2026] 127.0.0.1:56652 Closing
+[Tue Sep  1 00:23:21 2026] 127.0.0.1:59399 Accepted
+[Tue Sep  1 00:23:21 2026] 127.0.0.1:59399 Closing
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:50831 Accepted
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:50831 Closing
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:49645 Accepted
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:56367 Accepted
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:52411 Accepted
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:49645 [200]: GET /build/assets/SemestralTarget-DORw9wim.js
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:56367 [200]: GET /build/assets/file-plus-DYrXRG8C.js
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:52411 [200]: GET /build/assets/sliders-horizontal-CnOA4upg.js
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:49645 Closing
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:56367 Closing
+[Tue Sep  1 00:23:22 2026] 127.0.0.1:52411 Closing
