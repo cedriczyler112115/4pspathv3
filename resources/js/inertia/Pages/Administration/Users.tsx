@@ -156,15 +156,28 @@ export default function Users({
     );
   };
 
-  const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = (val: string) => {
+    filterForm.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      submitFilters({ search: val, page: 1 });
+    }, 350);
+  };
+
+  const submitFilters = (overrides?: Partial<typeof filterForm.data> & { page?: number }) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
-    router.get('/administration/users', data, {
+    router.post('/administration/users', data, {
       preserveState: true,
       replace: true,
+      preserveScroll: true,
     });
   };
 
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({
       search: '',
       division: '',
@@ -173,7 +186,19 @@ export default function Users({
       status: '',
       perPage: '10',
     });
-    router.get('/administration/users', {}, { replace: true });
+    router.post(
+      '/administration/users',
+      {
+        search: '',
+        division: '',
+        section: '',
+        user_level_id: '',
+        status: '',
+        perPage: '10',
+        page: 1,
+      },
+      { replace: true, preserveState: true }
+    );
   };
 
   const openEditModal = (row: UserRow) => {
@@ -267,8 +292,7 @@ export default function Users({
                 <input
                   type="text"
                   value={filterForm.data.search}
-                  onChange={(e) => filterForm.setData('search', e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Full name, position, email, designation..."
                   className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
@@ -277,7 +301,8 @@ export default function Users({
                     type="button"
                     onClick={() => {
                       filterForm.setData('search', '');
-                      submitFilters({ search: '' });
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      submitFilters({ search: '', page: 1 });
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
@@ -509,13 +534,22 @@ export default function Users({
                     );
                   }
 
+                  let targetPage = users.current_page;
+                  if (link.url) {
+                    try {
+                      const urlObj = new URL(link.url, window.location.origin);
+                      targetPage = Number(urlObj.searchParams.get('page')) || users.current_page;
+                    } catch {
+                      targetPage = users.current_page;
+                    }
+                  }
+
                   return (
-                    <Link
+                    <button
                       key={idx}
-                      href={link.url}
-                      preserveState
-                      preserveScroll
-                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
+                      type="button"
+                      onClick={() => submitFilters({ page: targetPage })}
+                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         link.active
                           ? 'bg-emerald-600 text-white font-bold shadow-2xs'
                           : 'border border-input bg-background text-foreground hover:bg-muted'

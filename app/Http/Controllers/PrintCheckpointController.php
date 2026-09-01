@@ -11,12 +11,67 @@ use Illuminate\View\View;
 
 class PrintCheckpointController extends Controller
 {
+    /**
+     * Print Checkpoint for Semestral Target (Ratee / Logged-in user)
+     */
     public function show(Request $request): View
     {
         $semId = (int) $request->query('sem_id', 0);
         $userId = Auth::id();
 
-        if ($semId <= 0 || !$userId) {
+        if ($semId <= 0 || ! $userId) {
+            abort(404, __('Semestral target record not found.'));
+        }
+
+        // If explicitly requested as verification, delegate
+        if ($request->query('type') === 'verification') {
+            return $this->showVerification($request);
+        }
+
+        $semRecord = DB::table('ipc_semester as sem')
+            ->leftJoin('users as u', 'sem.user_id', '=', 'u.id')
+            ->leftJoin('lib_division as d', 'u.division_id', '=', 'd.id')
+            ->leftJoin('lib_section as s', 'u.section_id', '=', 's.id')
+            ->leftJoin('users as sup', 'u.supervisor_id', '=', 'sup.id')
+            ->where('sem.id', $semId)
+            ->where('sem.user_id', $userId)
+            ->select([
+                'sem.id as semester_id',
+                'sem.year',
+                'sem.semester',
+                'sem.user_id',
+                'u.supervisor_id',
+                'u.first_name as ratee_first_name',
+                'u.middle_name as ratee_middle_name',
+                'u.last_name as ratee_last_name',
+                'u.position as ratee_position',
+                'u.designation as ratee_designation',
+                DB::raw('COALESCE(d.division_name, u.division) as ratee_division'),
+                DB::raw('COALESCE(s.section_name, u.section) as ratee_section'),
+                'sup.first_name as sup_first_name',
+                'sup.middle_name as sup_middle_name',
+                'sup.last_name as sup_last_name',
+                'sup.position as sup_position',
+                'sup.designation as sup_designation',
+            ])
+            ->first();
+
+        if (! $semRecord) {
+            abort(404, __('Semestral target record not found for logged in user.'));
+        }
+
+        return $this->renderCheckpointView($semRecord, (int) $userId);
+    }
+
+    /**
+     * Print Checkpoint for Verification (Supervisor assessing staff user)
+     */
+    public function showVerification(Request $request): View
+    {
+        $semId = (int) $request->query('sem_id', 0);
+        $authId = Auth::id();
+
+        if ($semId <= 0 || ! $authId) {
             abort(404, __('Semestral target record not found.'));
         }
 
@@ -47,9 +102,18 @@ class PrintCheckpointController extends Controller
             ])
             ->first();
 
-        if (!$semRecord) {
+        if (! $semRecord) {
             abort(404, __('Semestral target record not found.'));
         }
+
+        $rateeUserId = (int) $semRecord->user_id;
+
+        return $this->renderCheckpointView($semRecord, $rateeUserId);
+    }
+
+    protected function renderCheckpointView(object $semRecord, int $rateeUserId): View
+    {
+        $semId = (int) $semRecord->semester_id;
 
         $rateeFullName = mb_strtoupper(trim(($semRecord->ratee_last_name ?? '') . (filled($semRecord->ratee_last_name) ? ', ' : '') . collect([$semRecord->ratee_first_name, $semRecord->ratee_middle_name])->filter()->join(' ')), 'UTF-8');
         $rateePosition = mb_strtoupper((string) ($semRecord->ratee_designation ?: ($semRecord->ratee_position ?: '-')), 'UTF-8');
@@ -60,7 +124,7 @@ class PrintCheckpointController extends Controller
         $appFullName = 'ENTER APPROVED BY';
         $appPosition = 'ENTER POSITION / DESIGNATION';
 
-        // Edit history records for this semester's targets (including deleted targets)
+        // Edit history records for this semester's targets (including deleted targets) strictly scoped to this semester and ratee
         $activeTargetIds = DB::table('ipc_sem_targets_indicator')
             ->where('semester_id', $semId)
             ->pluck('id')
@@ -68,12 +132,26 @@ class PrintCheckpointController extends Controller
 
         $allTargetIds = DB::table('ipc_sem_target_edit_histories as h')
             ->leftJoin('ipc_sem_targets_indicator as sti', 'h.sem_target_id', '=', 'sti.id')
-            ->where(function ($q) use ($activeTargetIds, $semId) {
+            ->where(function ($q) use ($activeTargetIds, $semId, $rateeUserId) {
                 if (! empty($activeTargetIds)) {
                     $q->whereIn('h.sem_target_id', $activeTargetIds);
                 }
                 $q->orWhere('sti.semester_id', $semId);
-                $q->orWhere('h.field_name', 'deleted');
+                if ($rateeUserId > 0) {
+                    $q->orWhere(function ($q2) use ($rateeUserId, $semId) {
+                        $q2->where('h.user_id', $rateeUserId)
+                            ->where(function ($q3) {
+                                $q3->where('h.field_name', 'deleted')
+                                    ->orWhere('h.action_type', 'deleted');
+                            })
+                            ->whereNotExists(function ($sub) use ($semId) {
+                                $sub->select(DB::raw(1))
+                                    ->from('ipc_sem_targets_indicator as other_sti')
+                                    ->whereColumn('other_sti.id', 'h.sem_target_id')
+                                    ->where('other_sti.semester_id', '!=', $semId);
+                            });
+                    });
+                }
             })
             ->pluck('h.sem_target_id')
             ->unique()

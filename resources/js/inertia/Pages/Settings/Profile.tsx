@@ -1,8 +1,9 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
 import UserAvatar from '../../Components/UserAvatar';
-import { UserCircle, Save, Check, Camera, Trash2, Upload } from 'lucide-react';
+import SearchableSelect from '../../Components/SearchableSelect';
+import { UserCircle, Save, Check, Camera, Trash2, Upload, AlertTriangle, AlertCircle } from 'lucide-react';
 
 type Division = { id: number; division_name: string };
 type Section = { id: number; section_name: string; division_id: number };
@@ -38,9 +39,11 @@ type ProfileProps = {
   divisions: Division[];
   sections: Section[];
   supervisors: Supervisor[];
+  isProfileComplete?: boolean;
+  missingFields?: string[];
 };
 
-export default function Profile({ appName, user, divisions, sections, supervisors }: ProfileProps) {
+export default function Profile({ appName, user, divisions, sections, supervisors, isProfileComplete = true, missingFields = [] }: ProfileProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
@@ -99,11 +102,25 @@ export default function Profile({ appName, user, divisions, sections, supervisor
     : sections;
 
   const fullName = (supervisor: Supervisor) => {
-    return [supervisor.first_name, supervisor.middle_name, supervisor.last_name, supervisor.extension_name]
+    const parts = [
+      supervisor.last_name ? `${supervisor.last_name},` : '',
+      supervisor.first_name,
+      supervisor.middle_name,
+      supervisor.extension_name,
+    ]
       .filter(Boolean)
       .join(' ')
-      .trim() || supervisor.name || 'Unknown';
+      .trim();
+
+    return (parts || supervisor.name || 'UNKNOWN').toUpperCase();
   };
+
+  const supervisorOptions = useMemo(() => {
+    return supervisors.map((s) => ({
+      value: String(s.id),
+      label: fullName(s),
+    }));
+  }, [supervisors]);
 
   return (
     <AppLayout appName={appName} user={user}>
@@ -125,6 +142,36 @@ export default function Profile({ appName, user, divisions, sections, supervisor
               </p>
             </div>
           </div>
+
+          {/* INCOMPLETE PROFILE WARNING BANNER */}
+          {!isProfileComplete && (
+            <div className="rounded-xl border border-amber-300 dark:border-amber-800/80 bg-amber-50/90 dark:bg-amber-950/40 p-3.5 sm:p-4 space-y-2 animate-in fade-in">
+              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-xs">
+                <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Complete Your Profile to Access the App</span>
+              </div>
+              <p className="text-[11px] text-amber-800/90 dark:text-amber-300/80 leading-relaxed">
+                You must completely fill out all required personal and organizational details below before you can access modules, targets, ratings, and verifications in 4Ps PATH.
+              </p>
+              {missingFields.length > 0 && (
+                <div className="pt-1">
+                  <span className="text-[10.5px] font-semibold text-amber-950 dark:text-amber-200 block mb-1">
+                    Missing required fields:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {missingFields.map((field) => (
+                      <span
+                        key={field}
+                        className="inline-flex items-center rounded-md bg-amber-200/70 dark:bg-amber-900/60 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-200 border border-amber-300/60 dark:border-amber-800/60"
+                      >
+                        {field}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* PROFILE PICTURE CARD */}
           <div className="rounded-xl border border-border bg-muted/30 p-3 sm:p-4 flex flex-col sm:flex-row items-center gap-4">
@@ -196,30 +243,43 @@ export default function Profile({ appName, user, divisions, sections, supervisor
             {/* NAME FIELDS */}
             <div className="grid gap-2.5 sm:grid-cols-2 md:grid-cols-4">
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">First Name</label>
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>First Name</span>
+                  <span className="text-destructive">*</span>
+                </label>
                 <input
                   value={form.data.first_name}
                   onChange={(e) => form.setData('first_name', e.target.value)}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                  className={`h-8 w-full rounded-lg border ${form.errors.first_name ? 'border-destructive' : 'border-input'} bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring`}
                   required
                 />
+                {form.errors.first_name && <span className="text-[10px] text-destructive block">{form.errors.first_name}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">Middle Name</label>
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>Middle Name</span>
+                  <span className="text-destructive">*</span>
+                </label>
                 <input
                   value={form.data.middle_name}
                   onChange={(e) => form.setData('middle_name', e.target.value)}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                  className={`h-8 w-full rounded-lg border ${form.errors.middle_name ? 'border-destructive' : 'border-input'} bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring`}
+                  required
                 />
+                {form.errors.middle_name && <span className="text-[10px] text-destructive block">{form.errors.middle_name}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">Last Name</label>
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>Last Name</span>
+                  <span className="text-destructive">*</span>
+                </label>
                 <input
                   value={form.data.last_name}
                   onChange={(e) => form.setData('last_name', e.target.value)}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                  className={`h-8 w-full rounded-lg border ${form.errors.last_name ? 'border-destructive' : 'border-input'} bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring`}
                   required
                 />
+                {form.errors.last_name && <span className="text-[10px] text-destructive block">{form.errors.last_name}</span>}
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-muted-foreground">Ext. Name</label>
@@ -235,34 +295,48 @@ export default function Profile({ appName, user, divisions, sections, supervisor
             {/* WORK & DESIGNATION */}
             <div className="grid gap-2.5 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">Position</label>
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>Position</span>
+                  <span className="text-destructive">*</span>
+                </label>
                 <input
                   value={form.data.position}
                   onChange={(e) => form.setData('position', e.target.value)}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                  className={`h-8 w-full rounded-lg border ${form.errors.position ? 'border-destructive' : 'border-input'} bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring`}
+                  required
                 />
+                {form.errors.position && <span className="text-[10px] text-destructive block">{form.errors.position}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">Designation</label>
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>Designation</span>
+                  <span className="text-destructive">*</span>
+                </label>
                 <input
                   value={form.data.designation}
                   onChange={(e) => form.setData('designation', e.target.value)}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                  className={`h-8 w-full rounded-lg border ${form.errors.designation ? 'border-destructive' : 'border-input'} bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring`}
+                  required
                 />
+                {form.errors.designation && <span className="text-[10px] text-destructive block">{form.errors.designation}</span>}
               </div>
             </div>
 
             {/* DIVISION & SECTION */}
             <div className="grid gap-2.5 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">Division</label>
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>Division</span>
+                  <span className="text-destructive">*</span>
+                </label>
                 <select
                   value={form.data.division_id}
                   onChange={(e) => {
                     form.setData('division_id', e.target.value);
                     form.setData('section_id', '');
                   }}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+                  className={`h-8 w-full rounded-lg border ${form.errors.division_id ? 'border-destructive' : 'border-input'} bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer`}
+                  required
                 >
                   <option value="">Select Division</option>
                   {divisions.map((division) => (
@@ -271,13 +345,18 @@ export default function Profile({ appName, user, divisions, sections, supervisor
                     </option>
                   ))}
                 </select>
+                {form.errors.division_id && <span className="text-[10px] text-destructive block">{form.errors.division_id}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">Section</label>
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>Section</span>
+                  <span className="text-destructive">*</span>
+                </label>
                 <select
                   value={form.data.section_id}
                   onChange={(e) => form.setData('section_id', e.target.value)}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+                  className={`h-8 w-full rounded-lg border ${form.errors.section_id ? 'border-destructive' : 'border-input'} bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer`}
+                  required
                 >
                   <option value="">Select Section</option>
                   {filteredSections.map((section) => (
@@ -286,33 +365,48 @@ export default function Profile({ appName, user, divisions, sections, supervisor
                     </option>
                   ))}
                 </select>
+                {form.errors.section_id && <span className="text-[10px] text-destructive block">{form.errors.section_id}</span>}
               </div>
             </div>
 
             {/* CONTACT & SUPERVISOR */}
             <div className="grid gap-2.5 sm:grid-cols-2">
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">Mobile Contact Number</label>
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>Mobile Contact Number</span>
+                  <span className="text-destructive">*</span>
+                </label>
                 <input
                   value={form.data.contact_number}
                   onChange={(e) => form.setData('contact_number', e.target.value)}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                  placeholder="e.g. 09123456789"
+                  className={`h-8 w-full rounded-lg border ${form.errors.contact_number ? 'border-destructive' : 'border-input'} bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring`}
+                  required
                 />
+                {form.errors.contact_number && <span className="text-[10px] text-destructive block">{form.errors.contact_number}</span>}
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-muted-foreground">Supervisor</label>
-                <select
+                <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <span>Supervisor</span>
+                  <span className="text-destructive">*</span>
+                </label>
+                <SearchableSelect
                   value={form.data.supervisor_id}
-                  onChange={(e) => form.setData('supervisor_id', e.target.value)}
-                  className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
-                >
-                  <option value="">Select Supervisor</option>
-                  {supervisors.map((supervisor) => (
-                    <option key={supervisor.id} value={supervisor.id}>
-                      {fullName(supervisor)}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => form.setData('supervisor_id', val)}
+                  options={supervisorOptions}
+                  placeholder="SELECT SUPERVISOR"
+                  searchPlaceholder="Search supervisor by name..."
+                  uppercase={true}
+                  required={true}
+                  error={Boolean(form.errors.supervisor_id)}
+                />
+                {form.errors.supervisor_id ? (
+                  <span className="text-[10px] text-destructive block">{form.errors.supervisor_id}</span>
+                ) : (
+                  <span className="text-[10px] text-muted-foreground block">
+                    Required for performance routing and verification
+                  </span>
+                )}
               </div>
             </div>
 

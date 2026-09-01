@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../Layouts/AppLayout';
 import UserAvatar from '../Components/UserAvatar';
@@ -10,8 +10,6 @@ import {
   Layers,
   ChevronLeft,
   ChevronRight,
-  Mail,
-  Phone,
   Briefcase,
   SlidersHorizontal,
   X,
@@ -142,6 +140,8 @@ export default function Search({
     perPage: String(filters?.perPage || 10),
   });
 
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Filter sections based on selected division
   const availableSections = useMemo(() => {
     if (!form.data.division) {
@@ -150,45 +150,76 @@ export default function Search({
     return sections.filter((s) => String(s.division_id) === String(form.data.division));
   }, [sections, form.data.division]);
 
-  const handleDivisionChange = (divisionId: string) => {
-    form.setData((prev) => {
-      const isSectionValid =
-        divisionId === '' ||
-        sections.some(
-          (s) => String(s.division_id) === String(divisionId) && String(s.id) === String(prev.section)
-        );
+  const navigateSearch = (overrides: Record<string, any> = {}) => {
+    const payload = {
+      search: form.data.search,
+      division: form.data.division,
+      section: form.data.section,
+      year: form.data.year,
+      semester: form.data.semester,
+      perPage: form.data.perPage,
+      page: 1,
+      ...overrides,
+    };
 
-      return {
-        ...prev,
-        division: divisionId,
-        section: isSectionValid ? prev.section : '',
-      };
+    router.post('/search', payload, {
+      preserveState: true,
+      replace: true,
     });
+  };
+
+  const handleSearchChange = (val: string) => {
+    form.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      navigateSearch({ search: val, page: 1 });
+    }, 350);
+  };
+
+  const handleDivisionChange = (divisionId: string) => {
+    const isSectionValid =
+      divisionId === '' ||
+      sections.some(
+        (s) => String(s.division_id) === String(divisionId) && String(s.id) === String(form.data.section)
+      );
+    const newSection = isSectionValid ? form.data.section : '';
+
+    form.setData((prev) => ({
+      ...prev,
+      division: divisionId,
+      section: newSection,
+    }));
+    navigateSearch({ division: divisionId, section: newSection, page: 1 });
+  };
+
+  const handleSectionChange = (sectionId: string) => {
+    form.setData('section', sectionId);
+    navigateSearch({ section: sectionId, page: 1 });
+  };
+
+  const handleYearChange = (year: string) => {
+    form.setData('year', year);
+    navigateSearch({ year, page: 1 });
+  };
+
+  const handleSemesterChange = (semester: string) => {
+    form.setData('semester', semester);
+    navigateSearch({ semester, page: 1 });
   };
 
   const applyFilters = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    router.get('/search', { ...form.data, page: 1 }, { preserveState: true, replace: true });
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    navigateSearch({ page: 1 });
   };
 
   const handlePerPageChange = (val: string) => {
     form.setData('perPage', val);
-    router.get(
-      '/search',
-      {
-        search: form.data.search,
-        division: form.data.division,
-        section: form.data.section,
-        year: form.data.year,
-        semester: form.data.semester,
-        perPage: val,
-        page: 1,
-      },
-      { preserveState: true, replace: true }
-    );
+    navigateSearch({ perPage: val, page: 1 });
   };
 
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     form.setData({
       search: '',
       division: '',
@@ -197,7 +228,19 @@ export default function Search({
       semester: '',
       perPage: '10',
     });
-    router.get('/search', { search: '', division: '', section: '', year: '', semester: '', perPage: 10 }, { replace: true });
+    router.post(
+      '/search',
+      {
+        search: '',
+        division: '',
+        section: '',
+        year: '',
+        semester: '',
+        perPage: 10,
+        page: 1,
+      },
+      { replace: true, preserveState: true }
+    );
   };
 
   return (
@@ -237,14 +280,6 @@ export default function Search({
                 <RotateCcw className="size-3" />
                 <span>Reset</span>
               </button>
-              <button
-                type="button"
-                onClick={() => applyFilters()}
-                className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 text-white px-3 text-xs font-semibold hover:bg-emerald-700 transition shadow-xs cursor-pointer"
-              >
-                <SearchIcon className="size-3.5" />
-                <span>Apply Filters</span>
-              </button>
             </div>
           </div>
 
@@ -258,14 +293,18 @@ export default function Search({
                 <input
                   type="text"
                   value={form.data.search}
-                  onChange={(e) => form.setData('search', e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Type name, year, or rating..."
                   className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
                 {form.data.search && (
                   <button
                     type="button"
-                    onClick={() => form.setData('search', '')}
+                    onClick={() => {
+                      form.setData('search', '');
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      navigateSearch({ search: '', page: 1 });
+                    }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     <X className="size-3" />
@@ -302,7 +341,7 @@ export default function Search({
               </label>
               <select
                 value={form.data.section}
-                onChange={(e) => form.setData('section', e.target.value)}
+                onChange={(e) => handleSectionChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">
@@ -326,7 +365,7 @@ export default function Search({
               </label>
               <select
                 value={form.data.year}
-                onChange={(e) => form.setData('year', e.target.value)}
+                onChange={(e) => handleYearChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">All Years</option>
@@ -346,7 +385,7 @@ export default function Search({
               </label>
               <select
                 value={form.data.semester}
-                onChange={(e) => form.setData('semester', e.target.value)}
+                onChange={(e) => handleSemesterChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">All Semesters</option>
@@ -381,20 +420,17 @@ export default function Search({
         {/* RESULTS TABLE CARD */}
         <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse text-xs text-left">
+            <table className="w-full min-w-[700px] border-collapse text-xs text-left">
               <thead>
                 <tr className="bg-muted/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                   <th className="px-3 py-2 text-center w-12 border-r border-border">#</th>
                   <th className="px-3 py-2 border-r border-border">Employee / Full Name</th>
-                  <th className="px-3 py-2 border-r border-border">Division</th>
-                  <th className="px-3 py-2 border-r border-border">Section</th>
-                  <th className="px-3 py-2 border-r border-border">Position</th>
+                  <th className="px-3 py-2 border-r border-border">Division / Position</th>
+                  <th className="px-3 py-2 border-r border-border">Section / Designation</th>
                   <th className="px-3 py-2 border-r border-border text-center">Year</th>
                   <th className="px-3 py-2 border-r border-border text-center">Semester</th>
                   <th className="px-3 py-2 border-r border-border text-center">Final Rating</th>
-                  <th className="px-3 py-2 border-r border-border text-center">Adjectival Rating</th>
-                  <th className="px-3 py-2 border-r border-border">Contact Number</th>
-                  <th className="px-3 py-2">Email Address</th>
+                  <th className="px-3 py-2 text-center">Adjectival Rating</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -424,38 +460,41 @@ export default function Search({
                         </div>
                       </td>
 
-                      {/* Division */}
+                      {/* Division & Position */}
                       <td className="px-3 py-2 border-r border-border">
-                        {row.divisionName ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted text-[11px] font-medium text-foreground">
-                            {row.divisionName}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/60">-</span>
-                        )}
+                        <div className="space-y-0.5">
+                          {row.divisionName ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted text-[11px] font-semibold text-foreground">
+                              {row.divisionName}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/60 text-xs">-</span>
+                          )}
+                          {row.position && (
+                            <div className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                              <Briefcase className="size-2.5 text-muted-foreground/60 shrink-0" />
+                              <span className="truncate">{row.position}</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
-                      {/* Section */}
+                      {/* Section & Designation */}
                       <td className="px-3 py-2 border-r border-border">
-                        {row.sectionName ? (
-                          <span className="text-foreground font-medium text-xs">
-                            {row.sectionName}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/60">-</span>
-                        )}
-                      </td>
-
-                      {/* Position */}
-                      <td className="px-3 py-2 text-muted-foreground border-r border-border font-medium">
-                        {row.position ? (
-                          <div className="flex items-center gap-1.5">
-                            <Briefcase className="size-3 text-muted-foreground/70 shrink-0" />
-                            <span className="truncate">{row.position}</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground/60">-</span>
-                        )}
+                        <div className="space-y-0.5">
+                          {row.sectionName ? (
+                            <span className="text-foreground font-medium text-xs block">
+                              {row.sectionName}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/60 text-xs block">-</span>
+                          )}
+                          {row.designation && (
+                            <div className="text-[10px] text-muted-foreground font-medium truncate">
+                              {row.designation}
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Year */}
@@ -497,44 +536,14 @@ export default function Search({
                       </td>
 
                       {/* Adjectival Rating */}
-                      <td className="px-3 py-2 border-r border-border text-center whitespace-nowrap">
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
                         {getAdjectivalBadge(row.adjectivalRating)}
-                      </td>
-
-                      {/* Contact */}
-                      <td className="px-3 py-2 text-muted-foreground border-r border-border font-mono text-[11px]">
-                        {row.contactNumber ? (
-                          <a
-                            href={`tel:${row.contactNumber}`}
-                            className="inline-flex items-center gap-1 hover:text-primary transition"
-                          >
-                            <Phone className="size-3 text-muted-foreground/60" />
-                            <span>{row.contactNumber}</span>
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground/60">-</span>
-                        )}
-                      </td>
-
-                      {/* Email */}
-                      <td className="px-3 py-2 text-muted-foreground font-mono text-[11px]">
-                        {row.email ? (
-                          <a
-                            href={`mailto:${row.email}`}
-                            className="inline-flex items-center gap-1 hover:text-primary hover:underline transition"
-                          >
-                            <Mail className="size-3 text-muted-foreground/60" />
-                            <span>{row.email}</span>
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground/60">-</span>
-                        )}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center">
+                    <td colSpan={8} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <div className="size-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
                           <UsersIcon className="size-5" />
@@ -586,12 +595,25 @@ export default function Search({
                     );
                   }
 
+                  // Extract target page number
+                  let targetPage = users.current_page;
+                  if (link.url) {
+                    try {
+                      const urlObj = new URL(link.url, window.location.origin);
+                      targetPage = Number(urlObj.searchParams.get('page')) || users.current_page;
+                    } catch {
+                      if (isPrevious) targetPage = Math.max(1, users.current_page - 1);
+                      else if (isNext) targetPage = Math.min(users.last_page, users.current_page + 1);
+                      else targetPage = Number(link.label) || users.current_page;
+                    }
+                  }
+
                   return (
-                    <Link
+                    <button
                       key={idx}
-                      href={link.url}
-                      preserveState
-                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
+                      type="button"
+                      onClick={() => navigateSearch({ page: targetPage })}
+                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         link.active
                           ? 'bg-emerald-600 text-white font-bold shadow-2xs'
                           : 'border border-input bg-background text-foreground hover:bg-muted'
@@ -604,7 +626,7 @@ export default function Search({
                       ) : (
                         link.label.replace('&laquo;', '').replace('&raquo;', '')
                       )}
-                    </Link>
+                    </button>
                   );
                 })}
               </div>

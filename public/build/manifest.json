@@ -1,13 +1,13 @@
 {
-  "_AutoResizingTextarea-q9RDZDZI.js": {
-    "file": "assets/AutoResizingTextarea-q9RDZDZI.js",
+  "_AutoResizingTextarea-DxZ5acP5.js": {
+    "file": "assets/AutoResizingTextarea-DxZ5acP5.js",
     "name": "AutoResizingTextarea",
     "imports": [
       "resources/js/inertia/app.tsx"
     ]
   },
-  "_ToastContainer-DGx1Sqvo.js": {
-    "file": "assets/ToastContainer-DGx1Sqvo.js",
+  "_ToastContainer-Dd-fx680.js": {
+    "file": "assets/ToastContainer-Dd-fx680.js",
     "name": "ToastContainer",
     "imports": [
       "resources/js/inertia/app.tsx"
@@ -34,7 +34,7 @@
     "src": "node_modules/@fontsource-variable/geist/files/geist-vietnamese-wght-normal.woff2"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CTveQp-p.css",
+    "file": "assets/app-DsyQGK5B.css",
     "name": "app",
     "names": [
       "app.css"
@@ -56,258 +56,271 @@
     "isEntry": true
   },
   "resources/js/inertia/Layouts/AppLayout.tsx": {
-    "file": "assets/AppLayout-0C7rGGTE.js",
+    "file": "assets/AppLayout-CjrazseU.js",
     "name": "AppLayout",
     "src": "resources/js/inertia/Layouts/AppLayout.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js"
+      "_ToastContainer-Dd-fx680.js"
     ]
   },
   "resources/js/inertia/Layouts/AuthLayout.tsx": {
-    "file": "assets/AuthLayout-j3h_7klC.js",
+    "file": "assets/AuthLayout-CDikuWYk.js",
     "name": "AuthLayout",
     "src": "resources/js/inertia/Layouts/AuthLayout.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js"
+      "_ToastContainer-Dd-fx680.js"
+    ]
+  },
+  "resources/js/inertia/Pages/Administration/Adjustment/ModifyTarget.tsx": {
+    "file": "assets/ModifyTarget-Dxlzx4qS.js",
+    "name": "ModifyTarget",
+    "src": "resources/js/inertia/Pages/Administration/Adjustment/ModifyTarget.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/inertia/app.tsx",
+      "_ToastContainer-Dd-fx680.js",
+      "resources/js/inertia/Layouts/AppLayout.tsx",
+      "_AutoResizingTextarea-DxZ5acP5.js"
     ]
   },
   "resources/js/inertia/Pages/Administration/ApplicationSettings.tsx": {
-    "file": "assets/ApplicationSettings-DttzmqJs.js",
+    "file": "assets/ApplicationSettings-BULo4LlK.js",
     "name": "ApplicationSettings",
     "src": "resources/js/inertia/Pages/Administration/ApplicationSettings.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Administration/UserLevel.tsx": {
-    "file": "assets/UserLevel-DMzh76ce.js",
+    "file": "assets/UserLevel-DGC5a96N.js",
     "name": "UserLevel",
     "src": "resources/js/inertia/Pages/Administration/UserLevel.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Administration/Users.tsx": {
-    "file": "assets/Users-BgU6o8j9.js",
+    "file": "assets/Users-DmL75xNL.js",
     "name": "Users",
     "src": "resources/js/inertia/Pages/Administration/Users.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/AnnualTarget/AnnualTarget.tsx": {
-    "file": "assets/AnnualTarget-BooICqU4.js",
+    "file": "assets/AnnualTarget-6xluGELz.js",
     "name": "AnnualTarget",
     "src": "resources/js/inertia/Pages/AnnualTarget/AnnualTarget.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx",
-      "_AutoResizingTextarea-q9RDZDZI.js"
+      "_AutoResizingTextarea-DxZ5acP5.js"
     ]
   },
   "resources/js/inertia/Pages/Auth/Login.tsx": {
-    "file": "assets/Login-DAbsNPNO.js",
+    "file": "assets/Login-Cry3Vor-.js",
     "name": "Login",
     "src": "resources/js/inertia/Pages/Auth/Login.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AuthLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Dashboard.tsx": {
-    "file": "assets/Dashboard-CWhAzbsP.js",
+    "file": "assets/Dashboard-B2DRdkEa.js",
     "name": "Dashboard",
     "src": "resources/js/inertia/Pages/Dashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Libraries/HarmonizedStaff.tsx": {
-    "file": "assets/HarmonizedStaff-DOyUj9iE.js",
+    "file": "assets/HarmonizedStaff-BKRZoyjt.js",
     "name": "HarmonizedStaff",
     "src": "resources/js/inertia/Pages/Libraries/HarmonizedStaff.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Ratings/MyRatings.tsx": {
-    "file": "assets/MyRatings-12_3CNHr.js",
+    "file": "assets/MyRatings-D91xYvjp.js",
     "name": "MyRatings",
     "src": "resources/js/inertia/Pages/Ratings/MyRatings.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Ratings/SemestralTarget.tsx": {
-    "file": "assets/SemestralTarget-bvYqIQdJ.js",
+    "file": "assets/SemestralTarget-DOKtpg8P.js",
     "name": "SemestralTarget",
     "src": "resources/js/inertia/Pages/Ratings/SemestralTarget.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx",
-      "_AutoResizingTextarea-q9RDZDZI.js"
+      "_AutoResizingTextarea-DxZ5acP5.js"
     ]
   },
   "resources/js/inertia/Pages/RpmoManagement/HarmonizedIpc.tsx": {
-    "file": "assets/HarmonizedIpc-BGiyjdNR.js",
+    "file": "assets/HarmonizedIpc-2R2nKOQo.js",
     "name": "HarmonizedIpc",
     "src": "resources/js/inertia/Pages/RpmoManagement/HarmonizedIpc.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx",
-      "_AutoResizingTextarea-q9RDZDZI.js"
+      "_AutoResizingTextarea-DxZ5acP5.js"
     ]
   },
   "resources/js/inertia/Pages/RpmoManagement/PlRating.tsx": {
-    "file": "assets/PlRating-D88wXhqZ.js",
+    "file": "assets/PlRating-Z3d0L8mH.js",
     "name": "PlRating",
     "src": "resources/js/inertia/Pages/RpmoManagement/PlRating.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx",
-      "_AutoResizingTextarea-q9RDZDZI.js"
+      "_AutoResizingTextarea-DxZ5acP5.js"
     ]
   },
   "resources/js/inertia/Pages/RpmoManagement/PlsScorecard.tsx": {
-    "file": "assets/PlsScorecard-BySiip6H.js",
+    "file": "assets/PlsScorecard-CC6KtK3u.js",
     "name": "PlsScorecard",
     "src": "resources/js/inertia/Pages/RpmoManagement/PlsScorecard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Search.tsx": {
-    "file": "assets/Search-NYCGvpI9.js",
+    "file": "assets/Search-DFlHyG1k.js",
     "name": "Search",
     "src": "resources/js/inertia/Pages/Search.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Settings/Appearance.tsx": {
-    "file": "assets/Appearance-Bgnq9Rjk.js",
+    "file": "assets/Appearance-BWTIBLxr.js",
     "name": "Appearance",
     "src": "resources/js/inertia/Pages/Settings/Appearance.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Settings/MyStaff.tsx": {
-    "file": "assets/MyStaff-57d4j9d5.js",
+    "file": "assets/MyStaff-CVXNznHT.js",
     "name": "MyStaff",
     "src": "resources/js/inertia/Pages/Settings/MyStaff.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Settings/Profile.tsx": {
-    "file": "assets/Profile-DGgHX7bU.js",
+    "file": "assets/Profile-D-YeE9cH.js",
     "name": "Profile",
     "src": "resources/js/inertia/Pages/Settings/Profile.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Settings/Security.tsx": {
-    "file": "assets/Security-xs62Alr7.js",
+    "file": "assets/Security-DkhRZxLX.js",
     "name": "Security",
     "src": "resources/js/inertia/Pages/Settings/Security.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Settings/SidebarMenu.tsx": {
-    "file": "assets/SidebarMenu-jBePt0Xb.js",
+    "file": "assets/SidebarMenu-5pLDdAlH.js",
     "name": "SidebarMenu",
     "src": "resources/js/inertia/Pages/Settings/SidebarMenu.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Verification.tsx": {
-    "file": "assets/Verification-wB88bETd.js",
+    "file": "assets/Verification-olOXyTUV.js",
     "name": "Verification",
     "src": "resources/js/inertia/Pages/Verification.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx"
     ]
   },
   "resources/js/inertia/Pages/Verification/SemestralVerification.tsx": {
-    "file": "assets/SemestralVerification-CgY24_9Z.js",
+    "file": "assets/SemestralVerification-NW5tuSE_.js",
     "name": "SemestralVerification",
     "src": "resources/js/inertia/Pages/Verification/SemestralVerification.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/inertia/app.tsx",
-      "_ToastContainer-DGx1Sqvo.js",
+      "_ToastContainer-Dd-fx680.js",
       "resources/js/inertia/Layouts/AppLayout.tsx",
-      "_AutoResizingTextarea-q9RDZDZI.js"
+      "_AutoResizingTextarea-DxZ5acP5.js"
     ]
   },
   "resources/js/inertia/app.tsx": {
-    "file": "assets/app-0wrNmnyE.js",
+    "file": "assets/app-BIB6x49f.js",
     "name": "app",
     "src": "resources/js/inertia/app.tsx",
     "isEntry": true,
     "dynamicImports": [
       "resources/js/inertia/Layouts/AppLayout.tsx",
       "resources/js/inertia/Layouts/AuthLayout.tsx",
+      "resources/js/inertia/Pages/Administration/Adjustment/ModifyTarget.tsx",
       "resources/js/inertia/Pages/Administration/ApplicationSettings.tsx",
       "resources/js/inertia/Pages/Administration/UserLevel.tsx",
       "resources/js/inertia/Pages/Administration/Users.tsx",

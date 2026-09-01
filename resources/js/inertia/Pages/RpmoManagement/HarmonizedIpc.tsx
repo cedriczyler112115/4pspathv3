@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../Layouts/AppLayout';
 import FormattedText, { formatTextValue } from '../../Components/FormattedText';
@@ -123,13 +123,24 @@ export default function HarmonizedIpc({
 }: Props) {
   // Filter Form State
   const filterForm = useForm({
-    search: filters.search,
+    search: filters.search || '',
     year: filters.year || String(new Date().getFullYear()),
-    category: filters.category,
-    semester: filters.semester,
-    position: filters.position,
-    perPage: String(filters.perPage),
+    category: filters.category || '',
+    semester: filters.semester || '',
+    position: filters.position || '',
+    perPage: String(filters.perPage || 10),
   });
+
+  useEffect(() => {
+    filterForm.setData({
+      search: filters.search || '',
+      year: filters.year || String(new Date().getFullYear()),
+      category: filters.category || '',
+      semester: filters.semester || '',
+      position: filters.position || '',
+      perPage: String(filters.perPage || 10),
+    });
+  }, [filters.year, filters.category, filters.semester, filters.position, filters.search, filters.perPage]);
 
   // Inline Editing Group State & Pending Sub-targets
   const [editingIndicatorId, setEditingIndicatorId] = useState<number | null>(null);
@@ -220,15 +231,61 @@ export default function HarmonizedIpc({
     };
   }, [contextMenu]);
 
-  const submitFilters = (overrides = {}) => {
-    const data = { ...filterForm.data, ...overrides };
-    router.get('/rpmo-management/harmonized-ipc', data, {
-      preserveState: true,
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const submitFilters = (overrides: Record<string, any> = {}) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    const payload = {
+      search: filterForm.data.search,
+      year: filterForm.data.year,
+      category: filterForm.data.category,
+      semester: filterForm.data.semester,
+      position: filterForm.data.position,
+      perPage: filterForm.data.perPage,
+      page: 1,
+      ...overrides,
+    };
+    router.post('/rpmo-management/harmonized-ipc/filter', payload, {
       replace: true,
+      preserveScroll: true,
     });
   };
 
+  const handleSearchChange = (val: string) => {
+    filterForm.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      submitFilters({ search: val, page: 1 });
+    }, 350);
+  };
+
+  const handlePositionChange = (position: string) => {
+    filterForm.setData('position', position);
+    submitFilters({ position, page: 1 });
+  };
+
+  const handleYearChange = (year: string) => {
+    filterForm.setData('year', year);
+    submitFilters({ year, page: 1 });
+  };
+
+  const handleCategoryChange = (category: string) => {
+    filterForm.setData('category', category);
+    submitFilters({ category, page: 1 });
+  };
+
+  const handleSemesterChange = (semester: string) => {
+    filterForm.setData('semester', semester);
+    submitFilters({ semester, page: 1 });
+  };
+
+  const handlePerPageChange = (perPage: string) => {
+    filterForm.setData('perPage', perPage);
+    submitFilters({ perPage, page: 1 });
+  };
+
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({
       search: '',
       year: String(new Date().getFullYear()),
@@ -237,8 +294,8 @@ export default function HarmonizedIpc({
       position: '',
       perPage: '10',
     });
-    router.get(
-      '/rpmo-management/harmonized-ipc',
+    router.post(
+      '/rpmo-management/harmonized-ipc/filter',
       {
         search: '',
         year: String(new Date().getFullYear()),
@@ -246,6 +303,7 @@ export default function HarmonizedIpc({
         semester: '',
         position: '',
         perPage: '10',
+        page: 1,
       },
       { replace: true }
     );
@@ -393,7 +451,7 @@ export default function HarmonizedIpc({
 
   const handleSaveAddTarget = (e: React.FormEvent) => {
     e.preventDefault();
-    addForm.post('/rpmo-management/harmonized-ipc', {
+    addForm.post('/rpmo-management/harmonized-ipc/store', {
       onSuccess: () => {
         setShowAddModal(false);
       },
@@ -572,13 +630,10 @@ export default function HarmonizedIpc({
               <label className="text-[11px] font-semibold text-muted-foreground">Target Staff Position</label>
               <select
                 value={filterForm.data.position}
-                onChange={(e) => {
-                  filterForm.setData('position', e.target.value);
-                  submitFilters({ position: e.target.value });
-                }}
+                onChange={(e) => handlePositionChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
-                <option value="">Select Position</option>
+                <option value="">All Positions</option>
                 {positions.map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}
@@ -595,8 +650,7 @@ export default function HarmonizedIpc({
                 <input
                   type="text"
                   value={filterForm.data.search}
-                  onChange={(e) => filterForm.setData('search', e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search activity, description, outputs..."
                   className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
@@ -605,7 +659,8 @@ export default function HarmonizedIpc({
                     type="button"
                     onClick={() => {
                       filterForm.setData('search', '');
-                      submitFilters({ search: '' });
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      submitFilters({ search: '', page: 1 });
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
@@ -620,10 +675,7 @@ export default function HarmonizedIpc({
               <label className="text-[11px] font-semibold text-muted-foreground">Year</label>
               <select
                 value={filterForm.data.year}
-                onChange={(e) => {
-                  filterForm.setData('year', e.target.value);
-                  submitFilters({ year: e.target.value });
-                }}
+                onChange={(e) => handleYearChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">All years</option>
@@ -640,10 +692,7 @@ export default function HarmonizedIpc({
               <label className="text-[11px] font-semibold text-muted-foreground">Category</label>
               <select
                 value={filterForm.data.category}
-                onChange={(e) => {
-                  filterForm.setData('category', e.target.value);
-                  submitFilters({ category: e.target.value });
-                }}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">All categories</option>
@@ -660,10 +709,7 @@ export default function HarmonizedIpc({
               <label className="text-[11px] font-semibold text-muted-foreground">Semester</label>
               <select
                 value={filterForm.data.semester}
-                onChange={(e) => {
-                  filterForm.setData('semester', e.target.value);
-                  submitFilters({ semester: e.target.value });
-                }}
+                onChange={(e) => handleSemesterChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">All semesters</option>
@@ -680,10 +726,7 @@ export default function HarmonizedIpc({
               <label className="text-[11px] font-semibold text-muted-foreground">Per Page</label>
               <select
                 value={filterForm.data.perPage}
-                onChange={(e) => {
-                  filterForm.setData('perPage', e.target.value);
-                  submitFilters({ perPage: e.target.value });
-                }}
+                onChange={(e) => handlePerPageChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 {perPageOptions.map((opt) => (
@@ -1378,13 +1421,7 @@ export default function HarmonizedIpc({
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.get(
-                        '/rpmo-management/harmonized-ipc',
-                        { ...filterForm.data, page: targets.currentPage - 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
+                    onClick={() => submitFilters({ page: targets.currentPage - 1 })}
                     className="inline-flex cursor-pointer items-center rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
                   >
                     Previous
@@ -1407,13 +1444,7 @@ export default function HarmonizedIpc({
                     <button
                       key={page}
                       type="button"
-                      onClick={() =>
-                        router.get(
-                          '/rpmo-management/harmonized-ipc',
-                          { ...filterForm.data, page },
-                          { replace: true, preserveState: true }
-                        )
-                      }
+                      onClick={() => submitFilters({ page })}
                       className="inline-flex min-w-7 cursor-pointer items-center justify-center rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
                     >
                       {page}
@@ -1428,13 +1459,7 @@ export default function HarmonizedIpc({
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.get(
-                        '/rpmo-management/harmonized-ipc',
-                        { ...filterForm.data, page: targets.currentPage + 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
+                    onClick={() => submitFilters({ page: targets.currentPage + 1 })}
                     className="inline-flex cursor-pointer items-center rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
                   >
                     Next

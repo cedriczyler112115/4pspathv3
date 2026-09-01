@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
 import { Shield, Plus, RotateCcw, Search, ChevronLeft, ChevronRight, X, Pencil, Trash2, SlidersHorizontal, CheckSquare, Square } from 'lucide-react';
 
@@ -66,21 +66,32 @@ export default function UserLevel({
   const [menuSearch, setMenuSearch] = useState('');
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
+  const handleSearchChange = (val: string) => {
+    filterForm.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      submitFilters({ search: val, page: 1 });
+    }, 350);
+  };
+
+  const submitFilters = (overrides?: Partial<typeof filterForm.data> & { page?: number }) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
-    router.get('/administration/user-level', data, {
+    router.post('/administration/user-level', data, {
       preserveState: true,
       replace: true,
     });
   };
 
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({
       search: '',
       perPage: '10',
     });
-    router.get('/administration/user-level', {}, { replace: true });
+    router.post('/administration/user-level', { search: '', perPage: '10', page: 1 }, { replace: true, preserveState: true });
   };
 
   const openCreateModal = () => {
@@ -222,8 +233,7 @@ export default function UserLevel({
                 <input
                   type="text"
                   value={filterForm.data.search}
-                  onChange={(e) => filterForm.setData('search', e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search by user level title..."
                   className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
@@ -232,7 +242,8 @@ export default function UserLevel({
                     type="button"
                     onClick={() => {
                       filterForm.setData('search', '');
-                      submitFilters({ search: '' });
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      submitFilters({ search: '', page: 1 });
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
@@ -381,14 +392,8 @@ export default function UserLevel({
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.get(
-                        '/administration/user-level',
-                        { ...filterForm.data, page: userLevels.currentPage - 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
-                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
+                    onClick={() => submitFilters({ page: userLevels.currentPage - 1 })}
+                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition cursor-pointer"
                   >
                     <ChevronLeft className="size-3.5" />
                   </button>
@@ -401,14 +406,8 @@ export default function UserLevel({
                     <button
                       key={page}
                       type="button"
-                      onClick={() =>
-                        router.get(
-                          '/administration/user-level',
-                          { ...filterForm.data, page },
-                          { replace: true, preserveState: true }
-                        )
-                      }
-                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
+                      onClick={() => submitFilters({ page })}
+                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         isActive
                           ? 'bg-emerald-600 text-white font-bold shadow-2xs'
                           : 'border border-input bg-background text-foreground hover:bg-muted'
@@ -427,14 +426,8 @@ export default function UserLevel({
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.get(
-                        '/administration/user-level',
-                        { ...filterForm.data, page: userLevels.currentPage + 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
-                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
+                    onClick={() => submitFilters({ page: userLevels.currentPage + 1 })}
+                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition cursor-pointer"
                   >
                     <ChevronRight className="size-3.5" />
                   </button>

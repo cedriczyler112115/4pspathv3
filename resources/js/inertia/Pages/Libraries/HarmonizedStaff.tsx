@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
 import { Pencil, Trash2, Plus, RotateCcw, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
@@ -54,18 +54,31 @@ export default function HarmonizedStaff({
     isActive: true,
   });
 
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = (val: string) => {
+    filterForm.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      submitFilters({ search: val, page: 1 });
+    }, 350);
+  };
+
   const submitFilters = (overrides = {}) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
-    router.get('/libraries/harmonized-staff', data, {
+    router.post('/libraries/harmonized-staff', data, {
       preserveState: true,
       replace: true,
     });
   };
 
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({ search: '', perPage: '10' });
-    router.get('/libraries/harmonized-staff', { search: '', perPage: '10' }, {
+    router.post('/libraries/harmonized-staff', { search: '', perPage: '10', page: 1 }, {
       replace: true,
+      preserveState: true,
     });
   };
 
@@ -166,8 +179,7 @@ export default function HarmonizedStaff({
                 <input
                   type="text"
                   value={filterForm.data.search}
-                  onChange={(e) => filterForm.setData('search', e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Type position title..."
                   className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
@@ -176,7 +188,8 @@ export default function HarmonizedStaff({
                     type="button"
                     onClick={() => {
                       filterForm.setData('search', '');
-                      submitFilters({ search: '' });
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      submitFilters({ search: '', page: 1 });
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
@@ -307,14 +320,8 @@ export default function HarmonizedStaff({
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.get(
-                        '/libraries/harmonized-staff',
-                        { ...filterForm.data, page: positions.currentPage - 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
-                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
+                    onClick={() => submitFilters({ page: positions.currentPage - 1 })}
+                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition cursor-pointer"
                   >
                     <ChevronLeft className="size-3.5" />
                   </button>
@@ -327,14 +334,8 @@ export default function HarmonizedStaff({
                     <button
                       key={page}
                       type="button"
-                      onClick={() =>
-                        router.get(
-                          '/libraries/harmonized-staff',
-                          { ...filterForm.data, page },
-                          { replace: true, preserveState: true }
-                        )
-                      }
-                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
+                      onClick={() => submitFilters({ page })}
+                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         isActive
                           ? 'bg-emerald-600 text-white font-bold shadow-2xs'
                           : 'border border-input bg-background text-foreground hover:bg-muted'
@@ -353,14 +354,8 @@ export default function HarmonizedStaff({
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.get(
-                        '/libraries/harmonized-staff',
-                        { ...filterForm.data, page: positions.currentPage + 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
-                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition"
+                    onClick={() => submitFilters({ page: positions.currentPage + 1 })}
+                    className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition cursor-pointer"
                   >
                     <ChevronRight className="size-3.5" />
                   </button>

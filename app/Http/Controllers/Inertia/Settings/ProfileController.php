@@ -53,6 +53,8 @@ class ProfileController extends Controller
                 ->orderBy('last_name')
                 ->orderBy('first_name')
                 ->get(['id', 'name', 'last_name', 'first_name', 'middle_name', 'extension_name']),
+            'isProfileComplete' => $user?->hasCompleteProfile() ?? false,
+            'missingFields' => $user?->missingProfileFields() ?? [],
         ]);
     }
 

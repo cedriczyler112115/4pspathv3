@@ -316,6 +316,7 @@ export default function SemestralVerification({
   const docFileInputRef = React.useRef<HTMLInputElement>(null);
   const printDropdownRef = React.useRef<HTMLDivElement>(null);
   const optionsDropdownRef = React.useRef<HTMLDivElement>(null);
+  const contextMenuRef = React.useRef<HTMLDivElement>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -706,8 +707,11 @@ export default function SemestralVerification({
   });
 
   const isVerified = Boolean(rating.dateVerified);
-  const isReadOnly = false;
+  const isLock2 = Number(rating.lock) === 2;
+  const isLock3 = Number(rating.lock) === 3;
+  const isReadOnly = Number(rating.lock) >= 2;
   const isLocked = true;
+  const canManageDevelopmentPlan = Number(rating.lock) < 2 || (isVerified && isLock3);
 
   // Reset 'incomplete' filter if lock becomes 0 (not yet locked)
   useEffect(() => {
@@ -772,6 +776,7 @@ export default function SemestralVerification({
   };
 
   const saveField = (itemId: number, field: string, value: string) => {
+    if (isReadOnly) return;
     const timerKey = `${itemId}_${field}`;
     if (saveTimerRef.current[timerKey]) {
       clearTimeout(saveTimerRef.current[timerKey]);
@@ -1320,6 +1325,9 @@ export default function SemestralVerification({
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
+      if (contextMenuRef.current && contextMenuRef.current.contains(e.target as Node)) {
+        return;
+      }
       setContextMenu(null);
       setActiveSubMenu(null);
 
@@ -1345,7 +1353,7 @@ export default function SemestralVerification({
     isFirst: boolean = true
   ) => {
     e.preventDefault();
-    if (isLocked) return;
+    if (isReadOnly) return;
     const pageX = window.scrollX + e.clientX;
     const pageY = window.scrollY + e.clientY;
     setContextMenu({
@@ -1798,6 +1806,14 @@ export default function SemestralVerification({
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Supervisor Verification Status Badge if verified */}
+              {isVerified && (
+                <span className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 sm:px-3 text-xs font-semibold text-white shadow-2xs">
+                  <CheckCircle2 className="size-3.5" />
+                  <span>Verified by Supervisor</span>
+                </span>
+              )}
+
               {/* Print Dropdown */}
               <div ref={printDropdownRef} className="relative">
                 <button
@@ -1813,7 +1829,7 @@ export default function SemestralVerification({
                 {showPrintDropdown && (
                   <div className="absolute right-0 mt-2 w-44 rounded-xl border border-border bg-card p-1 shadow-xl z-30 text-xs animate-in fade-in-50 zoom-in-95">
                     <a
-                      href={`/ipcrf/myratings/semestral-target/print-ipcrf?sem_id=${rating.id}`}
+                      href={`/verification/semestral-verification/print-ipcrf?sem_id=${rating.id}`}
                       target="_blank"
                       rel="noreferrer"
                       onClick={() => setShowPrintDropdown(false)}
@@ -1822,7 +1838,7 @@ export default function SemestralVerification({
                       Print IPCR-F
                     </a>
                     <a
-                      href={`/ipcrf/myratings/semestral-target/print-checkpoint?sem_id=${rating.id}`}
+                      href={`/verification/semestral-verification/print-checkpoint?sem_id=${rating.id}`}
                       target="_blank"
                       rel="noreferrer"
                       onClick={() => setShowPrintDropdown(false)}
@@ -1844,59 +1860,50 @@ export default function SemestralVerification({
             </div>
           </div>
 
-          {/* ACTION CONTROLS */}
-          <div className="flex flex-wrap items-center justify-end gap-2.5 pt-0.5 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Supervisor Verification Status Badge if verified */}
-              {isVerified && (
-                <div className="flex items-center gap-1.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs">
-                    <CheckCircle2 className="size-3.5" />
-                    <span>Verified by Supervisor</span>
+          {/* USER PROFILE INFO STRIP */}
+          <div className="rounded-lg border border-border bg-muted/20 p-2 sm:p-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 text-xs items-start">
+              <div className="min-w-0 col-span-2 sm:col-span-1">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Full Name</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10.5px] sm:text-[11px] flex items-center gap-1.5 min-w-0">
+                  <UserAvatar
+                    user={{
+                      name: userProfile?.fullName,
+                      avatar_url: (userProfile as any)?.avatarUrl,
+                      avatar: (userProfile as any)?.avatar,
+                    }}
+                    size="xs"
+                  />
+                  <span className="truncate leading-tight" title={userProfile?.fullName || '-'}>
+                    {userProfile?.fullName || '-'}
                   </span>
                 </div>
-              )}
+              </div>
+              <div className="min-w-0">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Position</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10px] sm:text-[10.5px] leading-tight break-words" title={userProfile?.position || '-'}>
+                  {userProfile?.position || '-'}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Designation</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10px] sm:text-[10.5px] leading-tight break-words" title={userProfile?.designation || '-'}>
+                  {userProfile?.designation || '-'}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Division Name</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10px] sm:text-[10.5px] leading-tight break-words" title={userProfile?.divisionName || '-'}>
+                  {userProfile?.divisionName || '-'}
+                </div>
+              </div>
+              <div className="min-w-0 col-span-2 sm:col-span-1">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Section Name</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10px] sm:text-[10.5px] leading-tight break-words" title={userProfile?.sectionName || '-'}>
+                  {userProfile?.sectionName || '-'}
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* USER PROFILE INFO STRIP */}
-          <div className="rounded-lg border border-border bg-muted/20 p-2.5 overflow-x-auto">
-            <table className="w-full border-0 border-collapse text-xs">
-              <tbody>
-                <tr className="align-top">
-                  <td className="pr-6 whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Full Name</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground flex items-center gap-2">
-                      <UserAvatar
-                        user={{
-                          name: userProfile?.fullName,
-                          avatar_url: (userProfile as any)?.avatarUrl,
-                          avatar: (userProfile as any)?.avatar,
-                        }}
-                        size="sm"
-                      />
-                      <span>{userProfile?.fullName || '-'}</span>
-                    </div>
-                  </td>
-                  <td className="pr-6 whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Position</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.position || '-'}</div>
-                  </td>
-                  <td className="pr-6 whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Designation</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.designation || '-'}</div>
-                  </td>
-                  <td className="pr-6 whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Division Name</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.divisionName || '-'}</div>
-                  </td>
-                  <td className="whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Section Name</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.sectionName || '-'}</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
 
@@ -2696,7 +2703,7 @@ export default function SemestralVerification({
                   )}
 
                   <a
-                    href={`/ipcrf/myratings/semestral-target/print-checkpoint?sem_id=${rating.id}`}
+                    href={`/verification/semestral-verification/print-checkpoint?sem_id=${rating.id}`}
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 text-xs font-semibold shadow-sm transition cursor-pointer"
@@ -2898,7 +2905,7 @@ export default function SemestralVerification({
                         Professional development goals, learning activities, and required support resources.
                       </p>
                     </div>
-                    {!isAddingArea && (
+                    {!isAddingArea && canManageDevelopmentPlan && (
                       <button
                         type="button"
                         onClick={() => {
@@ -2927,13 +2934,13 @@ export default function SemestralVerification({
                             <th className="px-3 py-2.5 w-[26%] border-r border-border">Aim / Areas of Improvement</th>
                             <th className="px-3 py-2.5 w-[25%] border-r border-border">Development Activities</th>
                             <th className="px-3 py-2.5 w-[22%] border-r border-border">Support / Resources Needed</th>
-                            <th className="px-3 py-2.5 w-[15%] border-r border-border">Progress / Intervention</th>
-                            <th className="px-3 py-2.5 text-center w-[8%]">Action</th>
+                            <th className={`px-3 py-2.5 ${canManageDevelopmentPlan ? 'border-r border-border' : ''} w-[15%]`}>Progress / Intervention</th>
+                            {canManageDevelopmentPlan && <th className="px-3 py-2.5 text-center w-[8%]">Action</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                           {/* Inline Add Item Row */}
-                          {isAddingArea && (
+                          {isAddingArea && canManageDevelopmentPlan && (
                             <tr className="bg-emerald-50/40 dark:bg-emerald-950/20 align-top">
                               <td className="px-2 py-2.5 text-center font-bold text-emerald-600 border-r border-border">
                                 <span className="inline-flex size-5 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-[10px]">
@@ -3003,7 +3010,7 @@ export default function SemestralVerification({
                           {/* Existing Development Plan Rows */}
                           {areasOfImprovement.length > 0 ? (
                             areasOfImprovement.map((area, idx) => {
-                              const isEditing = editingAreaId === area.id;
+                              const isEditing = editingAreaId === area.id && canManageDevelopmentPlan;
 
                               if (isEditing) {
                                 return (
@@ -3082,45 +3089,47 @@ export default function SemestralVerification({
                                   <td className="px-3 py-3 text-foreground border-r border-border leading-relaxed whitespace-pre-line">
                                     <FormattedText value={area.support_resources} />
                                   </td>
-                                  <td className="px-3 py-3 text-foreground border-r border-border leading-relaxed whitespace-pre-line">
+                                  <td className={`px-3 py-3 text-foreground ${canManageDevelopmentPlan ? 'border-r border-border' : ''} leading-relaxed whitespace-pre-line`}>
                                     <FormattedText value={area.progress_intervention} />
                                   </td>
-                                  <td className="px-3 py-3 text-center align-middle">
-                                    <div className="flex items-center justify-center gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setEditingAreaId(area.id);
-                                          setEditAreaForm({
-                                            areas_improvement: area.areas_improvement || '',
-                                            development_activities: area.development_activities || '',
-                                            support_resources: area.support_resources || '',
-                                            progress_intervention: area.progress_intervention || '',
-                                          });
-                                        }}
-                                        className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition cursor-pointer"
-                                        title="Edit item inline"
-                                      >
-                                        <Pencil className="w-3.5 h-3.5" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteArea(area.id)}
-                                        className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                                        title="Delete item"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    </div>
-                                  </td>
+                                  {canManageDevelopmentPlan && (
+                                    <td className="px-3 py-3 text-center align-middle">
+                                      <div className="flex items-center justify-center gap-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingAreaId(area.id);
+                                            setEditAreaForm({
+                                              areas_improvement: area.areas_improvement || '',
+                                              development_activities: area.development_activities || '',
+                                              support_resources: area.support_resources || '',
+                                              progress_intervention: area.progress_intervention || '',
+                                            });
+                                          }}
+                                          className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition cursor-pointer"
+                                          title="Edit item inline"
+                                        >
+                                          <Pencil className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDeleteArea(area.id)}
+                                          className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
+                                          title="Delete item"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  )}
                                 </tr>
                               );
                             })
                           ) : (
                             !isAddingArea && (
                               <tr>
-                                <td colSpan={6} className="px-4 py-8 text-center text-xs text-muted-foreground">
-                                  No development plan items recorded yet. Click + Add Development Plan Item to add professional goals.
+                                <td colSpan={canManageDevelopmentPlan ? 6 : 5} className="px-4 py-8 text-center text-xs text-muted-foreground">
+                                  No development plan items recorded yet.
                                 </td>
                               </tr>
                             )
@@ -3144,15 +3153,17 @@ export default function SemestralVerification({
                           Official feedback, commendations, and guidance from supervisor.
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSaveFeedback('recommendation')}
-                        disabled={isSavingFeedback}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
-                      >
-                        {isSavingFeedback ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-                        <span>Save Remarks</span>
-                      </button>
+                      {canManageDevelopmentPlan && (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveFeedback('recommendation')}
+                          disabled={isSavingFeedback}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
+                        >
+                          {isSavingFeedback ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                          <span>Save Remarks</span>
+                        </button>
+                      )}
                     </div>
 
                     <RichTextEditor
@@ -3160,6 +3171,7 @@ export default function SemestralVerification({
                       onChange={setRecommendationHtml}
                       placeholder="Type rater's official comments, commendations and recommendations here in English..."
                       minHeight="170px"
+                      readOnly={!canManageDevelopmentPlan}
                     />
                   </div>
 
@@ -3174,15 +3186,17 @@ export default function SemestralVerification({
                           Identified core competencies, key achievements, and skills.
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSaveFeedback('strengths')}
-                        disabled={isSavingFeedback}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
-                      >
-                        {isSavingFeedback ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-                        <span>Save Strengths</span>
-                      </button>
+                      {canManageDevelopmentPlan && (
+                        <button
+                          type="button"
+                          onClick={() => handleSaveFeedback('strengths')}
+                          disabled={isSavingFeedback}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
+                        >
+                          {isSavingFeedback ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                          <span>Save Strengths</span>
+                        </button>
+                      )}
                     </div>
 
                     <RichTextEditor
@@ -3190,6 +3204,7 @@ export default function SemestralVerification({
                       onChange={setStrengthsHtml}
                       placeholder="Type ratee's identified strengths, notable capabilities and contributions here in English..."
                       minHeight="170px"
+                      readOnly={!canManageDevelopmentPlan}
                     />
                   </div>
                 </div>
@@ -3362,8 +3377,9 @@ export default function SemestralVerification({
         </div>
 
         {/* EXACT LIVEWIRE RIGHT CLICK CONTEXT MENU & SUB-MENU FLYOUTS */}
-        {contextMenu && !isLocked && (
+        {contextMenu && !isReadOnly && (
           <div
+            ref={contextMenuRef}
             style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
             className="absolute z-50 min-w-[14rem] rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 shadow-2xl animate-in fade-in-50 zoom-in-95 text-xs font-medium select-none text-slate-900 dark:text-slate-100"
             onClick={(e) => e.stopPropagation()}
@@ -3377,7 +3393,7 @@ export default function SemestralVerification({
             </div>
 
             {/* Menu Item 1: Add Target (with flyout sub-menu trigger) */}
-            {!isLocked && (
+            {!isReadOnly && (
               <div
                 className="relative"
                 onMouseEnter={() => setActiveSubMenu('add')}
@@ -3458,7 +3474,7 @@ export default function SemestralVerification({
             )}
 
             {/* Menu Item 2: Edit Target */}
-            {!isLocked && (
+            {!isReadOnly && (
               <button
                 type="button"
                 onMouseEnter={() => setActiveSubMenu(null)}
@@ -3499,7 +3515,7 @@ export default function SemestralVerification({
             <div className="my-1 border-t border-slate-100 dark:border-slate-800"></div>
 
             {/* Menu Item 4: Delete (with flyout sub-menu trigger) */}
-            {!isLocked && (
+            {!isReadOnly && (
               <div
                 className="relative"
                 onMouseEnter={() => setActiveSubMenu('delete')}

@@ -133,6 +133,59 @@ class User extends Authenticatable
         return $this->morphToMany(Role::class, 'model', 'model_has_roles');
     }
 
+    public function hasCompleteProfile(): bool
+    {
+        return empty($this->missingProfileFields());
+    }
+
+    /**
+     * Get list of required profile fields that are missing/incomplete.
+     *
+     * @return array<string>
+     */
+    public function missingProfileFields(): array
+    {
+        $missing = [];
+
+        if (blank($this->first_name)) {
+            $missing[] = 'First Name';
+        }
+
+        if (blank($this->middle_name)) {
+            $missing[] = 'Middle Name';
+        }
+
+        if (blank($this->last_name)) {
+            $missing[] = 'Last Name';
+        }
+
+        if (blank($this->position)) {
+            $missing[] = 'Position';
+        }
+
+        if (blank($this->designation)) {
+            $missing[] = 'Designation';
+        }
+
+        if (empty($this->division_id) && blank($this->division)) {
+            $missing[] = 'Division';
+        }
+
+        if (empty($this->section_id) && blank($this->section)) {
+            $missing[] = 'Section';
+        }
+
+        if (blank($this->contact_number)) {
+            $missing[] = 'Contact Number';
+        }
+
+        if (empty($this->supervisor_id)) {
+            $missing[] = 'Supervisor';
+        }
+
+        return $missing;
+    }
+
     public function isAdministrator(): bool
     {
         if ($this->id === 3) {

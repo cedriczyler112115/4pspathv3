@@ -18,6 +18,7 @@ use App\Http\Controllers\Inertia\SearchController;
 use App\Http\Controllers\Inertia\RatingsController;
 use App\Http\Controllers\Inertia\VerificationController;
 use App\Http\Controllers\Inertia\Verification\SemestralVerificationController;
+use App\Http\Controllers\Inertia\Administration\Adjustment\ModifyTargetController;
 use Illuminate\Support\Facades\Route;
 
 if (class_exists(\Inertia\Inertia::class)) {
@@ -32,12 +33,13 @@ if (class_exists(\Inertia\Inertia::class)) {
         })->name('home');
 
         Route::get('/dashboard', DashboardController::class)->name('dashboard');
-        Route::get('/search', SearchController::class)->name('search');
+        Route::match(['get', 'post'], '/search', SearchController::class)->name('search');
 
         // Annual Targets
-        Route::get('/ipcrf/annualtarget', [AnnualTargetController::class, 'index'])->name('annualtarget.index');
+        Route::match(['get', 'post'], '/ipcrf/annualtarget', [AnnualTargetController::class, 'index'])->name('annualtarget.index');
         Route::redirect('/annualtarget', '/ipcrf/annualtarget');
-        Route::post('/ipcrf/annualtarget', [AnnualTargetController::class, 'store'])->name('annualtarget.store');
+        Route::match(['get', 'post'], '/ipcrf/annualtarget/filter', [AnnualTargetController::class, 'index'])->name('annualtarget.filter');
+        Route::post('/ipcrf/annualtarget/store', [AnnualTargetController::class, 'store'])->name('annualtarget.store');
         Route::post('/ipcrf/annualtarget/reorder', [AnnualTargetController::class, 'reorder'])->name('annualtarget.reorder');
         Route::post('/ipcrf/annualtarget/{indicatorId}/sub-target', [AnnualTargetController::class, 'storeSubTarget'])->name('annualtarget.sub-target.store');
         Route::patch('/ipcrf/annualtarget/{indicatorId}', [AnnualTargetController::class, 'update'])->name('annualtarget.update');
@@ -52,13 +54,15 @@ if (class_exists(\Inertia\Inertia::class)) {
         Route::post('/ipcrf/annualtarget/copy-all-harmonized', [AnnualTargetController::class, 'copyAllHarmonizedTargetGroups'])->name('annualtarget.copy-all-harmonized');
 
         // Verification
-        Route::get('/verification', [VerificationController::class, 'index'])->name('verification');
+        Route::match(['get', 'post'], '/verification', [VerificationController::class, 'index'])->name('verification');
         Route::get('/verification/semestral-verification', [SemestralVerificationController::class, 'index'])->name('verification.semestral-verification');
+        Route::get('/verification/semestral-verification/print-ipcrf', [\App\Http\Controllers\PrintIpcrfController::class, 'showVerification'])->name('verification.semestral-verification.print-ipcrf');
+        Route::get('/verification/semestral-verification/print-checkpoint', [\App\Http\Controllers\PrintCheckpointController::class, 'showVerification'])->name('verification.semestral-verification.print-checkpoint');
         Route::get('/verification/{ratingId}/semestral-verification', [SemestralVerificationController::class, 'show'])->name('verification.semestral-verification.show');
 
         // Semestral Ratings
         Route::redirect('/myratings', '/ipcrf/myratings');
-        Route::get('/ipcrf/myratings', [RatingsController::class, 'index'])->name('myratings.index');
+        Route::match(['get', 'post'], '/ipcrf/myratings', [RatingsController::class, 'index'])->name('myratings.index');
         Route::get('/ipcrf/myratings/semestral-target/print-ipcrf', [\App\Http\Controllers\PrintIpcrfController::class, 'show'])->name('myratings.semestral-target.print-ipcrf');
         Route::get('/ipcrf/myratings/semestral-target/print-checkpoint', [\App\Http\Controllers\PrintCheckpointController::class, 'show'])->name('myratings.semestral-target.print-checkpoint');
         Route::get('/ipcrf/myratings/{ratingId}/sem-target', [RatingsController::class, 'show'])->name('myratings.sem-target');
@@ -91,14 +95,16 @@ if (class_exists(\Inertia\Inertia::class)) {
         Route::get('/settings/profile', [ProfileController::class, 'edit'])->name('settings.profile');
         Route::match(['patch', 'post'], '/settings/profile', [ProfileController::class, 'update']);
         Route::redirect('/myaccount/profile', '/settings/profile')->name('profile.edit');
-        Route::get('/settings/mystaff', [MyStaffController::class, 'index'])->name('settings.mystaff');
+        Route::match(['get', 'post'], '/settings/mystaff', [MyStaffController::class, 'index'])->name('settings.mystaff');
         Route::get('/settings/security', [SecurityController::class, 'edit'])->name('settings.security');
         Route::patch('/settings/security', [SecurityController::class, 'update']);
         Route::redirect('/myaccount/security', '/settings/security')->name('security.edit');
         Route::get('/settings/appearance', [AppearanceController::class, 'edit'])->name('settings.appearance');
         Route::patch('/settings/appearance', [AppearanceController::class, 'update']);
-        Route::get('/settings/sidebar-menu', [SidebarMenuController::class, 'index'])->name('settings.sidebar-menu');
-        Route::post('/settings/sidebar-menu', [SidebarMenuController::class, 'store'])->name('settings.sidebar-menu.store');
+        Route::match(['get', 'post'], '/settings/sidebar-menu', [SidebarMenuController::class, 'index'])->name('settings.sidebar-menu');
+        Route::match(['get', 'post'], '/settings/sidebar-menu/filter', [SidebarMenuController::class, 'index'])->name('settings.sidebar-menu.filter');
+        Route::post('/settings/sidebar-menu/store', [SidebarMenuController::class, 'store'])->name('settings.sidebar-menu.store');
+        Route::post('/settings/sidebar-menu', [SidebarMenuController::class, 'store']);
         Route::patch('/settings/sidebar-menu/{id}', [SidebarMenuController::class, 'update'])->name('settings.sidebar-menu.update');
         Route::delete('/settings/sidebar-menu/{id}', [SidebarMenuController::class, 'destroy'])->name('settings.sidebar-menu.destroy');
         Route::redirect('/administration/sidebar-menu', '/settings/sidebar-menu')->name('sidebar-menu.index');
@@ -106,20 +112,22 @@ if (class_exists(\Inertia\Inertia::class)) {
         // Administration & Libraries
         Route::get('/administration/settings', [ApplicationSettingsController::class, 'edit'])->name('administration.settings');
         Route::patch('/administration/settings', [ApplicationSettingsController::class, 'update']);
-        Route::get('/administration/user-level', [UserLevelController::class, 'index'])->name('administration.user-level');
+        Route::match(['get', 'post'], '/administration/user-level', [UserLevelController::class, 'index'])->name('administration.user-level');
         Route::post('/administration/user-level', [UserLevelController::class, 'save'])->name('administration.user-level.save');
         Route::delete('/administration/user-level/{levelId}', [UserLevelController::class, 'destroy'])->name('administration.user-level.destroy');
         Route::patch('/administration/user-level/menu-access', [UserLevelController::class, 'saveMenuAccess'])->name('administration.user-level.menu-access');
         Route::redirect('/libraries/users/user-level', '/administration/user-level')->name('libraries.users.user-level.index');
 
-        Route::get('/libraries/harmonized-staff', [HarmonizedStaffController::class, 'index'])->name('libraries.harmonized-staff');
+        Route::match(['get', 'post'], '/libraries/harmonized-staff', [HarmonizedStaffController::class, 'index'])->name('libraries.harmonized-staff');
         Route::post('/libraries/harmonized-staff', [HarmonizedStaffController::class, 'store'])->name('libraries.harmonized-staff.store');
         Route::patch('/libraries/harmonized-staff/{id}', [HarmonizedStaffController::class, 'update'])->name('libraries.harmonized-staff.update');
         Route::delete('/libraries/harmonized-staff/{id}', [HarmonizedStaffController::class, 'destroy'])->name('libraries.harmonized-staff.destroy');
         Route::redirect('/harmonized-staff', '/libraries/harmonized-staff');
 
-        Route::get('/rpmo-management/harmonized-ipc', [HarmonizedIpcController::class, 'index'])->name('rpmo-management.harmonized-ipc');
-        Route::post('/rpmo-management/harmonized-ipc', [HarmonizedIpcController::class, 'store'])->name('rpmo-management.harmonized-ipc.store');
+        Route::match(['get', 'post'], '/rpmo-management/harmonized-ipc', [HarmonizedIpcController::class, 'index'])->name('rpmo-management.harmonized-ipc');
+        Route::match(['get', 'post'], '/rpmo-management/harmonized-ipc/filter', [HarmonizedIpcController::class, 'index'])->name('rpmo-management.harmonized-ipc.filter');
+        Route::post('/rpmo-management/harmonized-ipc/store', [HarmonizedIpcController::class, 'store'])->name('rpmo-management.harmonized-ipc.store');
+        Route::post('/rpmo-management/harmonized-ipc', [HarmonizedIpcController::class, 'store']);
         Route::post('/rpmo-management/harmonized-ipc/reorder', [HarmonizedIpcController::class, 'reorder'])->name('rpmo-management.harmonized-ipc.reorder');
         Route::post('/rpmo-management/harmonized-ipc/{indicatorId}/sub-target', [HarmonizedIpcController::class, 'storeSubTarget'])->name('rpmo-management.harmonized-ipc.sub-target.store');
         Route::patch('/rpmo-management/harmonized-ipc/{indicatorId}/{rowId}', [HarmonizedIpcController::class, 'update'])->name('rpmo-management.harmonized-ipc.update');
@@ -127,18 +135,24 @@ if (class_exists(\Inertia\Inertia::class)) {
         Route::delete('/rpmo-management/harmonized-ipc-item/{itemId}', [HarmonizedIpcController::class, 'destroyItem'])->name('rpmo-management.harmonized-ipc-item.destroy');
         Route::redirect('/harmonized-ipc', '/rpmo-management/harmonized-ipc');
 
-        Route::get('/rpmo-management/pls-scorecard', [PlsScorecardController::class, 'index'])->name('rpmo-management.pls-scorecard');
+        Route::match(['get', 'post'], '/rpmo-management/pls-scorecard', [PlsScorecardController::class, 'index'])->name('rpmo-management.pls-scorecard');
         Route::get('/rpmo-management/pls-scorecard/{ratingId}/pl-rating', [PlsScorecardController::class, 'showPlRating'])->name('rpmo-management.pls-scorecard.pl-rating');
         Route::patch('/rpmo-management/pls-scorecard/{ratingId}/accomplishment/{itemId}', [PlsScorecardController::class, 'updateAccomplishment'])->name('rpmo-management.pls-scorecard.accomplishment.update');
         Route::redirect('/rpmo-management/pls-scorecard/pl-rating', '/rpmo-management/pls-scorecard');
         Route::redirect('/pls-scorecard', '/rpmo-management/pls-scorecard');
 
         Route::middleware('can:access-administration')->group(function (): void {
-            Route::get('/administration/users', [UsersController::class, 'index'])->name('administration.users');
+            Route::match(['get', 'post'], '/administration/users', [UsersController::class, 'index'])->name('administration.users');
             Route::patch('/administration/users/{userId}', [UsersController::class, 'update'])->name('administration.users.update');
             Route::delete('/administration/users/{userId}', [UsersController::class, 'destroy'])->name('administration.users.destroy');
             Route::patch('/administration/users/{userId}/toggle-status', [UsersController::class, 'toggleStatus'])->name('administration.users.toggle-status');
             Route::redirect('/libraries/users/users-list', '/administration/users')->name('administration.users.index');
+
+            // Adjustment: Modify Target
+            Route::match(['get', 'post'], '/administration/adjustment/modify-target', [ModifyTargetController::class, 'index'])->name('administration.adjustment.modify-target');
+            Route::patch('/administration/adjustment/modify-target/{targetId}/indicator', [ModifyTargetController::class, 'updateIndicator'])->name('administration.adjustment.modify-target.update-indicator');
+            Route::patch('/administration/adjustment/modify-target/{itemId}/item', [ModifyTargetController::class, 'updateItem'])->name('administration.adjustment.modify-target.update-item');
+            Route::patch('/administration/adjustment/modify-target/{itemId}/row', [ModifyTargetController::class, 'updateRow'])->name('administration.adjustment.modify-target.update-row');
         });
     });
 

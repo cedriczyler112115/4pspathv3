@@ -321,6 +321,7 @@ export default function PlRating({
   const docFileInputRef = React.useRef<HTMLInputElement>(null);
   const printDropdownRef = React.useRef<HTMLDivElement>(null);
   const optionsDropdownRef = React.useRef<HTMLDivElement>(null);
+  const contextMenuRef = React.useRef<HTMLDivElement>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -1325,6 +1326,9 @@ export default function PlRating({
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
+      if (contextMenuRef.current && contextMenuRef.current.contains(e.target as Node)) {
+        return;
+      }
       setContextMenu(null);
       setActiveSubMenu(null);
 
@@ -1350,7 +1354,7 @@ export default function PlRating({
     isFirst: boolean = true
   ) => {
     e.preventDefault();
-    if (isLocked) return;
+    if (isReadOnly) return;
     const pageX = window.scrollX + e.clientX;
     const pageY = window.scrollY + e.clientY;
     setContextMenu({
@@ -2511,8 +2515,9 @@ export default function PlRating({
         </div>
 
         {/* EXACT LIVEWIRE RIGHT CLICK CONTEXT MENU & SUB-MENU FLYOUTS */}
-        {contextMenu && !isLocked && (
+        {contextMenu && !isReadOnly && (
           <div
+            ref={contextMenuRef}
             style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
             className="absolute z-50 min-w-[14rem] rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 shadow-2xl animate-in fade-in-50 zoom-in-95 text-xs font-medium select-none text-slate-900 dark:text-slate-100"
             onClick={(e) => e.stopPropagation()}
@@ -2526,7 +2531,7 @@ export default function PlRating({
             </div>
 
             {/* Menu Item 1: Add Target (with flyout sub-menu trigger) */}
-            {!isLocked && (
+            {!isReadOnly && (
               <div
                 className="relative"
                 onMouseEnter={() => setActiveSubMenu('add')}
@@ -2607,7 +2612,7 @@ export default function PlRating({
             )}
 
             {/* Menu Item 2: Edit Target */}
-            {!isLocked && (
+            {!isReadOnly && (
               <button
                 type="button"
                 onMouseEnter={() => setActiveSubMenu(null)}
@@ -2648,7 +2653,7 @@ export default function PlRating({
             <div className="my-1 border-t border-slate-100 dark:border-slate-800"></div>
 
             {/* Menu Item 4: Delete (with flyout sub-menu trigger) */}
-            {!isLocked && (
+            {!isReadOnly && (
               <div
                 className="relative"
                 onMouseEnter={() => setActiveSubMenu('delete')}

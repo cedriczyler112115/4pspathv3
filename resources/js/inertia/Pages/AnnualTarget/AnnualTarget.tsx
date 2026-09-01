@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../Layouts/AppLayout';
 import UserAvatar from '../../Components/UserAvatar';
@@ -143,13 +143,24 @@ export default function AnnualTarget({
 }: Props) {
   // Filter Form State
   const filterForm = useForm({
-    search: filters.search,
+    search: filters.search || '',
     year: filters.year || String(new Date().getFullYear()),
-    category: filters.category,
-    semester: filters.semester,
-    perPage: String(filters.perPage),
-    duplicates: filters.showOnlyDuplicates,
+    category: filters.category || '',
+    semester: filters.semester || '',
+    perPage: String(filters.perPage || 10),
+    duplicates: Boolean(filters.showOnlyDuplicates),
   });
+
+  useEffect(() => {
+    filterForm.setData({
+      search: filters.search || '',
+      year: filters.year || String(new Date().getFullYear()),
+      category: filters.category || '',
+      semester: filters.semester || '',
+      perPage: String(filters.perPage || 10),
+      duplicates: Boolean(filters.showOnlyDuplicates),
+    });
+  }, [filters.year, filters.category, filters.semester, filters.search, filters.perPage, filters.showOnlyDuplicates]);
 
   // Inline Editing Group State & Pending Sub-targets
   const [editingIndicatorId, setEditingIndicatorId] = useState<number | null>(null);
@@ -341,15 +352,56 @@ export default function AnnualTarget({
     setShowCopyModal(true);
   };
 
-  const submitFilters = (overrides = {}) => {
-    const data = { ...filterForm.data, ...overrides };
-    router.get('/ipcrf/annualtarget', data, {
-      preserveState: true,
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const submitFilters = (overrides: Record<string, any> = {}) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    const payload = {
+      search: filterForm.data.search,
+      year: filterForm.data.year,
+      category: filterForm.data.category,
+      semester: filterForm.data.semester,
+      perPage: filterForm.data.perPage,
+      duplicates: filterForm.data.duplicates,
+      page: 1,
+      ...overrides,
+    };
+    router.post('/ipcrf/annualtarget/filter', payload, {
       replace: true,
+      preserveScroll: true,
     });
   };
 
+  const handleSearchChange = (val: string) => {
+    filterForm.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      submitFilters({ search: val, page: 1 });
+    }, 350);
+  };
+
+  const handleYearChange = (year: string) => {
+    filterForm.setData('year', year);
+    submitFilters({ year, page: 1 });
+  };
+
+  const handleCategoryChange = (category: string) => {
+    filterForm.setData('category', category);
+    submitFilters({ category, page: 1 });
+  };
+
+  const handleSemesterChange = (semester: string) => {
+    filterForm.setData('semester', semester);
+    submitFilters({ semester, page: 1 });
+  };
+
+  const handlePerPageChange = (perPage: string) => {
+    filterForm.setData('perPage', perPage);
+    submitFilters({ perPage, page: 1 });
+  };
+
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({
       search: '',
       year: String(new Date().getFullYear()),
@@ -358,8 +410,8 @@ export default function AnnualTarget({
       perPage: '10',
       duplicates: false,
     });
-    router.get(
-      '/ipcrf/annualtarget',
+    router.post(
+      '/ipcrf/annualtarget/filter',
       {
         search: '',
         year: String(new Date().getFullYear()),
@@ -367,6 +419,7 @@ export default function AnnualTarget({
         semester: '',
         perPage: '10',
         duplicates: false,
+        page: 1,
       },
       { replace: true }
     );
@@ -493,7 +546,7 @@ export default function AnnualTarget({
 
   const handleSaveAddTarget = (e: React.FormEvent) => {
     e.preventDefault();
-    addForm.post('/ipcrf/annualtarget', {
+    addForm.post('/ipcrf/annualtarget/store', {
       onSuccess: () => {
         setShowAddModal(false);
       },
@@ -747,8 +800,7 @@ export default function AnnualTarget({
                 <input
                   type="text"
                   value={filterForm.data.search}
-                  onChange={(e) => filterForm.setData('search', e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search activity, description, outputs..."
                   className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
@@ -757,7 +809,8 @@ export default function AnnualTarget({
                     type="button"
                     onClick={() => {
                       filterForm.setData('search', '');
-                      submitFilters({ search: '' });
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      submitFilters({ search: '', page: 1 });
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
@@ -772,10 +825,7 @@ export default function AnnualTarget({
               <label className="text-[11px] font-semibold text-muted-foreground">Target Year</label>
               <select
                 value={filterForm.data.year}
-                onChange={(e) => {
-                  filterForm.setData('year', e.target.value);
-                  submitFilters({ year: e.target.value });
-                }}
+                onChange={(e) => handleYearChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 {years.map((y) => (
@@ -791,10 +841,7 @@ export default function AnnualTarget({
               <label className="text-[11px] font-semibold text-muted-foreground">KRA Category</label>
               <select
                 value={filterForm.data.category}
-                onChange={(e) => {
-                  filterForm.setData('category', e.target.value);
-                  submitFilters({ category: e.target.value });
-                }}
+                onChange={(e) => handleCategoryChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">All Categories</option>
@@ -811,10 +858,7 @@ export default function AnnualTarget({
               <label className="text-[11px] font-semibold text-muted-foreground">Semester</label>
               <select
                 value={filterForm.data.semester}
-                onChange={(e) => {
-                  filterForm.setData('semester', e.target.value);
-                  submitFilters({ semester: e.target.value });
-                }}
+                onChange={(e) => handleSemesterChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="">All Semesters</option>
@@ -831,11 +875,7 @@ export default function AnnualTarget({
               <label className="text-[11px] font-semibold text-muted-foreground">Per Page</label>
               <select
                 value={filterForm.data.perPage}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  filterForm.setData('perPage', val);
-                  submitFilters({ perPage: val, page: 1 });
-                }}
+                onChange={(e) => handlePerPageChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 {perPageOptions.map((opt) => (
@@ -849,35 +889,35 @@ export default function AnnualTarget({
         </div>
 
           {/* Categorized Table Grid */}
-          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
-            <table className="w-full min-w-[1100px] border-separate border-spacing-0 text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-2xs">
+            <table className="w-full min-w-[1100px] border-collapse text-xs text-left">
+              <thead className="bg-muted/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
                 <tr>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 text-center w-[70px] min-w-[70px]">
+                  <th className="border-b border-r border-border px-3 py-3 text-center w-[70px] min-w-[70px] whitespace-nowrap">
                     Action
                   </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[250px] min-w-[250px]">
+                  <th className="border-b border-r border-border px-3 py-3 whitespace-nowrap w-[250px] min-w-[250px]">
                     Key Result Area
                   </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[140px] min-w-[140px]">
+                  <th className="border-b border-r border-border px-3 py-3 whitespace-nowrap w-[140px] min-w-[140px]">
                     Semester
                   </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap min-w-[220px]">
+                  <th className="border-b border-r border-border px-3 py-3 whitespace-nowrap min-w-[220px]">
                     Success Indicator
                   </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
+                  <th className="border-b border-r border-border px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
                     EFFICIENCY
                   </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
+                  <th className="border-b border-r border-border px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
                     QUALITY
                   </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
+                  <th className="border-b border-r border-border px-3 py-3 whitespace-nowrap w-[110px] min-w-[110px]">
                     TIMELINESS
                   </th>
-                  <th className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[160px] min-w-[160px]">
+                  <th className="border-b border-r border-border px-3 py-3 whitespace-nowrap w-[160px] min-w-[160px]">
                     MOVS
                   </th>
-                  <th className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 whitespace-nowrap w-[180px] min-w-[180px]">
+                  <th className="border-b border-border px-3 py-3 whitespace-nowrap w-[180px] min-w-[180px]">
                     REMARKS
                   </th>
                 </tr>
@@ -910,10 +950,10 @@ export default function AnnualTarget({
                           });
                         }}
                       >
-                        <tr className="bg-muted/70">
-                          <td colSpan={9} className="border-b border-border px-3 py-2">
-                            <div className="sticky left-3 inline-flex items-center gap-2.5 font-bold text-foreground">
-                              <span className="text-xs uppercase tracking-wide">{cat.label}</span>
+                        <tr className="bg-muted/80 border-b border-border font-bold">
+                          <td colSpan={9} className="px-3 py-2">
+                            <div className="sticky left-3 inline-flex items-center gap-2.5">
+                              <span className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-400 font-bold">{cat.label}</span>
                               {!isLocked ? (
                                 <button
                                   type="button"
@@ -932,7 +972,7 @@ export default function AnnualTarget({
                       {catGroups.length === 0 ? (
                         <tbody>
                           <tr>
-                            <td colSpan={9} className="border-b border-slate-200 dark:border-slate-800 px-3 py-8 text-center text-slate-500">
+                            <td colSpan={9} className="border-b border-border px-3 py-8 text-center text-muted-foreground">
                               No record found in this category.
                             </td>
                           </tr>
@@ -966,10 +1006,10 @@ export default function AnnualTarget({
                                       kra: group.kraCategory,
                                     });
                                   }}
-                                  className={`border-t border-slate-200/60 dark:border-slate-800/60 text-sm hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors ${
-                                    isEditingGroup ? 'bg-amber-50/90 dark:bg-amber-950/40' : ''
+                                  className={`hover:bg-muted/30 transition-colors align-top border-b border-border ${
+                                    isEditingGroup ? 'bg-sky-50/80 dark:bg-sky-950/40' : ''
                                   } ${
-                                    isDragging ? 'opacity-50 bg-slate-200 dark:bg-slate-800' : ''
+                                    isDragging ? 'opacity-50 bg-muted' : ''
                                   }`}
                                 >
                                   {/* Main Indicator Rowspan Columns */}
@@ -988,7 +1028,7 @@ export default function AnnualTarget({
                                             true
                                           )
                                         }
-                                        className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-center"
+                                        className="border-b border-r border-border px-3 py-3 align-top text-center"
                                       >
                                         <div className="flex items-center justify-center gap-1">
                                           {isEditingGroup ? (
@@ -996,22 +1036,22 @@ export default function AnnualTarget({
                                               <button
                                                 type="button"
                                                 onClick={() => handleSaveInlineEdit(group)}
-                                                className="w-10 h-7 rounded bg-emerald-600 text-white flex items-center justify-center shadow-xs hover:bg-emerald-700"
+                                                className="w-8 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-xs transition"
                                                 title="Save Changes"
                                               >
-                                                <Check className="w-4 h-4" />
+                                                <Check className="w-4 h-4 stroke-[3]" />
                                               </button>
                                               <button
                                                 type="button"
                                                 onClick={cancelInlineEdit}
-                                                className="w-10 h-7 rounded bg-amber-500 text-white flex items-center justify-center shadow-xs hover:bg-amber-600"
+                                                className="w-8 h-8 rounded-lg bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-xs transition"
                                                 title="Cancel"
                                               >
-                                                <X className="w-4 h-4" />
+                                                <X className="w-4 h-4 stroke-[3]" />
                                               </button>
                                             </div>
                                           ) : group.targetStatus === 3 || isLocked ? (
-                                            <Lock className="w-4 h-4 text-slate-400" title="Locked target" />
+                                            <Lock className="w-4 h-4 text-muted-foreground" title="Locked target" />
                                           ) : (
                                             <div
                                               draggable
@@ -1029,7 +1069,7 @@ export default function AnnualTarget({
                                                 setDraggingIndicatorId(group.indicatorId);
                                               }}
                                               onDragEnd={() => setDraggingIndicatorId(null)}
-                                              className="p-1 cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-700 transition"
+                                              className="p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition"
                                               title="Drag target to reorder or move category"
                                             >
                                               <GripVertical className="w-4 h-4" />
@@ -1051,14 +1091,14 @@ export default function AnnualTarget({
                                             true
                                           )
                                         }
-                                        className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-slate-900 dark:text-slate-100 font-medium"
+                                        className="border-b border-r border-border px-3 py-3 align-top text-xs text-foreground font-medium"
                                       >
                                          {isEditingExistingRows ? (
                                             <AutoResizingTextarea
                                               value={inlineEditForm.data.activity}
                                               onChange={(e) => inlineEditForm.setData('activity', e.target.value)}
                                               rows={2}
-                                              className="w-full rounded-md border border-slate-300 p-2 text-xs"
+                                              className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                             />
                                          ) : (
                                           <FormattedText value={group.activity} />
@@ -1080,7 +1120,7 @@ export default function AnnualTarget({
                                         false
                                       )
                                     }
-                                    className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
+                                    className="border-b border-r border-border px-3 py-3 align-top text-xs text-foreground"
                                   >
                                     {isEditingExistingRows ? (
                                       <select
@@ -1094,7 +1134,7 @@ export default function AnnualTarget({
                                             },
                                           })
                                         }
-                                        className="w-full rounded-md border border-slate-300 p-1 text-xs"
+                                        className="w-full rounded-lg border border-input bg-background p-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                       >
                                         {semesters.map((s) => (
                                           <option key={s.value} value={s.value}>
@@ -1119,7 +1159,7 @@ export default function AnnualTarget({
                                         false
                                       )
                                     }
-                                    className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-800 dark:text-slate-200"
+                                    className="border-b border-r border-border px-3 py-3 align-top text-xs text-foreground"
                                   >
                                      {isEditingExistingRows ? (
                                         <AutoResizingTextarea
@@ -1134,7 +1174,7 @@ export default function AnnualTarget({
                                             })
                                           }
                                           rows={2}
-                                          className="w-full rounded-md border border-slate-300 p-1 text-xs"
+                                          className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                         />
                                      ) : (
                                        <FormattedText value={row.description} />
@@ -1153,7 +1193,7 @@ export default function AnnualTarget({
                                          false
                                        )
                                      }
-                                     className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
+                                     className="border-b border-r border-border px-3 py-3 align-top text-xs text-foreground"
                                    >
                                      {isEditingExistingRows ? (
                                        <AutoResizingTextarea
@@ -1168,7 +1208,7 @@ export default function AnnualTarget({
                                            })
                                          }
                                          rows={2}
-                                         className="w-full rounded-md border border-slate-300 p-1 text-xs"
+                                         className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                        />
                                      ) : (
                                        <FormattedText value={row.efficiency} />
@@ -1187,7 +1227,7 @@ export default function AnnualTarget({
                                          false
                                        )
                                      }
-                                     className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
+                                     className="border-b border-r border-border px-3 py-3 align-top text-xs text-foreground"
                                    >
                                      {isEditingExistingRows ? (
                                        <AutoResizingTextarea
@@ -1202,7 +1242,7 @@ export default function AnnualTarget({
                                            })
                                          }
                                          rows={2}
-                                         className="w-full rounded-md border border-slate-300 p-1 text-xs"
+                                         className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                        />
                                      ) : (
                                        <FormattedText value={row.quality} />
@@ -1221,7 +1261,7 @@ export default function AnnualTarget({
                                          false
                                        )
                                      }
-                                     className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
+                                     className="border-b border-r border-border px-3 py-3 align-top text-xs text-foreground"
                                    >
                                      {isEditingExistingRows ? (
                                        <AutoResizingTextarea
@@ -1236,7 +1276,7 @@ export default function AnnualTarget({
                                            })
                                          }
                                          rows={2}
-                                         className="w-full rounded-md border border-slate-300 p-1 text-xs"
+                                         className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                        />
                                      ) : (
                                        <FormattedText value={row.timeliness} />
@@ -1255,7 +1295,7 @@ export default function AnnualTarget({
                                          false
                                        )
                                      }
-                                     className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
+                                     className="border-b border-r border-border px-3 py-3 align-top text-xs text-foreground"
                                    >
                                      {isEditingExistingRows ? (
                                        <AutoResizingTextarea
@@ -1270,7 +1310,7 @@ export default function AnnualTarget({
                                            })
                                          }
                                          rows={2}
-                                         className="w-full rounded-md border border-slate-300 p-1 text-xs"
+                                         className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                        />
                                      ) : (
                                        <FormattedText value={row.movs} />
@@ -1289,7 +1329,7 @@ export default function AnnualTarget({
                                          false
                                        )
                                      }
-                                     className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 align-top text-xs text-slate-700 dark:text-slate-300"
+                                     className="border-b border-border px-3 py-3 align-top text-xs text-foreground"
                                    >
                                      {isEditingExistingRows ? (
                                        <AutoResizingTextarea
@@ -1304,7 +1344,7 @@ export default function AnnualTarget({
                                            })
                                          }
                                          rows={2}
-                                         className="w-full rounded-md border border-slate-300 p-1 text-xs"
+                                         className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                        />
                                      ) : (
                                        <FormattedText value={row.remarks} />
@@ -1318,9 +1358,9 @@ export default function AnnualTarget({
                                 ? pendingSubTargets.map((pending, pIdx) => (
                                     <tr
                                       key={`pending-${group.indicatorId}-${pending.tempId}`}
-                                      className="border-t border-amber-300 bg-amber-100/90 dark:bg-amber-950/60 text-sm"
+                                      className="border-b border-border bg-sky-50/90 dark:bg-sky-950/50 text-xs align-top"
                                     >
-                                      <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
+                                      <td className="border-b border-r border-border px-3 py-3 align-top">
                                         <select
                                           value={inlineEditForm.data.pendingSubTargets[pIdx]?.semester || '1'}
                                           onChange={(e) => {
@@ -1339,7 +1379,7 @@ export default function AnnualTarget({
                                             };
                                             inlineEditForm.setData('pendingSubTargets', updated);
                                           }}
-                                          className="w-full rounded-md border border-amber-400 p-1 text-xs bg-white dark:bg-slate-900"
+                                          className="w-full rounded-lg border border-input bg-background p-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                         >
                                           {semesters.map((s) => (
                                             <option key={s.value} value={s.value}>
@@ -1349,7 +1389,7 @@ export default function AnnualTarget({
                                         </select>
                                       </td>
 
-                                       <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
+                                       <td className="border-b border-r border-border px-3 py-3 align-top">
                                          <AutoResizingTextarea
                                            value={inlineEditForm.data.pendingSubTargets[pIdx]?.description || ''}
                                            onChange={(e) => {
@@ -1370,11 +1410,11 @@ export default function AnnualTarget({
                                            }}
                                            placeholder="Enter success indicator / description for new sub-target"
                                            rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
+                                           className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                          />
                                        </td>
 
-                                       <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
+                                       <td className="border-b border-r border-border px-3 py-3 align-top">
                                          <AutoResizingTextarea
                                            value={inlineEditForm.data.pendingSubTargets[pIdx]?.efficiency || ''}
                                            onChange={(e) => {
@@ -1395,11 +1435,11 @@ export default function AnnualTarget({
                                            }}
                                            placeholder="Efficiency"
                                            rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
+                                           className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                          />
                                        </td>
 
-                                       <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
+                                       <td className="border-b border-r border-border px-3 py-3 align-top">
                                          <AutoResizingTextarea
                                            value={inlineEditForm.data.pendingSubTargets[pIdx]?.quality || ''}
                                            onChange={(e) => {
@@ -1420,11 +1460,11 @@ export default function AnnualTarget({
                                            }}
                                            placeholder="Quality"
                                            rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
+                                           className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                          />
                                        </td>
 
-                                       <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
+                                       <td className="border-b border-r border-border px-3 py-3 align-top">
                                          <AutoResizingTextarea
                                            value={inlineEditForm.data.pendingSubTargets[pIdx]?.timeliness || ''}
                                            onChange={(e) => {
@@ -1445,11 +1485,11 @@ export default function AnnualTarget({
                                            }}
                                            placeholder="Timeliness"
                                            rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
+                                           className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                          />
                                        </td>
 
-                                       <td className="border-b border-r border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
+                                       <td className="border-b border-r border-border px-3 py-3 align-top">
                                          <AutoResizingTextarea
                                            value={inlineEditForm.data.pendingSubTargets[pIdx]?.movs || ''}
                                            onChange={(e) => {
@@ -1470,11 +1510,11 @@ export default function AnnualTarget({
                                            }}
                                            placeholder="MOVs"
                                            rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
+                                           className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                          />
                                        </td>
 
-                                       <td className="border-b border-slate-200 dark:border-slate-800 px-3 py-3 align-top">
+                                       <td className="border-b border-border px-3 py-3 align-top">
                                          <AutoResizingTextarea
                                            value={inlineEditForm.data.pendingSubTargets[pIdx]?.remarks || ''}
                                            onChange={(e) => {
@@ -1495,7 +1535,7 @@ export default function AnnualTarget({
                                            }}
                                            placeholder="Remarks"
                                            rows={2}
-                                           className="w-full rounded-md border border-amber-400 p-1.5 text-xs bg-white dark:bg-slate-900"
+                                           className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
                                          />
                                        </td>
                                     </tr>
@@ -1518,26 +1558,20 @@ export default function AnnualTarget({
               aria-label="Pagination Navigation"
               className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pt-2"
             >
-              <div className="text-sm text-slate-500 dark:text-slate-400">
+              <div className="text-xs text-muted-foreground">
                 Showing {targets.from ?? 0} to {targets.to ?? 0} of {targets.total} records
               </div>
 
               <div className="flex flex-wrap items-center gap-1.5">
                 {targets.currentPage === 1 ? (
-                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm text-slate-400 select-none">
+                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground select-none">
                     Previous
                   </span>
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.get(
-                        '/ipcrf/annualtarget',
-                        { ...filterForm.data, page: targets.currentPage - 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
-                    className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 transition-colors"
+                    onClick={() => submitFilters({ page: targets.currentPage - 1 })}
+                    className="inline-flex cursor-pointer items-center rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors"
                   >
                     Previous
                   </button>
@@ -1548,7 +1582,7 @@ export default function AnnualTarget({
                     return (
                       <span
                         key={`ellipsis-${pIdx}`}
-                        className="inline-flex min-w-10 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-400 select-none"
+                        className="inline-flex min-w-8 items-center justify-center rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs text-muted-foreground select-none"
                       >
                         {page}
                       </span>
@@ -1560,7 +1594,7 @@ export default function AnnualTarget({
                       <span
                         key={page}
                         aria-current="page"
-                        className="inline-flex min-w-10 cursor-pointer items-center justify-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-xs"
+                        className="inline-flex min-w-8 cursor-pointer items-center justify-center rounded-lg border border-emerald-600 bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-xs"
                       >
                         {page}
                       </span>
@@ -1571,14 +1605,8 @@ export default function AnnualTarget({
                     <button
                       key={page}
                       type="button"
-                      onClick={() =>
-                        router.get(
-                          '/ipcrf/annualtarget',
-                          { ...filterForm.data, page },
-                          { replace: true, preserveState: true }
-                        )
-                      }
-                      className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 transition-colors"
+                      onClick={() => submitFilters({ page })}
+                      className="inline-flex cursor-pointer items-center justify-center min-w-8 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground hover:bg-muted transition-colors"
                     >
                       {page}
                     </button>
@@ -1586,20 +1614,14 @@ export default function AnnualTarget({
                 })}
 
                 {targets.currentPage === targets.lastPage ? (
-                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 px-3 py-2 text-sm text-slate-400 select-none">
+                  <span className="inline-flex cursor-not-allowed items-center rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground select-none">
                     Next
                   </span>
                 ) : (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.get(
-                        '/ipcrf/annualtarget',
-                        { ...filterForm.data, page: targets.currentPage + 1 },
-                        { replace: true, preserveState: true }
-                      )
-                    }
-                    className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-700 dark:text-slate-200 hover:border-emerald-500/50 hover:bg-emerald-50/50 hover:text-emerald-600 transition-colors"
+                    onClick={() => submitFilters({ page: targets.currentPage + 1 })}
+                    className="inline-flex cursor-pointer items-center rounded-lg border border-input bg-background px-3 py-1.5 text-xs text-foreground hover:bg-muted transition-colors"
                   >
                     Next
                   </button>
@@ -1613,11 +1635,11 @@ export default function AnnualTarget({
         {contextMenu ? (
           <div
             style={{ top: contextMenu.y, left: contextMenu.x, zIndex: 99999 }}
-            className="absolute min-w-[14rem] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 p-1.5 text-xs font-medium shadow-2xl space-y-1"
+            className="absolute min-w-[14rem] rounded-xl border border-border bg-popover text-popover-foreground p-1.5 text-xs font-medium shadow-2xl space-y-1"
           >
             {/* Menu Header */}
             <div
-              className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 dark:border-slate-800 mb-1 flex items-center justify-between select-none"
+              className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border mb-1 flex items-center justify-between select-none"
             >
               <div className="flex items-center gap-1.5">
                 <Sliders className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -1631,22 +1653,22 @@ export default function AnnualTarget({
                 type="button"
                 onMouseEnter={() => setActiveSubMenu('add')}
                 onClick={() => setActiveSubMenu(activeSubMenu === 'add' ? null : 'add')}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors ${
-                  activeSubMenu === 'add' ? 'bg-slate-100 dark:bg-slate-800' : ''
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-muted transition-colors ${
+                  activeSubMenu === 'add' ? 'bg-muted' : ''
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <PlusCircle className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                  <PlusCircle className="w-4 h-4 text-foreground" />
                   <span>Add Target</span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
 
               {/* Submenu Floating Flyout for Add */}
               {activeSubMenu === 'add' ? (
                 <div
                   style={{ top: -6, left: 198, zIndex: 100000 }}
-                  className="absolute min-w-[12rem] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1.5 text-xs font-medium shadow-2xl space-y-1"
+                  className="absolute min-w-[12rem] rounded-xl border border-border bg-popover text-popover-foreground p-1.5 text-xs font-medium shadow-2xl space-y-1"
                 >
                   <button
                     type="button"
@@ -1655,9 +1677,9 @@ export default function AnnualTarget({
                       setContextMenu(null);
                       setActiveSubMenu(null);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-muted"
                   >
-                    <Plus className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                    <Plus className="w-4 h-4 text-foreground" />
                     <span>Add new target</span>
                   </button>
 
@@ -1669,9 +1691,9 @@ export default function AnnualTarget({
                       setContextMenu(null);
                       setActiveSubMenu(null);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-muted"
                   >
-                    <FilePlus className="w-4 h-4 text-slate-700 dark:text-slate-300" />
+                    <FilePlus className="w-4 h-4 text-foreground" />
                     <span>Add sub-target</span>
                   </button>
                 </div>
@@ -1688,13 +1710,13 @@ export default function AnnualTarget({
                 setContextMenu(null);
                 setActiveSubMenu(null);
               }}
-              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-foreground hover:bg-muted transition-colors"
             >
               <Pencil className="w-4 h-4 text-amber-500" />
               <span>Edit Target</span>
             </button>
 
-            <div className="my-1 border-t border-slate-100 dark:border-slate-800" />
+            <div className="my-1 border-t border-border" />
 
             {/* Menu Item 3: Delete Submenu */}
             <div className="relative">
@@ -1702,7 +1724,7 @@ export default function AnnualTarget({
                 type="button"
                 onMouseEnter={() => setActiveSubMenu('delete')}
                 onClick={() => setActiveSubMenu(activeSubMenu === 'delete' ? null : 'delete')}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors ${
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors ${
                   activeSubMenu === 'delete' ? 'bg-rose-50 dark:bg-rose-950/40' : ''
                 }`}
               >
@@ -1710,14 +1732,14 @@ export default function AnnualTarget({
                   <Trash2 className="w-4 h-4 text-rose-500" />
                   <span>Delete</span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
               </button>
 
               {/* Submenu Floating Flyout for Delete */}
               {activeSubMenu === 'delete' ? (
                 <div
                   style={{ top: -6, left: 198, zIndex: 100000 }}
-                  className="absolute min-w-[17rem] rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-1.5 text-xs font-medium shadow-2xl space-y-1"
+                  className="absolute min-w-[17rem] rounded-xl border border-border bg-popover text-popover-foreground p-1.5 text-xs font-medium shadow-2xl space-y-1"
                 >
                   <button
                     type="button"
@@ -1730,7 +1752,7 @@ export default function AnnualTarget({
                     }}
                     className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
                       !contextMenu.canDeleteTarget
-                        ? 'opacity-40 cursor-not-allowed text-slate-400'
+                        ? 'opacity-40 cursor-not-allowed text-muted-foreground'
                         : 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40'
                     }`}
                   >
@@ -1749,7 +1771,7 @@ export default function AnnualTarget({
                     }}
                     className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors ${
                       !contextMenu.canDeleteSubTarget
-                        ? 'opacity-40 cursor-not-allowed text-slate-400'
+                        ? 'opacity-40 cursor-not-allowed text-muted-foreground'
                         : 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40'
                     }`}
                   >
@@ -1764,44 +1786,44 @@ export default function AnnualTarget({
 
         {/* Modal: Add Target */}
         {showAddModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-card p-6 shadow-2xl space-y-5 border border-border">
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Add target</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <h3 className="text-base font-bold text-foreground">Add target</h3>
+                <p className="text-xs text-muted-foreground">
                   Create a new target entry inside the selected KRA category.
                 </p>
               </div>
 
               <form onSubmit={handleSaveAddTarget} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-4 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl">
+                <div className="grid gap-4 sm:grid-cols-4 bg-muted/40 p-3 rounded-xl border border-border">
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Position</label>
-                    <span className="inline-flex rounded-full bg-violet-100 text-violet-800 font-bold text-xs px-2.5 py-1">
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Position</label>
+                    <span className="inline-flex rounded-full bg-violet-500/10 text-violet-700 dark:text-violet-400 font-bold text-xs px-2.5 py-1 border border-violet-500/20">
                       {userProfile.position || 'Staff'}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">KRA Category</label>
-                    <span className="inline-flex rounded-full bg-cyan-100 text-cyan-800 font-bold text-xs px-2.5 py-1">
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">KRA Category</label>
+                    <span className="inline-flex rounded-full bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 font-bold text-xs px-2.5 py-1 border border-cyan-500/20">
                       {categories.find((c) => c.value === String(addingKraCategory))?.label || `Category #${addingKraCategory}`}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Year</label>
-                    <span className="inline-flex rounded-full bg-slate-200 text-slate-800 font-bold text-xs px-2.5 py-1">
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Year</label>
+                    <span className="inline-flex rounded-full bg-muted text-foreground font-bold text-xs px-2.5 py-1 border border-border">
                       {addForm.data.year}
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold text-slate-500 mb-1">Semester</label>
+                    <label className="block text-[11px] font-semibold text-muted-foreground mb-1">Semester</label>
                     <select
                       value={addForm.data.semester}
                       onChange={(e) => addForm.setData('semester', Number(e.target.value))}
-                      className="h-9 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs focus:border-emerald-500"
+                      className="h-9 w-full rounded-lg border border-input bg-background px-3 text-xs text-foreground focus:ring-2 focus:ring-ring outline-hidden cursor-pointer"
                     >
                       {semesters.map((s) => (
                         <option key={s.value} value={s.value}>
@@ -1814,118 +1836,118 @@ export default function AnnualTarget({
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
                       Key Result Area (Activity)
                     </label>
                     <AutoResizingTextarea
                       value={addForm.data.activity}
                       onChange={(e) => addForm.setData('activity', e.target.value)}
                       rows={2}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500"
+                      className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
                       Success Indicator (Description)
                     </label>
                     <AutoResizingTextarea
                       value={addForm.data.description}
                       onChange={(e) => addForm.setData('description', e.target.value)}
                       rows={2}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500"
+                      className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 py-1">
-                  <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Rating Guide
                   </span>
-                  <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
+                  <div className="h-px flex-1 bg-border" />
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
                       Efficiency
                     </label>
                     <AutoResizingTextarea
                       value={addForm.data.efficiency}
                       onChange={(e) => addForm.setData('efficiency', e.target.value)}
                       rows={2}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500"
+                      className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
                       Quality
                     </label>
                     <AutoResizingTextarea
                       value={addForm.data.quality}
                       onChange={(e) => addForm.setData('quality', e.target.value)}
                       rows={2}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500"
+                      className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
                       Timeliness
                     </label>
                     <AutoResizingTextarea
                       value={addForm.data.timeliness}
                       onChange={(e) => addForm.setData('timeliness', e.target.value)}
                       rows={2}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500"
+                      className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
                       MOVs
                     </label>
                     <AutoResizingTextarea
                       value={addForm.data.movs}
                       onChange={(e) => addForm.setData('movs', e.target.value)}
                       rows={2}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500"
+                      className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       required
                     />
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                    <label className="block text-xs font-semibold text-foreground mb-1">
                       Remarks
                     </label>
                     <AutoResizingTextarea
                       value={addForm.data.remarks}
                       onChange={(e) => addForm.setData('remarks', e.target.value)}
                       rows={2}
-                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500"
+                      className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <div className="flex justify-end gap-2 pt-4 border-t border-border">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
-                    className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 transition"
+                    className="rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={addForm.processing}
-                    className="rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition"
+                    className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer"
                   >
                     Save Target
                   </button>
@@ -1937,27 +1959,27 @@ export default function AnnualTarget({
 
         {/* Modal: Copy Targets */}
         {showCopyModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto rounded-2xl bg-card p-6 shadow-2xl space-y-5 border border-border">
+              <div className="flex items-center justify-between border-b border-border pb-4">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Copy Target</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <h3 className="text-base font-bold text-foreground">Copy Target</h3>
+                  <p className="text-xs text-muted-foreground">
                     Copy target entries from staff annual targets or harmonized IPC targets into your list.
                   </p>
                 </div>
 
-                <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                <div className="flex gap-1.5 bg-muted/60 p-1 rounded-lg border border-border">
                   <button
                     type="button"
                     onClick={() => {
                       setCopyTab('staff');
                       setCopyStaffPage(1);
                     }}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition cursor-pointer ${
                       copyTab === 'staff'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-800'
+                        ? 'bg-card text-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     Staff Target
@@ -1968,10 +1990,10 @@ export default function AnnualTarget({
                       setCopyTab('harmonized');
                       setCopyHarmonizedPage(1);
                     }}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition cursor-pointer ${
                       copyTab === 'harmonized'
-                        ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
-                        : 'text-slate-500 hover:text-slate-800'
+                        ? 'bg-card text-foreground shadow-xs'
+                        : 'text-muted-foreground hover:text-foreground'
                     }`}
                   >
                     Harmonized Target
@@ -1983,7 +2005,7 @@ export default function AnnualTarget({
                 <div className="space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 items-end">
                     <div className="lg:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Staff Name
                       </label>
                       <select
@@ -1992,7 +2014,7 @@ export default function AnnualTarget({
                           setCopyStaffUserId(e.target.value);
                           setCopyStaffPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         <option value="">Select Staff</option>
                         {copyData.staffUsers.map((u) => (
@@ -2004,7 +2026,7 @@ export default function AnnualTarget({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Year
                       </label>
                       <select
@@ -2013,7 +2035,7 @@ export default function AnnualTarget({
                           setCopyStaffYear(e.target.value);
                           setCopyStaffPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         {years.map((y) => (
                           <option key={y.value} value={y.value}>
@@ -2024,7 +2046,7 @@ export default function AnnualTarget({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Category
                       </label>
                       <select
@@ -2033,7 +2055,7 @@ export default function AnnualTarget({
                           setCopyStaffCategory(e.target.value);
                           setCopyStaffPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         <option value="">All categories</option>
                         {categories.map((c) => (
@@ -2045,7 +2067,7 @@ export default function AnnualTarget({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Semester
                       </label>
                       <select
@@ -2054,7 +2076,7 @@ export default function AnnualTarget({
                           setCopyStaffSemester(e.target.value);
                           setCopyStaffPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         <option value="">All semesters</option>
                         {semesters.map((s) => (
@@ -2066,7 +2088,7 @@ export default function AnnualTarget({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Existing Target
                       </label>
                       <select
@@ -2075,7 +2097,7 @@ export default function AnnualTarget({
                           setCopyStaffStatusFilter(e.target.value);
                           setCopyStaffPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         <option value="">All Status</option>
                         <option value="new">New Only</option>
@@ -2086,36 +2108,36 @@ export default function AnnualTarget({
 
                   {/* Staff Copy Table Listing */}
                   {!copyStaffUserId ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center text-xs text-slate-500">
+                    <div className="rounded-xl border border-dashed border-border p-12 text-center text-xs text-muted-foreground">
                       Please select a staff member to view their targets.
                     </div>
                   ) : copyData.copyTargets.data.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center text-xs text-slate-500">
+                    <div className="rounded-xl border border-dashed border-border p-12 text-center text-xs text-muted-foreground">
                       No targets found for the selected staff member and year.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div className="overflow-x-auto rounded-xl border border-border bg-card">
                       <table className="w-full text-left text-xs border-collapse">
-                        <thead className="bg-slate-50 dark:bg-slate-800/50 font-semibold uppercase text-slate-500">
+                        <thead className="bg-muted/60 font-semibold uppercase text-muted-foreground border-b border-border">
                           <tr>
-                            <th className="px-3 py-2 text-center w-36">Action</th>
-                            <th className="px-3 py-2 w-64">Activity / Indicator</th>
+                            <th className="px-3 py-2 text-center w-36 border-r border-border">Action</th>
+                            <th className="px-3 py-2 w-64 border-r border-border">Activity / Indicator</th>
                             <th className="px-3 py-2">Sub-Targets & Measures</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y divide-border">
                           {copyData.copyTargets.data.map((group) => (
-                            <tr key={group.indicatorId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                              <td className="px-3 py-3 align-top text-center whitespace-nowrap">
+                            <tr key={group.indicatorId} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-3 py-3 align-top text-center whitespace-nowrap border-r border-border">
                                 {group.isExisting ? (
                                   <div className="flex flex-col items-center gap-1.5">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                       Already Existing
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => handleCopySingleGroup(group.indicatorId)}
-                                      className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 text-xs font-bold text-white shadow-xs transition"
+                                      className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 text-xs font-bold text-white shadow-xs transition cursor-pointer"
                                       title="Override and copy anyway"
                                     >
                                       Copy Anyway
@@ -2125,27 +2147,27 @@ export default function AnnualTarget({
                                   <button
                                     type="button"
                                     onClick={() => handleCopySingleGroup(group.indicatorId)}
-                                    className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-xs transition"
+                                    className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-xs transition cursor-pointer"
                                   >
                                     Copy
                                   </button>
                                 )}
                               </td>
 
-                              <td className="px-3 py-3 align-top font-medium text-slate-900 dark:text-slate-100">
+                              <td className="px-3 py-3 align-top font-medium text-foreground border-r border-border">
                                 <FormattedText value={group.activity} />
-                                <div className="mt-1 text-[11px] font-normal text-slate-500">
+                                <div className="mt-1 text-[11px] font-normal text-muted-foreground">
                                   Category: {categories.find((c) => c.value === String(group.kraCategory))?.label || group.kraCategory} | Year: {group.targetYear}
                                 </div>
                               </td>
 
                               <td className="px-3 py-3 align-top space-y-2">
                                 {group.subTargets.map((sub) => (
-                                  <div key={sub.id} className="rounded-lg border border-slate-100 dark:border-slate-800 p-2 bg-slate-50/50 dark:bg-slate-800/40 text-xs">
-                                    <div className="font-semibold text-slate-800 dark:text-slate-200">
+                                  <div key={sub.id} className="rounded-lg border border-border p-2 bg-muted/20 text-xs">
+                                    <div className="font-semibold text-foreground">
                                       <FormattedText value={sub.description} />
                                     </div>
-                                    <div className="mt-1 text-[11px] text-slate-500 flex flex-wrap gap-3">
+                                    <div className="mt-1 text-[11px] text-muted-foreground flex flex-wrap gap-3">
                                       <span>Sem: {formatSemesterLabel(String(sub.newSemester), semesters)}</span>
                                       <span>Eff: {sub.efficiency || '-'}</span>
                                       <span>Qual: {sub.quality || '-'}</span>
@@ -2165,7 +2187,7 @@ export default function AnnualTarget({
                 <div className="space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 items-end">
                     <div className="lg:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Harmonized Position
                       </label>
                       <select
@@ -2174,7 +2196,7 @@ export default function AnnualTarget({
                           setCopyHarmonizedPositionId(e.target.value);
                           setCopyHarmonizedPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         <option value="">Select Position</option>
                         {copyData.harmonizedPositions.map((p) => (
@@ -2186,7 +2208,7 @@ export default function AnnualTarget({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Year
                       </label>
                       <select
@@ -2195,7 +2217,7 @@ export default function AnnualTarget({
                           setCopyHarmonizedYear(e.target.value);
                           setCopyHarmonizedPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         {years.map((y) => (
                           <option key={y.value} value={y.value}>
@@ -2206,7 +2228,7 @@ export default function AnnualTarget({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Category
                       </label>
                       <select
@@ -2215,7 +2237,7 @@ export default function AnnualTarget({
                           setCopyHarmonizedCategory(e.target.value);
                           setCopyHarmonizedPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         <option value="">All categories</option>
                         {categories.map((c) => (
@@ -2227,7 +2249,7 @@ export default function AnnualTarget({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Semester
                       </label>
                       <select
@@ -2236,7 +2258,7 @@ export default function AnnualTarget({
                           setCopyHarmonizedSemester(e.target.value);
                           setCopyHarmonizedPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         <option value="">All semesters</option>
                         {semesters.map((s) => (
@@ -2248,7 +2270,7 @@ export default function AnnualTarget({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Existing Target
                       </label>
                       <select
@@ -2257,7 +2279,7 @@ export default function AnnualTarget({
                           setCopyHarmonizedStatusFilter(e.target.value);
                           setCopyHarmonizedPage(1);
                         }}
-                        className="h-10 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 text-xs"
+                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
                       >
                         <option value="">All Status</option>
                         <option value="new">New Only</option>
@@ -2268,36 +2290,36 @@ export default function AnnualTarget({
 
                   {/* Harmonized Copy Table Listing */}
                   {!copyHarmonizedPositionId ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center text-xs text-slate-500">
+                    <div className="rounded-xl border border-dashed border-border p-12 text-center text-xs text-muted-foreground">
                       Please select a harmonized position to view targets.
                     </div>
                   ) : copyData.copyTargets.data.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-12 text-center text-xs text-slate-500">
+                    <div className="rounded-xl border border-dashed border-border p-12 text-center text-xs text-muted-foreground">
                       No targets found for the selected harmonized position and year.
                     </div>
                   ) : (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div className="overflow-x-auto rounded-xl border border-border bg-card">
                       <table className="w-full text-left text-xs border-collapse">
-                        <thead className="bg-slate-50 dark:bg-slate-800/50 font-semibold uppercase text-slate-500">
+                        <thead className="bg-muted/60 font-semibold uppercase text-muted-foreground border-b border-border">
                           <tr>
-                            <th className="px-3 py-2 text-center w-36">Action</th>
-                            <th className="px-3 py-2 w-64">Activity / Indicator</th>
+                            <th className="px-3 py-2 text-center w-36 border-r border-border">Action</th>
+                            <th className="px-3 py-2 w-64 border-r border-border">Activity / Indicator</th>
                             <th className="px-3 py-2">Sub-Targets & Measures</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y divide-border">
                           {copyData.copyTargets.data.map((group) => (
-                            <tr key={group.indicatorId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30">
-                              <td className="px-3 py-3 align-top text-center whitespace-nowrap">
+                            <tr key={group.indicatorId} className="hover:bg-muted/30 transition-colors">
+                              <td className="px-3 py-3 align-top text-center whitespace-nowrap border-r border-border">
                                 {group.isExisting ? (
                                   <div className="flex flex-col items-center gap-1.5">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
                                       Already Existing
                                     </span>
                                     <button
                                       type="button"
                                       onClick={() => handleCopySingleGroup(group.indicatorId)}
-                                      className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 text-xs font-bold text-white shadow-xs transition"
+                                      className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 text-xs font-bold text-white shadow-xs transition cursor-pointer"
                                       title="Override and copy anyway"
                                     >
                                       Copy Anyway
@@ -2307,27 +2329,27 @@ export default function AnnualTarget({
                                   <button
                                     type="button"
                                     onClick={() => handleCopySingleGroup(group.indicatorId)}
-                                    className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-xs transition"
+                                    className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-3 py-1 text-xs font-bold text-white shadow-xs transition cursor-pointer"
                                   >
                                     Copy
                                   </button>
                                 )}
                               </td>
 
-                              <td className="px-3 py-3 align-top font-medium text-slate-900 dark:text-slate-100">
+                              <td className="px-3 py-3 align-top font-medium text-foreground border-r border-border">
                                 <FormattedText value={group.activity} />
-                                <div className="mt-1 text-[11px] font-normal text-slate-500">
+                                <div className="mt-1 text-[11px] font-normal text-muted-foreground">
                                   Category: {categories.find((c) => c.value === String(group.kraCategory))?.label || group.kraCategory} | Year: {group.targetYear}
                                 </div>
                               </td>
 
                               <td className="px-3 py-3 align-top space-y-2">
                                 {group.subTargets.map((sub) => (
-                                  <div key={sub.id} className="rounded-lg border border-slate-100 dark:border-slate-800 p-2 bg-slate-50/50 dark:bg-slate-800/40 text-xs">
-                                    <div className="font-semibold text-slate-800 dark:text-slate-200">
+                                  <div key={sub.id} className="rounded-lg border border-border p-2 bg-muted/20 text-xs">
+                                    <div className="font-semibold text-foreground">
                                       <FormattedText value={sub.description} />
                                     </div>
-                                    <div className="mt-1 text-[11px] text-slate-500 flex flex-wrap gap-3">
+                                    <div className="mt-1 text-[11px] text-muted-foreground flex flex-wrap gap-3">
                                       <span>Sem: {formatSemesterLabel(String(sub.newSemester), semesters)}</span>
                                       <span>Eff: {sub.efficiency || '-'}</span>
                                       <span>Qual: {sub.quality || '-'}</span>
@@ -2345,11 +2367,11 @@ export default function AnnualTarget({
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className="flex justify-end gap-2 pt-4 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowCopyModal(false)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 transition"
+                  className="rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                 >
                   Close
                 </button>
@@ -2360,38 +2382,38 @@ export default function AnnualTarget({
 
         {/* Modal: Lock Targets */}
         {showLockModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl space-y-5 border border-border">
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-foreground">
                   Save and Lock Annual Target
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   Are you sure you want to save and lock your annual target entries? Once locked, these targets will no longer be editable.
                 </p>
               </div>
 
-              <div className="rounded-xl border border-amber-500/30 bg-amber-50/80 p-4 dark:bg-amber-950/30">
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
                 <div className="flex items-start gap-3">
-                  <div className="text-xs leading-relaxed text-amber-900 dark:text-amber-300">
+                  <div className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
                     <span className="font-bold">Important Notice: </span>
                     This will automatically create the 1st Semester and 2nd Semester Target in My Ratings link.
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowLockModal(false)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 transition"
+                  className="rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleLockTargets}
-                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-sm font-semibold shadow-sm transition"
+                  className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-semibold shadow-xs transition cursor-pointer"
                 >
                   Confirm and Lock
                 </button>
@@ -2402,29 +2424,29 @@ export default function AnnualTarget({
 
         {/* Modal: Unlock Targets */}
         {showUnlockModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl space-y-5 border border-border">
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-foreground">
                   Unlock Annual Target
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   Are you sure you want to unlock your annual target entries? Once unlocked, these targets can be edited and modified.
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setShowUnlockModal(false)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 transition"
+                  className="rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleUnlockTargets}
-                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-sm font-semibold shadow-sm transition"
+                  className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-xs font-semibold shadow-xs transition cursor-pointer"
                 >
                   Confirm and Unlock
                 </button>
@@ -2435,32 +2457,32 @@ export default function AnnualTarget({
 
         {/* Modal: Move Target to Different Category */}
         {showMoveConfirmModal ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl space-y-5 border border-border">
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-foreground">
                   Move target to another KRA?
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   This target will be moved to a different Key Result Area category. Confirm to save the new category and position.
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <button
                   type="button"
                   onClick={() => {
                     setShowMoveConfirmModal(false);
                     setPendingMove(null);
                   }}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 transition"
+                  className="rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={confirmTargetMove}
-                  className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 text-sm font-semibold shadow-sm transition"
+                  className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 text-xs font-semibold shadow-xs transition cursor-pointer"
                 >
                   Confirm move
                 </button>
@@ -2471,22 +2493,22 @@ export default function AnnualTarget({
 
         {/* Modal: Delete Main Target */}
         {deletingIndicatorId !== null ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-6 shadow-xl space-y-5 border border-slate-200 dark:border-slate-800">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-lg rounded-2xl bg-card p-6 shadow-2xl space-y-5 border border-border">
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                <h3 className="text-base font-bold text-foreground">
                   Delete selected target and its sub-target
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   Are you sure you want to delete this target and all of its sub-targets? This action cannot be undone.
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <button
                   type="button"
                   onClick={() => setDeletingIndicatorId(null)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:text-slate-300 transition"
+                  className="rounded-lg px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -2497,7 +2519,7 @@ export default function AnnualTarget({
                       onSuccess: () => setDeletingIndicatorId(null),
                     });
                   }}
-                  className="rounded-xl bg-red-600 hover:bg-red-700 px-5 py-2 text-sm font-semibold text-white shadow-sm transition"
+                  className="rounded-lg bg-rose-600 hover:bg-rose-700 px-5 py-2 text-xs font-semibold text-white shadow-xs transition cursor-pointer"
                 >
                   Delete
                 </button>

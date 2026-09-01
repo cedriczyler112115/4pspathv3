@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Eye, Trash2, RotateCcw, Search, ShieldCheck, Clock, Edit3, Flag, AlertTriangle, X } from 'lucide-react';
 import AppLayout from '../../Layouts/AppLayout';
@@ -65,47 +65,50 @@ export default function MyRatings({
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const applyFilters = (overrides?: Partial<typeof form.data>) => {
+  const applyFilters = (overrides?: Partial<typeof form.data> & { page?: number }) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...form.data, ...overrides };
-    router.get('/ipcrf/myratings', data, {
+    router.post('/ipcrf/myratings', data, {
       preserveState: true,
       replace: true,
+      preserveScroll: true,
     });
   };
 
   const handleSearchChange = (val: string) => {
     form.setData('search', val);
-  };
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    applyFilters();
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      applyFilters({ search: val, page: 1 });
+    }, 350);
   };
 
   const handleYearChange = (val: string) => {
     form.setData('year', val);
-    applyFilters({ year: val });
+    applyFilters({ year: val, page: 1 });
   };
 
   const handleSemesterChange = (val: string) => {
     form.setData('semester', val);
-    applyFilters({ semester: val });
+    applyFilters({ semester: val, page: 1 });
   };
 
   const handlePerPageChange = (val: string) => {
     form.setData('perPage', val);
-    applyFilters({ perPage: val });
+    applyFilters({ perPage: val, page: 1 });
   };
 
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     form.setData({
       search: '',
       year: '',
       semester: '',
       perPage: '10',
     });
-    router.get('/ipcrf/myratings', {}, { replace: true });
+    router.post('/ipcrf/myratings', { search: '', year: '', semester: '', perPage: '10', page: 1 }, { replace: true, preserveState: true });
   };
 
   const confirmDelete = (id: number) => {
@@ -182,14 +185,6 @@ export default function MyRatings({
                 <RotateCcw className="size-3" />
                 <span>Reset</span>
               </button>
-              <button
-                type="button"
-                onClick={handleSearchSubmit}
-                className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 text-white px-3 text-xs font-semibold hover:bg-emerald-700 transition shadow-xs cursor-pointer"
-              >
-                <Search className="size-3.5" />
-                <span>Apply Filters</span>
-              </button>
             </div>
           </div>
 
@@ -236,7 +231,7 @@ export default function MyRatings({
           )}
 
           {/* FILTERS FORM */}
-          <form onSubmit={handleSearchSubmit} className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          <form onSubmit={(e) => { e.preventDefault(); applyFilters({ page: 1 }); }} className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             {/* Search Input */}
             <div className="space-y-1">
               <label className="text-[11px] font-semibold text-muted-foreground">Search by Keywords</label>
@@ -254,9 +249,10 @@ export default function MyRatings({
                     type="button"
                     onClick={() => {
                       form.setData('search', '');
-                      applyFilters({ search: '' });
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      applyFilters({ search: '', page: 1 });
                     }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                   >
                     <X className="size-3" />
                   </button>
@@ -447,13 +443,22 @@ export default function MyRatings({
                     );
                   }
 
+                  let targetPage = ratings.current_page;
+                  if (link.url) {
+                    try {
+                      const urlObj = new URL(link.url, window.location.origin);
+                      targetPage = Number(urlObj.searchParams.get('page')) || ratings.current_page;
+                    } catch {
+                      targetPage = ratings.current_page;
+                    }
+                  }
+
                   return (
-                    <Link
+                    <button
                       key={idx}
-                      href={link.url}
-                      preserveState
-                      preserveScroll
-                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors ${
+                      type="button"
+                      onClick={() => applyFilters({ page: targetPage })}
+                      className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         link.active
                           ? 'bg-emerald-600 text-white font-bold shadow-2xs'
                           : 'border border-input bg-background text-foreground hover:bg-muted'

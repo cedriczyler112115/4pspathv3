@@ -16,17 +16,17 @@ trait ProfileValidationRules
     protected function profileRules(?int $userId = null): array
     {
         return [
-            'name' => $this->nameRules(),
-            'last_name' => $this->nullableTextRule(100),
-            'first_name' => $this->nullableTextRule(100),
-            'middle_name' => $this->nullableTextRule(100),
+            'name' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:100'],
+            'middle_name' => ['required', 'string', 'max:100'],
+            'last_name' => ['required', 'string', 'max:100'],
             'extension_name' => $this->nullableTextRule(50),
-            'position' => $this->nullableTextRule(100),
-            'designation' => $this->nullableTextRule(100),
-            'division_id' => ['nullable', 'integer', Rule::exists('lib_division', 'id')],
-            'section_id' => ['nullable', 'integer', Rule::exists('lib_section', 'id')],
-            'contact_number' => $this->nullableTextRule(100),
-            'supervisor_id' => ['nullable', 'integer', Rule::exists(User::class, 'id')],
+            'position' => ['required', 'string', 'max:100'],
+            'designation' => ['required', 'string', 'max:100'],
+            'division_id' => ['required', 'integer', Rule::exists('lib_division', 'id')],
+            'section_id' => ['required', 'integer', Rule::exists('lib_section', 'id')],
+            'contact_number' => ['required', 'string', 'max:100'],
+            'supervisor_id' => ['required', 'integer', Rule::exists(User::class, 'id')],
             'is_supervisor' => ['nullable', 'boolean'],
         ];
     }

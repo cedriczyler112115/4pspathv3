@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../Layouts/AppLayout';
 import UserAvatar from '../../Components/UserAvatar';
@@ -83,22 +83,35 @@ export default function PlsScorecard({
     perPage: String(filters.perPage || 10),
   });
 
-  const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = (val: string) => {
+    filterForm.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      submitFilters({ search: val, page: 1 });
+    }, 350);
+  };
+
+  const submitFilters = (overrides?: Partial<typeof filterForm.data> & { page?: number }) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
-    router.get('/rpmo-management/pls-scorecard', data, {
+    router.post('/rpmo-management/pls-scorecard', data, {
       preserveState: true,
       replace: true,
+      preserveScroll: true,
     });
   };
 
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({
       search: '',
       year: '',
       semester: '',
       perPage: '10',
     });
-    router.get('/rpmo-management/pls-scorecard', {}, { replace: true });
+    router.post('/rpmo-management/pls-scorecard', { search: '', year: '', semester: '', perPage: '10', page: 1 }, { replace: true, preserveState: true });
   };
 
   const getInitials = (name?: string) => {
@@ -222,8 +235,7 @@ export default function PlsScorecard({
                 <input
                   type="text"
                   value={filterForm.data.search}
-                  onChange={(e) => filterForm.setData('search', e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search PL by last, first, middle name, email, position..."
                   className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
@@ -232,7 +244,8 @@ export default function PlsScorecard({
                     type="button"
                     onClick={() => {
                       filterForm.setData('search', '');
-                      submitFilters({ search: '' });
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+                      submitFilters({ search: '', page: 1 });
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
                   >
@@ -456,13 +469,30 @@ export default function PlsScorecard({
             {/* Pagination Links */}
             {records.links && records.links.length > 3 && (
               <div className="flex items-center gap-1 flex-wrap">
-                {records.links.map((link, i) =>
-                  link.url ? (
-                    <Link
+                {records.links.map((link, i) => {
+                  if (!link.url) {
+                    return (
+                      <span
+                        key={i}
+                        dangerouslySetInnerHTML={{ __html: link.label }}
+                        className="inline-flex min-w-7 h-7 items-center justify-center rounded-md px-2 text-xs text-muted-foreground/50 border border-transparent select-none"
+                      />
+                    );
+                  }
+
+                  let targetPage = records.current_page;
+                  try {
+                    const urlObj = new URL(link.url, window.location.origin);
+                    targetPage = Number(urlObj.searchParams.get('page')) || records.current_page;
+                  } catch {
+                    targetPage = records.current_page;
+                  }
+
+                  return (
+                    <button
                       key={i}
-                      href={link.url}
-                      preserveScroll
-                      preserveState
+                      type="button"
+                      onClick={() => submitFilters({ page: targetPage })}
                       dangerouslySetInnerHTML={{ __html: link.label }}
                       className={`inline-flex min-w-7 h-7 items-center justify-center rounded-md px-2 text-xs font-semibold transition cursor-pointer ${
                         link.active
@@ -470,14 +500,8 @@ export default function PlsScorecard({
                           : 'border border-input bg-background text-foreground hover:bg-muted'
                       }`}
                     />
-                  ) : (
-                    <span
-                      key={i}
-                      dangerouslySetInnerHTML={{ __html: link.label }}
-                      className="inline-flex min-w-7 h-7 items-center justify-center rounded-md px-2 text-xs text-muted-foreground/50 border border-transparent select-none"
-                    />
-                  )
-                )}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -48,12 +48,14 @@ class HarmonizedIpcController extends Controller
         $isAll = strtolower($rawPerPage) === 'all';
         $perPageInt = $isAll ? 999999 : max(1, (int) $rawPerPage);
 
+        $selectedYear = $request->has('year') ? (string) $request->input('year') : ApplicationSetting::defaultYear();
+
         $filters = [
-            'search' => (string) $request->string('search'),
-            'year' => (string) $request->string('year', ApplicationSetting::defaultYear()),
-            'category' => (string) $request->string('category'),
-            'semester' => (string) $request->string('semester'),
-            'position' => (string) $request->string('position'),
+            'search' => (string) $request->input('search', ''),
+            'year' => $selectedYear,
+            'category' => (string) $request->input('category', ''),
+            'semester' => (string) $request->input('semester', ''),
+            'position' => (string) $request->input('position', ''),
             'perPage' => $rawPerPage,
         ];
 

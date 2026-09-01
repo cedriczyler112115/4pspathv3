@@ -18,21 +18,14 @@ final class HarmonizedIpcDirectory
         string $search,
         int $perPage,
     ): LengthAwarePaginator {
-        if ($harmonizedPositionId === null) {
-            return new LengthAwarePaginator(
-                collect(),
-                0,
-                $perPage,
-                1,
-                ['path' => LengthAwarePaginator::resolveCurrentPath()]
-            );
-        }
-
         return DB::table('harmonized_ipc_targets_indicators as iti')
             ->leftJoin('harmonized_ipc_targets_indicators_itemlist as itl', 'itl.ind_id', '=', 'iti.id')
-            ->where('iti.harmonized_position_id', $harmonizedPositionId)
+            ->when($harmonizedPositionId !== null, fn ($query) => $query->where('iti.harmonized_position_id', $harmonizedPositionId))
             ->where('iti.target_status', '<', 4)
-            ->where('itl.indi_status', '<', 4)
+            ->where(function ($query): void {
+                $query->whereNull('itl.indi_status')
+                    ->orWhere('itl.indi_status', '<', 4);
+            })
             ->when(! $includeStrategicFunction, fn ($query) => $query->where('iti.kra_category', '!=', 1))
             ->select([
                 DB::raw('iti.id as tarid'),

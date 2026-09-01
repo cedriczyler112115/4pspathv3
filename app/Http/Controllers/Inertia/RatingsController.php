@@ -422,6 +422,9 @@ class RatingsController extends Controller
 
     protected function getCheckpointChanges(int $ratingId): array
     {
+        $sem = DB::table('ipc_semester')->where('id', $ratingId)->first();
+        $rateeUserId = (int) ($sem->user_id ?? 0);
+
         $activeTargetIds = DB::table('ipc_sem_targets_indicator')
             ->where('semester_id', $ratingId)
             ->pluck('id')
@@ -429,12 +432,26 @@ class RatingsController extends Controller
 
         $allTargetIds = DB::table('ipc_sem_target_edit_histories as h')
             ->leftJoin('ipc_sem_targets_indicator as sti', 'h.sem_target_id', '=', 'sti.id')
-            ->where(function ($q) use ($activeTargetIds, $ratingId) {
+            ->where(function ($q) use ($activeTargetIds, $ratingId, $rateeUserId) {
                 if (! empty($activeTargetIds)) {
                     $q->whereIn('h.sem_target_id', $activeTargetIds);
                 }
                 $q->orWhere('sti.semester_id', $ratingId);
-                $q->orWhere('h.field_name', 'deleted');
+                if ($rateeUserId > 0) {
+                    $q->orWhere(function ($q2) use ($rateeUserId, $ratingId) {
+                        $q2->where('h.user_id', $rateeUserId)
+                            ->where(function ($q3) {
+                                $q3->where('h.field_name', 'deleted')
+                                    ->orWhere('h.action_type', 'deleted');
+                            })
+                            ->whereNotExists(function ($sub) use ($ratingId) {
+                                $sub->select(DB::raw(1))
+                                    ->from('ipc_sem_targets_indicator as other_sti')
+                                    ->whereColumn('other_sti.id', 'h.sem_target_id')
+                                    ->where('other_sti.semester_id', '!=', $ratingId);
+                            });
+                    });
+                }
             })
             ->pluck('h.sem_target_id')
             ->unique()

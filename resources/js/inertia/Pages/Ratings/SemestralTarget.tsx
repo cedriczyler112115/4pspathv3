@@ -297,6 +297,7 @@ export default function SemestralTarget({
   const docFileInputRef = React.useRef<HTMLInputElement>(null);
   const printDropdownRef = React.useRef<HTMLDivElement>(null);
   const optionsDropdownRef = React.useRef<HTMLDivElement>(null);
+  const contextMenuRef = React.useRef<HTMLDivElement>(null);
   const [restoringId, setRestoringId] = useState<number | null>(null);
   const [showLockModal, setShowLockModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -1301,6 +1302,9 @@ export default function SemestralTarget({
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
+      if (contextMenuRef.current && contextMenuRef.current.contains(e.target as Node)) {
+        return;
+      }
       setContextMenu(null);
       setActiveSubMenu(null);
 
@@ -1326,7 +1330,7 @@ export default function SemestralTarget({
     isFirst: boolean = true
   ) => {
     e.preventDefault();
-    if (isLocked) return;
+    if (isReadOnly) return;
     const pageX = window.scrollX + e.clientX;
     const pageY = window.scrollY + e.clientY;
     setContextMenu({
@@ -1628,6 +1632,46 @@ export default function SemestralTarget({
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Status Action Buttons (Save & Lock Target, etc.) */}
+              {isVerified ? (
+                <span className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white shadow-2xs">
+                  <CheckCircle2 className="size-3.5" />
+                  <span>Verified by Supervisor</span>
+                </span>
+              ) : rating.lock === 2 ? (
+                <button
+                  type="button"
+                  id="waiting-verification-btn"
+                  onClick={() => setShowCancelReadyModal(true)}
+                  className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 text-xs font-semibold text-white transition cursor-pointer shadow-2xs"
+                  title="Click to cancel ready submission and re-enable editing"
+                >
+                  <Clock className="size-3.5" />
+                  <span>Waiting for Verification</span>
+                </button>
+              ) : isLocked ? (
+                isEveryTargetComplete ? (
+                  <button
+                    type="button"
+                    id="im-ready-btn"
+                    onClick={() => setShowImReadyModal(true)}
+                    className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                  >
+                    <CheckCircle2 className="size-3.5" />
+                    <span>I'm Ready</span>
+                  </button>
+                ) : null
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLockSemestralTarget}
+                  className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                >
+                  <Lock className="size-3.5" />
+                  <span>Save &amp; Lock Target</span>
+                </button>
+              )}
+
               {/* Options Dropdown */}
               <div ref={optionsDropdownRef} className="relative">
                 <button
@@ -1718,89 +1762,50 @@ export default function SemestralTarget({
             </div>
           </div>
 
-          {/* ACTION CONTROLS */}
-          <div className="flex flex-wrap items-center justify-end gap-2.5 pt-0.5 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Status Action Buttons */}
-              {isVerified ? (
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs">
-                  <CheckCircle2 className="size-3.5" />
-                  <span>Verified by Supervisor</span>
-                </span>
-              ) : rating.lock === 2 ? (
-                <button
-                  type="button"
-                  id="waiting-verification-btn"
-                  onClick={() => setShowCancelReadyModal(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white transition cursor-pointer shadow-2xs"
-                  title="Click to cancel ready submission and re-enable editing"
-                >
-                  <Clock className="size-3.5" />
-                  <span>Waiting for Verification</span>
-                </button>
-              ) : isLocked ? (
-                isEveryTargetComplete ? (
-                  <button
-                    type="button"
-                    id="im-ready-btn"
-                    onClick={() => setShowImReadyModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer"
-                  >
-                    <CheckCircle2 className="size-3.5" />
-                    <span>I'm Ready</span>
-                  </button>
-                ) : null
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleLockSemestralTarget}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer"
-                >
-                  <Lock className="size-3.5" />
-                  <span>Save &amp; Lock Target</span>
-                </button>
-              )}
-            </div>
-          </div>
-
           {/* USER PROFILE INFO STRIP */}
-          <div className="rounded-lg border border-border bg-muted/20 p-2.5 overflow-x-auto">
-            <table className="w-full border-0 border-collapse text-xs">
-              <tbody>
-                <tr className="align-top">
-                  <td className="pr-6 whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Full Name</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground flex items-center gap-2">
-                      <UserAvatar
-                        user={{
-                          name: userProfile?.fullName,
-                          avatar_url: (userProfile as any)?.avatarUrl,
-                          avatar: (userProfile as any)?.avatar,
-                        }}
-                        size="sm"
-                      />
-                      <span>{userProfile?.fullName || '-'}</span>
-                    </div>
-                  </td>
-                  <td className="pr-6 whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Position</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.position || '-'}</div>
-                  </td>
-                  <td className="pr-6 whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Designation</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.designation || '-'}</div>
-                  </td>
-                  <td className="pr-6 whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Division Name</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.divisionName || '-'}</div>
-                  </td>
-                  <td className="whitespace-nowrap">
-                    <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Section Name</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.sectionName || '-'}</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="rounded-lg border border-border bg-muted/20 p-2 sm:p-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 text-xs items-start">
+              <div className="min-w-0 col-span-2 sm:col-span-1">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Full Name</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10.5px] sm:text-[11px] flex items-center gap-1.5 min-w-0">
+                  <UserAvatar
+                    user={{
+                      name: userProfile?.fullName,
+                      avatar_url: (userProfile as any)?.avatarUrl,
+                      avatar: (userProfile as any)?.avatar,
+                    }}
+                    size="xs"
+                  />
+                  <span className="truncate leading-tight" title={userProfile?.fullName || '-'}>
+                    {userProfile?.fullName || '-'}
+                  </span>
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Position</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10px] sm:text-[10.5px] leading-tight break-words" title={userProfile?.position || '-'}>
+                  {userProfile?.position || '-'}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Designation</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10px] sm:text-[10.5px] leading-tight break-words" title={userProfile?.designation || '-'}>
+                  {userProfile?.designation || '-'}
+                </div>
+              </div>
+              <div className="min-w-0">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Division Name</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10px] sm:text-[10.5px] leading-tight break-words" title={userProfile?.divisionName || '-'}>
+                  {userProfile?.divisionName || '-'}
+                </div>
+              </div>
+              <div className="min-w-0 col-span-2 sm:col-span-1">
+                <div className="text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">Section Name</div>
+                <div className="mt-0.5 font-bold uppercase text-foreground text-[10px] sm:text-[10.5px] leading-tight break-words" title={userProfile?.sectionName || '-'}>
+                  {userProfile?.sectionName || '-'}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2096,16 +2101,9 @@ export default function SemestralTarget({
                                                           >
                                                             <Clock className="w-4 h-4" />
                                                           </button>
-                                                        )}
+                                                      )}
                                                     </>
                                                   )}
-                                                </div>
-
-                                                {/* Target ID at the bottom of the Action column */}
-                                                <div className="pt-2 mt-auto text-center">
-                                                  <span className="text-[10px] font-semibold italic text-muted-foreground select-none">
-                                                    <strong><em>{group.indicatorId}</em></strong>
-                                                  </span>
                                                 </div>
                                               </div>
                                             </td>
@@ -2114,38 +2112,49 @@ export default function SemestralTarget({
                                           {isFirstRow && (
                                             <td
                                               rowSpan={totalSubRows}
-                                              className="px-3 py-3 border-r border-border text-xs font-normal text-foreground align-top"
+                                              className="px-3 py-3 border-r border-border text-xs font-normal text-foreground align-top h-1"
                                             >
-                                              {isEditingThisGroup ? (
-                                                <div className="space-y-2">
-                                                  <AutoResizingTextarea
-                                                    rows={2}
-                                                    value={editingGroup.activity}
-                                                    onChange={(e) =>
-                                                      setEditingGroup({ ...editingGroup, activity: e.target.value })
-                                                    }
-                                                    className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
-                                                  />
-                                                  <select
-                                                    value={editingGroup.kraCategory}
-                                                    onChange={(e) =>
-                                                      setEditingGroup({
-                                                        ...editingGroup,
-                                                        kraCategory: Number(e.target.value),
-                                                      })
-                                                    }
-                                                    className="w-full rounded-lg border border-input bg-background p-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                                  >
-                                                    {includeStrategicFunction && (
-                                                      <option value={1}>Strategic Function</option>
-                                                    )}
-                                                    <option value={2}>Core Function</option>
-                                                    <option value={3}>Support Function</option>
-                                                  </select>
+                                              <div className="flex h-full min-h-[120px] flex-col justify-between">
+                                                <div>
+                                                  {isEditingThisGroup ? (
+                                                    <div className="space-y-2">
+                                                      <AutoResizingTextarea
+                                                        rows={2}
+                                                        value={editingGroup.activity}
+                                                        onChange={(e) =>
+                                                          setEditingGroup({ ...editingGroup, activity: e.target.value })
+                                                        }
+                                                        className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner"
+                                                      />
+                                                      <select
+                                                        value={editingGroup.kraCategory}
+                                                        onChange={(e) =>
+                                                          setEditingGroup({
+                                                            ...editingGroup,
+                                                            kraCategory: Number(e.target.value),
+                                                          })
+                                                        }
+                                                        className="w-full rounded-lg border border-input bg-background p-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                                      >
+                                                        {includeStrategicFunction && (
+                                                          <option value={1}>Strategic Function</option>
+                                                        )}
+                                                        <option value={2}>Core Function</option>
+                                                        <option value={3}>Support Function</option>
+                                                      </select>
+                                                    </div>
+                                                  ) : (
+                                                    <FormattedText value={(group.activity || '').replace(/<\/?(strong|b)\b[^>]*>/gi, '')} />
+                                                  )}
                                                 </div>
-                                              ) : (
-                                                <FormattedText value={(group.activity || '').replace(/<\/?(strong|b)\b[^>]*>/gi, '')} />
-                                              )}
+
+                                                {/* Target ID at the bottom of the Key Result Area column */}
+                                                <div className="pt-2 mt-auto text-center">
+                                                  <span className="text-[10px] font-semibold italic text-muted-foreground select-none">
+                                                    <strong><em>{group.indicatorId}</em></strong>
+                                                  </span>
+                                                </div>
+                                              </div>
                                             </td>
                                           )}
 
@@ -2431,71 +2440,82 @@ export default function SemestralTarget({
                                           </td>
 
                                           {/* RG Remarks */}
-                                          <td className="px-3 py-3 align-top text-xs text-foreground">
-                                            {isEditingThisGroup && itemEditIdx !== -1 ? (
-                                              <AutoResizingTextarea
-                                                rows={2}
-                                                value={editingGroup.items[itemEditIdx].remarks}
-                                                onChange={(e) => {
-                                                  const newItems = [...editingGroup.items];
-                                                  newItems[itemEditIdx].remarks = e.target.value;
-                                                  setEditingGroup({ ...editingGroup, items: newItems });
-                                                }}
-                                                className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner leading-normal"
-                                              />
-                                            ) : isLocked ? (
-                                              isReadOnly ? (
-                                                <div className="space-y-2">
-                                                  <div className="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]">
-                                                    {itemValues[item.itemId]?.remarks || item.remarks || '-'}
-                                                  </div>
-                                                  {item.scorecardRemarks && (
-                                                    <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
-                                                      {item.scorecardCreatedByName && (
-                                                        <div className="mb-1.5 border-b border-purple-500/20 pb-1">
-                                                          <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full block">
-                                                            By: {item.scorecardCreatedByName}
-                                                          </span>
-                                                        </div>
-                                                      )}
-                                                      <div className="text-xs text-foreground leading-normal whitespace-pre-line">
-                                                        {item.scorecardRemarks}
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              ) : (
-                                                <div className="space-y-2">
-                                                  <AutoResizingTextarea
-                                                    rows={6}
-                                                    value={itemValues[item.itemId]?.remarks ?? item.remarks ?? ''}
-                                                    onChange={(e) => scheduleSave(item.itemId, 'remarks', e.target.value)}
-                                                    onBlur={(e) => saveField(item.itemId, 'remarks', e.target.value)}
-                                                    placeholder="Remarks..."
-                                                    className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
-                                                    style={{ minHeight: '200px' }}
-                                                  />
-                                                  {item.scorecardRemarks && (
-                                                    <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
-                                                      {item.scorecardCreatedByName && (
-                                                        <div className="mb-1.5 border-b border-purple-500/20 pb-1">
-                                                          <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full block">
-                                                            By: {item.scorecardCreatedByName}
-                                                          </span>
-                                                        </div>
-                                                      )}
-                                                      <div className="text-xs text-foreground leading-normal whitespace-pre-line">
-                                                        {item.scorecardRemarks}
-                                                      </div>
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )
-                                            ) : (
+                                          <td className="px-3 py-3 align-top text-xs text-foreground h-1">
+                                            <div className="flex h-full min-h-[120px] flex-col justify-between">
                                               <div>
-                                                <FormattedText value={item.remarks} />
+                                                {isEditingThisGroup && itemEditIdx !== -1 ? (
+                                                  <AutoResizingTextarea
+                                                    rows={2}
+                                                    value={editingGroup.items[itemEditIdx].remarks}
+                                                    onChange={(e) => {
+                                                      const newItems = [...editingGroup.items];
+                                                      newItems[itemEditIdx].remarks = e.target.value;
+                                                      setEditingGroup({ ...editingGroup, items: newItems });
+                                                    }}
+                                                    className="w-full rounded-lg border border-input bg-background p-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring shadow-inner leading-normal"
+                                                  />
+                                                ) : isLocked ? (
+                                                  isReadOnly ? (
+                                                    <div className="space-y-2">
+                                                      <div className="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]">
+                                                        {itemValues[item.itemId]?.remarks || item.remarks || '-'}
+                                                      </div>
+                                                      {item.scorecardRemarks && (
+                                                        <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
+                                                          {item.scorecardCreatedByName && (
+                                                            <div className="mb-1.5 border-b border-purple-500/20 pb-1">
+                                                              <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full block">
+                                                                By: {item.scorecardCreatedByName}
+                                                              </span>
+                                                            </div>
+                                                          )}
+                                                          <div className="text-xs text-foreground leading-normal whitespace-pre-line">
+                                                            {item.scorecardRemarks}
+                                                          </div>
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  ) : (
+                                                    <div className="space-y-2">
+                                                      <AutoResizingTextarea
+                                                        rows={6}
+                                                        value={itemValues[item.itemId]?.remarks ?? item.remarks ?? ''}
+                                                        onChange={(e) => scheduleSave(item.itemId, 'remarks', e.target.value)}
+                                                        onBlur={(e) => saveField(item.itemId, 'remarks', e.target.value)}
+                                                        placeholder="Remarks..."
+                                                        className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
+                                                        style={{ minHeight: '200px' }}
+                                                      />
+                                                      {item.scorecardRemarks && (
+                                                        <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
+                                                          {item.scorecardCreatedByName && (
+                                                            <div className="mb-1.5 border-b border-purple-500/20 pb-1">
+                                                              <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full block">
+                                                                By: {item.scorecardCreatedByName}
+                                                              </span>
+                                                            </div>
+                                                          )}
+                                                          <div className="text-xs text-foreground leading-normal whitespace-pre-line">
+                                                            {item.scorecardRemarks}
+                                                          </div>
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  )
+                                                ) : (
+                                                  <div>
+                                                    <FormattedText value={item.remarks} />
+                                                  </div>
+                                                )}
                                               </div>
-                                            )}
+
+                                              {/* Item ID at the bottom center of the Remarks column */}
+                                              <div className="pt-2 mt-auto text-center">
+                                                <span className="text-[10px] font-semibold italic text-muted-foreground select-none">
+                                                  <strong><em>{item.itemId}</em></strong>
+                                                </span>
+                                              </div>
+                                            </div>
                                           </td>
                                         </tr>
                                       );
@@ -2927,16 +2947,6 @@ export default function SemestralTarget({
                         Professional development goals, learning activities, and required support resources.
                       </p>
                     </div>
-                    {!isLocked && (
-                      <button
-                        type="button"
-                        onClick={() => setShowAreaModal(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition cursor-pointer"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Add Development Plan Item</span>
-                      </button>
-                    )}
                   </div>
 
                   <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
@@ -2947,11 +2957,8 @@ export default function SemestralTarget({
                             <th className="px-3 py-2.5 text-center w-[5%] border-r border-border">#</th>
                             <th className="px-3 py-2.5 w-[25%] border-r border-border">Aim / Areas of Improvement</th>
                             <th className="px-3 py-2.5 w-[25%] border-r border-border">Development Activities</th>
-                            <th className="px-3 py-2.5 w-[22%] border-r border-border">Support / Resources Needed</th>
-                            <th className="px-3 py-2.5 w-[18%] border-r border-border">Progress / Intervention</th>
-                            {!isLocked && (
-                              <th className="px-3 py-2.5 text-center w-[5%]">Action</th>
-                            )}
+                            <th className="px-3 py-2.5 w-[25%] border-r border-border">Support / Resources Needed</th>
+                            <th className="px-3 py-2.5 w-[20%]">Progress / Intervention</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
@@ -2970,39 +2977,15 @@ export default function SemestralTarget({
                                 <td className="px-3 py-3 text-foreground border-r border-border leading-relaxed whitespace-pre-line">
                                   {area.support_resources || '-'}
                                 </td>
-                                <td className="px-3 py-3 text-foreground border-r border-border leading-relaxed whitespace-pre-line">
+                                <td className="px-3 py-3 text-foreground leading-relaxed whitespace-pre-line">
                                   {area.progress_intervention || '-'}
                                 </td>
-                                {!isLocked && (
-                                  <td className="px-3 py-3 text-center align-middle">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setConfirmModal({
-                                          isOpen: true,
-                                          title: 'Delete Development Plan Item',
-                                          message: 'Are you sure you want to delete this development plan item?',
-                                          confirmText: 'Delete Item',
-                                          variant: 'danger',
-                                          icon: 'trash',
-                                          onConfirm: () => {
-                                            router.delete(`/ipcrf/myratings/${rating.id}/areas-improvement/${area.id}`);
-                                          },
-                                        });
-                                      }}
-                                      className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition cursor-pointer"
-                                      title="Delete"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </td>
-                                )}
                               </tr>
                             ))
                           ) : (
                             <tr>
-                              <td colSpan={isLocked ? 5 : 6} className="px-4 py-8 text-center text-xs text-muted-foreground">
-                                No development plan items recorded yet. Click + Add Development Plan Item to record professional goals.
+                              <td colSpan={5} className="px-4 py-8 text-center text-xs text-muted-foreground">
+                                No development plan items recorded yet.
                               </td>
                             </tr>
                           )}
@@ -3201,8 +3184,9 @@ export default function SemestralTarget({
         </div>
 
         {/* EXACT LIVEWIRE RIGHT CLICK CONTEXT MENU & SUB-MENU FLYOUTS */}
-        {contextMenu && !isLocked && (
+        {contextMenu && !isReadOnly && (
           <div
+            ref={contextMenuRef}
             style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
             className="absolute z-50 min-w-[14rem] rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 shadow-2xl animate-in fade-in-50 zoom-in-95 text-xs font-medium select-none text-slate-900 dark:text-slate-100"
             onClick={(e) => e.stopPropagation()}
@@ -3216,7 +3200,7 @@ export default function SemestralTarget({
             </div>
 
             {/* Menu Item 1: Add Target (with flyout sub-menu trigger) */}
-            {!isLocked && (
+            {!isReadOnly && (
               <div
                 className="relative"
                 onMouseEnter={() => setActiveSubMenu('add')}
@@ -3297,7 +3281,7 @@ export default function SemestralTarget({
             )}
 
             {/* Menu Item 2: Edit Target */}
-            {!isLocked && (
+            {!isReadOnly && (
               <button
                 type="button"
                 onMouseEnter={() => setActiveSubMenu(null)}
@@ -3338,7 +3322,7 @@ export default function SemestralTarget({
             <div className="my-1 border-t border-slate-100 dark:border-slate-800"></div>
 
             {/* Menu Item 4: Delete (with flyout sub-menu trigger) */}
-            {!isLocked && (
+            {!isReadOnly && (
               <div
                 className="relative"
                 onMouseEnter={() => setActiveSubMenu('delete')}

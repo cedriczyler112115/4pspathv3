@@ -1,5 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
 import * as LucideIcons from 'lucide-react';
 import { LayoutGrid, Plus, RotateCcw, Search, X, Pencil, Trash2, ChevronRight, CornerDownRight, AlertCircle } from 'lucide-react';
@@ -144,6 +144,15 @@ export default function SidebarMenu({
     userLevel: filters.userLevel || 'all',
   });
 
+  useEffect(() => {
+    filterForm.setData({
+      search: filters.search || '',
+      status: filters.status || 'all',
+      hierarchy: filters.hierarchy || 'all',
+      userLevel: filters.userLevel || 'all',
+    });
+  }, [filters.search, filters.status, filters.hierarchy, filters.userLevel]);
+
   const itemForm = useForm({
     parent_id: '' as string | number,
     label: '',
@@ -157,20 +166,47 @@ export default function SidebarMenu({
     user_levels: [] as number[],
   });
 
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
-    router.get('/settings/sidebar-menu', data, {
-      preserveState: true,
+    router.post('/settings/sidebar-menu/filter', data, {
       replace: true,
+      preserveScroll: true,
     });
   };
 
+  const handleSearchChange = (val: string) => {
+    filterForm.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      submitFilters({ search: val });
+    }, 350);
+  };
+
+  const handleStatusChange = (status: string) => {
+    filterForm.setData('status', status);
+    submitFilters({ status });
+  };
+
+  const handleHierarchyChange = (hierarchy: string) => {
+    filterForm.setData('hierarchy', hierarchy);
+    submitFilters({ hierarchy });
+  };
+
+  const handleUserLevelChange = (userLevel: string) => {
+    filterForm.setData('userLevel', userLevel);
+    submitFilters({ userLevel });
+  };
+
   const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({ search: '', status: 'all', hierarchy: 'all', userLevel: 'all' });
-    router.get(
-      '/settings/sidebar-menu',
+    router.post(
+      '/settings/sidebar-menu/filter',
       { search: '', status: 'all', hierarchy: 'all', userLevel: 'all' },
-      { preserveState: true, replace: true }
+      { replace: true }
     );
   };
 
@@ -222,7 +258,7 @@ export default function SidebarMenu({
         },
       });
     } else {
-      itemForm.post('/settings/sidebar-menu', {
+      itemForm.post('/settings/sidebar-menu/store', {
         onSuccess: () => {
           setShowModal(false);
         },
@@ -320,8 +356,7 @@ export default function SidebarMenu({
                 <input
                   type="text"
                   value={filterForm.data.search}
-                  onChange={(e) => filterForm.setData('search', e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitFilters()}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   placeholder="Search by label, key, href..."
                   className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring"
                 />
@@ -330,6 +365,7 @@ export default function SidebarMenu({
                     type="button"
                     onClick={() => {
                       filterForm.setData('search', '');
+                      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
                       submitFilters({ search: '' });
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -345,10 +381,7 @@ export default function SidebarMenu({
               <label className="text-[11px] font-semibold text-muted-foreground">Status</label>
               <select
                 value={filterForm.data.status}
-                onChange={(e) => {
-                  filterForm.setData('status', e.target.value);
-                  submitFilters({ status: e.target.value });
-                }}
+                onChange={(e) => handleStatusChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="all">All Statuses</option>
@@ -362,10 +395,7 @@ export default function SidebarMenu({
               <label className="text-[11px] font-semibold text-muted-foreground">Hierarchy</label>
               <select
                 value={filterForm.data.hierarchy}
-                onChange={(e) => {
-                  filterForm.setData('hierarchy', e.target.value);
-                  submitFilters({ hierarchy: e.target.value });
-                }}
+                onChange={(e) => handleHierarchyChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="all">All Levels</option>
@@ -379,10 +409,7 @@ export default function SidebarMenu({
               <label className="text-[11px] font-semibold text-muted-foreground">User Level</label>
               <select
                 value={filterForm.data.userLevel}
-                onChange={(e) => {
-                  filterForm.setData('userLevel', e.target.value);
-                  submitFilters({ userLevel: e.target.value });
-                }}
+                onChange={(e) => handleUserLevelChange(e.target.value)}
                 className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
               >
                 <option value="all">All User Levels</option>
