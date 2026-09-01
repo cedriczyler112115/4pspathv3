@@ -165,8 +165,8 @@ export default function AppLayout({ children, headerExtra }: AppLayoutProps) {
               href="/dashboard"
               className="flex items-center gap-2 min-w-0 group cursor-pointer"
             >
-              <div className="size-6.5 shrink-0 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-black text-[10px] shadow-xs group-hover:scale-105 transition-transform">
-                4P
+              <div className="h-8 w-10 shrink-0 rounded-lg bg-white dark:bg-slate-900 border border-border/70 p-0.5 flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform overflow-hidden">
+                <img src="/logos/dswd.png" alt="DSWD Logo" className="w-full h-full object-contain" />
               </div>
               {sidebarOpen && (
                 <div className="flex flex-col min-w-0 truncate">

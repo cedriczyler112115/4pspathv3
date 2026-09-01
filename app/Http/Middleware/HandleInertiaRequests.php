@@ -24,7 +24,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         return array_merge(parent::share($request), [
-            'appName' => config('app.name'),
+            'appName' => (string) \App\Models\ApplicationSetting::valueFor('app_name', (string) config('app.name', '4Ps PATH v3')),
             'auth.user' => fn () => $request->user()
                 ? array_merge(
                     $request->user()->only('id', 'name', 'email', 'avatar', 'user_level_id', 'can_scorecard'),
