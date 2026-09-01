@@ -368,16 +368,17 @@ export default function HarmonizedIpc({
     );
   };
 
-  const openAddModalForCategory = (catVal: number) => {
+  const openAddModalForCategory = (catVal?: number) => {
     if (!filterForm.data.position) {
       alert('Please select a position first before adding a target.');
       return;
     }
-    setAddingKraCategory(catVal);
+    const chosenCategory = catVal !== undefined ? catVal : (filterForm.data.category ? Number(filterForm.data.category) : '');
+    setAddingKraCategory(chosenCategory ? Number(chosenCategory) : 0);
     addForm.setData({
       positionId: filterForm.data.position,
       year: filterForm.data.year || String(new Date().getFullYear()),
-      category: catVal,
+      category: chosenCategory as any,
       activity: '',
       semester: '1',
       description: '',
@@ -550,6 +551,16 @@ export default function HarmonizedIpc({
               >
                 <RotateCcw className="size-3" />
                 <span>Reset</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openAddModalForCategory()}
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 text-xs font-bold shadow-2xs transition cursor-pointer"
+                title="Add new target"
+              >
+                <Plus className="size-3.5" />
+                <span>Add Target</span>
               </button>
             </div>
           </div>
@@ -762,14 +773,6 @@ export default function HarmonizedIpc({
                         <td colSpan={9} className="border-b border-border px-2.5 py-1.5">
                           <div className="flex items-center gap-2 font-bold text-foreground">
                             <span className="text-xs uppercase tracking-wide">{cat.label}</span>
-                            <button
-                              type="button"
-                              onClick={() => openAddModalForCategory(catVal)}
-                              className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 cursor-pointer shadow-2xs transition"
-                            >
-                              <Plus className="size-3.5" />
-                              <span>Add Target</span>
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1619,9 +1622,23 @@ export default function HarmonizedIpc({
 
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-500 mb-1">KRA Category</label>
-                    <span className="inline-flex rounded-full bg-cyan-100 text-cyan-800 font-bold text-xs px-2.5 py-1">
-                      {categories.find((c) => c.value === String(addingKraCategory))?.label || `Category #${addingKraCategory}`}
-                    </span>
+                    <select
+                      value={addForm.data.category !== undefined && addForm.data.category !== null && addForm.data.category !== 0 ? String(addForm.data.category) : ''}
+                      onChange={(e) => {
+                        const val = e.target.value ? Number(e.target.value) : '';
+                        setAddingKraCategory(val ? Number(val) : 0);
+                        addForm.setData('category', val as any);
+                      }}
+                      required
+                      className="h-9 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="">Please select</option>
+                      {categories.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>

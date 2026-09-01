@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, Fragment } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import UserAvatar from '../../Components/UserAvatar';
 import {
   FileText,
   Trash2,
@@ -42,6 +43,7 @@ import {
   Paperclip,
   Play,
   Presentation,
+  BookOpen,
 } from 'lucide-react';
 import AppLayout from '../../Layouts/AppLayout';
 import FormattedText, { formatTextValue } from '../../Components/FormattedText';
@@ -90,6 +92,12 @@ type IndicatorItem = {
   actQuality: number | null;
   actEfficiency: number | null;
   actTimeliness: number | null;
+  scorecardEfficiency?: string | null;
+  scorecardQuality?: string | null;
+  scorecardTimeliness?: string | null;
+  scorecardRemarks?: string | null;
+  scorecardCreated?: number | null;
+  scorecardCreatedByName?: string | null;
   averageScore: number | null;
   verified?: number;
 };
@@ -694,16 +702,12 @@ export default function SemestralTarget({
     const initialCounts: Record<number, number> = {};
     const baselineMap: Record<number, any> = {};
     const storageKey = `sem_target_drafts_${rating.id || 0}`;
-    let drafts: Record<number, any> = {};
     try {
-      drafts = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    } catch (e) {}
+      localStorage.removeItem(storageKey);
+    } catch (e) { }
 
     initialIndicators.forEach((g) => {
       g.items.forEach((item) => {
-        const draft = drafts[item.itemId];
-        const isFreshDraft = draft && draft.cachedAt && (Date.now() - draft.cachedAt < 900000);
-
         const baseline = {
           actualAccomplishment: formatTextValue(item.actualAccomplishment, ''),
           movs: formatTextValue(item.movs, ''),
@@ -713,28 +717,7 @@ export default function SemestralTarget({
           actTimeliness: item.actTimeliness ? String(item.actTimeliness) : '',
         };
         baselineMap[item.itemId] = { ...baseline };
-
-        initialMap[item.itemId] = {
-          actualAccomplishment: isFreshDraft && draft.actualAccomplishment !== undefined
-            ? draft.actualAccomplishment
-            : baseline.actualAccomplishment,
-          movs: isFreshDraft && draft.movs !== undefined
-            ? draft.movs
-            : baseline.movs,
-          remarks: isFreshDraft && draft.remarks !== undefined
-            ? draft.remarks
-            : baseline.remarks,
-          actEfficiency: isFreshDraft && draft.actEfficiency !== undefined
-            ? draft.actEfficiency
-            : baseline.actEfficiency,
-          actQuality: isFreshDraft && draft.actQuality !== undefined
-            ? draft.actQuality
-            : baseline.actQuality,
-          actTimeliness: isFreshDraft && draft.actTimeliness !== undefined
-            ? draft.actTimeliness
-            : baseline.actTimeliness,
-        };
-
+        initialMap[item.itemId] = { ...baseline };
         initialCounts[item.itemId] = item.attachmentCount ?? 0;
       });
     });
@@ -743,17 +726,8 @@ export default function SemestralTarget({
     setItemAttachmentCounts(initialCounts);
   }, [initialIndicators, rating.id]);
 
-  const saveLocalDraft = (itemId: number, data: any) => {
-    const storageKey = `sem_target_drafts_${rating.id || 0}`;
-    try {
-      const drafts = JSON.parse(localStorage.getItem(storageKey) || '{}');
-      drafts[itemId] = {
-        ...(drafts[itemId] || {}),
-        ...data,
-        cachedAt: Date.now(),
-      };
-      localStorage.setItem(storageKey, JSON.stringify(drafts));
-    } catch (e) {}
+  const saveLocalDraft = (_itemId: number, _data: any) => {
+    // Local storage draft disabled as requested
   };
 
   const handleItemFieldChange = (itemId: number, field: string, value: string) => {
@@ -1293,29 +1267,33 @@ export default function SemestralTarget({
   ) => {
     const formatted = formatTextValue(text, '');
     const clean = formatted.replace(/<[^>]*>?/gm, '').trim();
-    const isLong = clean.length > 200;
+    if (!clean && !text) return null;
+
     const isExpanded = Boolean(expandedItems[`${itemId}_${field}`]);
-    const displayText = isLong && !isExpanded ? clean.substring(0, 200) + '...' : (text || '-');
 
     return (
-      <div className="space-y-1">
-        <div className="text-[10px] text-slate-500 dark:text-slate-400 leading-tight">
-          <FormattedText value={displayText} />
-        </div>
-        {isLong && (
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => toggleExpanded(itemId, field)}
-            className="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none cursor-pointer"
-          >
-            <span>{isExpanded ? 'Show less' : 'Show more'}</span>
-            {isExpanded ? (
-              <ChevronUp className="w-3 h-3" />
-            ) : (
-              <ChevronDown className="w-3 h-3" />
-            )}
-          </button>
+      <div className="mt-1.5 w-full rounded-lg border border-border/80 bg-muted/30 overflow-hidden shadow-2xs transition-all">
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => toggleExpanded(itemId, field)}
+          className="flex items-center justify-between gap-1.5 px-2.5 py-1.5 w-full text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition cursor-pointer"
+        >
+          <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+            <BookOpen className="w-3 h-3 text-emerald-600 dark:text-emerald-400 opacity-90 shrink-0" />
+            <span className="whitespace-nowrap font-medium text-foreground">{isExpanded ? 'Hide rating guide' : 'Rating Guide'}</span>
+          </div>
+          {isExpanded ? (
+            <ChevronUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          ) : (
+            <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
+          )}
+        </button>
+
+        {isExpanded && (
+          <div className="border-t border-border/60 p-2.5 text-[11px] leading-relaxed text-foreground/90 bg-background/50">
+            <FormattedText value={text || '-'} />
+          </div>
         )}
       </div>
     );
@@ -1596,8 +1574,35 @@ export default function SemestralTarget({
 
   const categoriesList = includeStrategicFunction ? [1, 2, 3] : [2, 3];
 
+  const scoresHeader = (
+    <div className="hidden lg:flex items-center gap-1.5 text-xs">
+      <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-xs">
+        {includeStrategicFunction && (
+          <>
+            <span className="text-muted-foreground font-medium text-[10px]">Strategic Score:</span>
+            <span className="font-bold text-foreground font-mono text-[11px]">{functionScores?.strategicScore || '0.00000'}</span>
+            <span className="text-border mx-0.5">•</span>
+          </>
+        )}
+        <span className="text-muted-foreground font-medium text-[10px]">Core Score:</span>
+        <span className="font-bold text-foreground font-mono text-[11px]">{functionScores?.coreScore || '0.00000'}</span>
+        <span className="text-border mx-0.5">•</span>
+        <span className="text-muted-foreground font-medium text-[10px]">Support Score:</span>
+        <span className="font-bold text-foreground font-mono text-[11px]">{functionScores?.supportScore || '0.00000'}</span>
+      </div>
+
+      <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-xs">
+        <span className="text-muted-foreground font-medium text-[10px]">Final Rating:</span>
+        <span className="font-bold text-foreground font-mono text-[11px]">{functionScores?.finalScore || rating.finalRating}</span>
+        <span className="text-border mx-0.5">•</span>
+        <span className="text-muted-foreground font-medium text-[10px]">Adjectival:</span>
+        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-[11px]">{functionScores?.adjectival || rating.adjectivalRating}</span>
+      </div>
+    </div>
+  );
+
   return (
-    <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
+    <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []} headerExtra={scoresHeader}>
       <Head title={`Semestral Target - ${rating.year}`} />
 
       <div className="space-y-3">
@@ -1622,91 +1627,13 @@ export default function SemestralTarget({
               </div>
             </div>
 
-            <div>
-              <Link
-                href="/ipcrf/myratings"
-                className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
-              >
-                <ArrowLeft className="size-3.5" />
-                <span>Back to My Ratings</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* SCORES BAR & ACTION CONTROLS */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-0.5 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs">
-                {includeStrategicFunction && (
-                  <>
-                    <span className="text-muted-foreground font-medium text-[11px]">Strategic Score:</span>
-                    <span className="font-bold text-foreground font-mono">{functionScores?.strategicScore || '0.00000'}</span>
-                    <span className="text-border mx-0.5">•</span>
-                  </>
-                )}
-                <span className="text-muted-foreground font-medium text-[11px]">Core Score:</span>
-                <span className="font-bold text-foreground font-mono">{functionScores?.coreScore || '0.00000'}</span>
-                <span className="text-border mx-0.5">•</span>
-                <span className="text-muted-foreground font-medium text-[11px]">Support Score:</span>
-                <span className="font-bold text-foreground font-mono">{functionScores?.supportScore || '0.00000'}</span>
-              </div>
-
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs">
-                <span className="text-muted-foreground font-medium text-[11px]">Final Rating:</span>
-                <span className="font-bold text-foreground font-mono">{functionScores?.finalScore || rating.finalRating}</span>
-                <span className="text-border mx-0.5">•</span>
-                <span className="text-muted-foreground font-medium text-[11px]">Adjectival:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">{functionScores?.adjectival || rating.adjectivalRating}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Status Action Buttons */}
-              {isVerified ? (
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs">
-                  <CheckCircle2 className="size-3.5" />
-                  <span>Verified by Supervisor</span>
-                </span>
-              ) : rating.lock === 2 ? (
-                <button
-                  type="button"
-                  id="waiting-verification-btn"
-                  onClick={() => setShowCancelReadyModal(true)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white transition cursor-pointer shadow-2xs"
-                  title="Click to cancel ready submission and re-enable editing"
-                >
-                  <Clock className="size-3.5" />
-                  <span>Waiting for Verification</span>
-                </button>
-              ) : isLocked ? (
-                isEveryTargetComplete ? (
-                  <button
-                    type="button"
-                    id="im-ready-btn"
-                    onClick={() => setShowImReadyModal(true)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer"
-                  >
-                    <CheckCircle2 className="size-3.5" />
-                    <span>I'm Ready</span>
-                  </button>
-                ) : null
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleLockSemestralTarget}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer"
-                >
-                  <Lock className="size-3.5" />
-                  <span>Save &amp; Lock Target</span>
-                </button>
-              )}
-
+            <div className="flex items-center gap-2">
               {/* Options Dropdown */}
               <div ref={optionsDropdownRef} className="relative">
                 <button
                   type="button"
                   onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition cursor-pointer shadow-2xs"
+                  className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted transition cursor-pointer shadow-2xs"
                 >
                   <SlidersHorizontal className="size-3.5 text-muted-foreground" />
                   <span>Options</span>
@@ -1750,7 +1677,7 @@ export default function SemestralTarget({
                 <button
                   type="button"
                   onClick={() => setShowPrintDropdown(!showPrintDropdown)}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition cursor-pointer shadow-2xs"
+                  className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted transition cursor-pointer shadow-2xs"
                 >
                   <Printer className="size-3.5 text-muted-foreground" />
                   <span>Print</span>
@@ -1780,6 +1707,59 @@ export default function SemestralTarget({
                   </div>
                 )}
               </div>
+
+              <Link
+                href="/ipcrf/myratings"
+                className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"
+              >
+                <ArrowLeft className="size-3.5" />
+                <span>Back to My Ratings</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* ACTION CONTROLS */}
+          <div className="flex flex-wrap items-center justify-end gap-2.5 pt-0.5 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Status Action Buttons */}
+              {isVerified ? (
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-2xs">
+                  <CheckCircle2 className="size-3.5" />
+                  <span>Verified by Supervisor</span>
+                </span>
+              ) : rating.lock === 2 ? (
+                <button
+                  type="button"
+                  id="waiting-verification-btn"
+                  onClick={() => setShowCancelReadyModal(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-xs font-semibold text-white transition cursor-pointer shadow-2xs"
+                  title="Click to cancel ready submission and re-enable editing"
+                >
+                  <Clock className="size-3.5" />
+                  <span>Waiting for Verification</span>
+                </button>
+              ) : isLocked ? (
+                isEveryTargetComplete ? (
+                  <button
+                    type="button"
+                    id="im-ready-btn"
+                    onClick={() => setShowImReadyModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                  >
+                    <CheckCircle2 className="size-3.5" />
+                    <span>I'm Ready</span>
+                  </button>
+                ) : null
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLockSemestralTarget}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-semibold shadow-2xs transition cursor-pointer"
+                >
+                  <Lock className="size-3.5" />
+                  <span>Save &amp; Lock Target</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -1790,7 +1770,17 @@ export default function SemestralTarget({
                 <tr className="align-top">
                   <td className="pr-6 whitespace-nowrap">
                     <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Full Name</div>
-                    <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile?.fullName || '-'}</div>
+                    <div className="mt-0.5 font-bold uppercase text-foreground flex items-center gap-2">
+                      <UserAvatar
+                        user={{
+                          name: userProfile?.fullName,
+                          avatar_url: (userProfile as any)?.avatarUrl,
+                          avatar: (userProfile as any)?.avatar,
+                        }}
+                        size="sm"
+                      />
+                      <span>{userProfile?.fullName || '-'}</span>
+                    </div>
                   </td>
                   <td className="pr-6 whitespace-nowrap">
                     <div className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Position</div>
@@ -1833,11 +1823,10 @@ export default function SemestralTarget({
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center gap-1.5 rounded-t-lg px-3.5 py-2 text-xs font-bold transition cursor-pointer border-t border-x ${
-                      isActive
+                    className={`flex items-center gap-1.5 rounded-t-lg px-3.5 py-2 text-xs font-bold transition cursor-pointer border-t border-x ${isActive
                         ? 'bg-card text-emerald-600 dark:text-emerald-400 border-border -mb-[1px] shadow-2xs z-10'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/60 border-transparent'
-                    }`}
+                      }`}
                   >
                     <Icon className="size-3.5" />
                     <span>{tab.label}</span>
@@ -1907,9 +1896,9 @@ export default function SemestralTarget({
                     </select>
                   </div>
 
-                  <div className="space-y-1 flex items-end gap-2">
-                    <div className="flex-1 space-y-1">
-                      <label className="text-[11px] font-semibold text-muted-foreground">Per Page</label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center gap-2">
+                      <label className="text-[11px] font-semibold text-muted-foreground whitespace-nowrap">Per Page</label>
                       <select
                         value={perPage}
                         onChange={(e) => setPerPage(e.target.value)}
@@ -1951,7 +1940,7 @@ export default function SemestralTarget({
                 ) : (
                   <div className="space-y-4">
                     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
-                      <table className="w-full text-left text-xs border-collapse">
+                      <table className="w-full table-fixed text-left text-xs border-collapse">
                         {isLocked ? (
                           <colgroup>
                             <col style={{ width: '4%' }} />
@@ -2035,10 +2024,10 @@ export default function SemestralTarget({
                                             )
                                           }
                                           className={`hover:bg-muted/30 transition-colors align-top border-b border-border ${isEditingThisGroup
-                                              ? 'bg-sky-50/80 dark:bg-sky-950/40'
-                                              : contextMenu && contextMenu.itemId === item.itemId
-                                                ? 'bg-sky-50 dark:bg-sky-950/50'
-                                                : ''
+                                            ? 'bg-sky-50/80 dark:bg-sky-950/40'
+                                            : contextMenu && contextMenu.itemId === item.itemId
+                                              ? 'bg-sky-50 dark:bg-sky-950/50'
+                                              : ''
                                             }`}
                                         >
                                           {isFirstRow && (
@@ -2269,6 +2258,18 @@ export default function SemestralTarget({
                                                     className="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
                                                   />
                                                 )}
+                                                {item.scorecardEfficiency && (
+                                                  <div className="mt-1 flex flex-col items-center gap-0.5">
+                                                    <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:text-purple-300 border border-purple-500/20 shadow-2xs">
+                                                      Scorecard: {item.scorecardEfficiency}
+                                                    </span>
+                                                    {item.scorecardCreatedByName && (
+                                                      <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full">
+                                                        By: {item.scorecardCreatedByName}
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                )}
                                                 {renderTargetTextWithShowMore(item.efficiencyTarget, item.itemId, 'efficiency')}
                                               </div>
                                             ) : (
@@ -2309,6 +2310,18 @@ export default function SemestralTarget({
                                                     className="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
                                                   />
                                                 )}
+                                                {item.scorecardQuality && (
+                                                  <div className="mt-1 flex flex-col items-center gap-0.5">
+                                                    <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:text-purple-300 border border-purple-500/20 shadow-2xs">
+                                                      Scorecard: {item.scorecardQuality}
+                                                    </span>
+                                                    {item.scorecardCreatedByName && (
+                                                      <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full">
+                                                        By: {item.scorecardCreatedByName}
+                                                      </span>
+                                                    )}
+                                                  </div>
+                                                )}
                                                 {renderTargetTextWithShowMore(item.qualityTarget, item.itemId, 'quality')}
                                               </div>
                                             ) : (
@@ -2348,6 +2361,18 @@ export default function SemestralTarget({
                                                     placeholder="Score (1-5 or N/A)"
                                                     className="w-full rounded-md border border-input bg-background px-2.5 py-1 text-center text-xs font-semibold text-foreground shadow-xs focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 mb-1"
                                                   />
+                                                )}
+                                                {item.scorecardTimeliness && (
+                                                  <div className="mt-1 flex flex-col items-center gap-0.5">
+                                                    <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-700 dark:text-purple-300 border border-purple-500/20 shadow-2xs">
+                                                      Scorecard: {item.scorecardTimeliness}
+                                                    </span>
+                                                    {item.scorecardCreatedByName && (
+                                                      <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full">
+                                                        By: {item.scorecardCreatedByName}
+                                                      </span>
+                                                    )}
+                                                  </div>
                                                 )}
                                                 {renderTargetTextWithShowMore(item.timelinessTarget, item.itemId, 'timeliness')}
                                               </div>
@@ -2420,19 +2445,51 @@ export default function SemestralTarget({
                                               />
                                             ) : isLocked ? (
                                               isReadOnly ? (
-                                                <div className="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]">
-                                                  {itemValues[item.itemId]?.remarks || item.remarks || '-'}
+                                                <div className="space-y-2">
+                                                  <div className="text-xs text-foreground leading-normal whitespace-pre-line min-h-[200px]">
+                                                    {itemValues[item.itemId]?.remarks || item.remarks || '-'}
+                                                  </div>
+                                                  {item.scorecardRemarks && (
+                                                    <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
+                                                      {item.scorecardCreatedByName && (
+                                                        <div className="mb-1.5 border-b border-purple-500/20 pb-1">
+                                                          <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full block">
+                                                            By: {item.scorecardCreatedByName}
+                                                          </span>
+                                                        </div>
+                                                      )}
+                                                      <div className="text-xs text-foreground leading-normal whitespace-pre-line">
+                                                        {item.scorecardRemarks}
+                                                      </div>
+                                                    </div>
+                                                  )}
                                                 </div>
                                               ) : (
-                                                <AutoResizingTextarea
-                                                  rows={6}
-                                                  value={itemValues[item.itemId]?.remarks ?? item.remarks ?? ''}
-                                                  onChange={(e) => scheduleSave(item.itemId, 'remarks', e.target.value)}
-                                                  onBlur={(e) => saveField(item.itemId, 'remarks', e.target.value)}
-                                                  placeholder="Remarks..."
-                                                  className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
-                                                  style={{ minHeight: '200px' }}
-                                                />
+                                                <div className="space-y-2">
+                                                  <AutoResizingTextarea
+                                                    rows={6}
+                                                    value={itemValues[item.itemId]?.remarks ?? item.remarks ?? ''}
+                                                    onChange={(e) => scheduleSave(item.itemId, 'remarks', e.target.value)}
+                                                    onBlur={(e) => saveField(item.itemId, 'remarks', e.target.value)}
+                                                    placeholder="Remarks..."
+                                                    className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs leading-4 text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 min-h-[200px]"
+                                                    style={{ minHeight: '200px' }}
+                                                  />
+                                                  {item.scorecardRemarks && (
+                                                    <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-2 text-xs">
+                                                      {item.scorecardCreatedByName && (
+                                                        <div className="mb-1.5 border-b border-purple-500/20 pb-1">
+                                                          <span className="text-[9px] text-muted-foreground italic font-medium whitespace-nowrap truncate max-w-full block">
+                                                            By: {item.scorecardCreatedByName}
+                                                          </span>
+                                                        </div>
+                                                      )}
+                                                      <div className="text-xs text-foreground leading-normal whitespace-pre-line">
+                                                        {item.scorecardRemarks}
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
                                               )
                                             ) : (
                                               <div>
@@ -2553,8 +2610,8 @@ export default function SemestralTarget({
                               type="button"
                               onClick={() => setCurrentPage(page)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${page === pageToUse
-                                  ? 'bg-emerald-600 text-white shadow-xs'
-                                  : 'text-foreground hover:bg-muted'
+                                ? 'bg-emerald-600 text-white shadow-xs'
+                                : 'text-foreground hover:bg-muted'
                                 }`}
                             >
                               {page}
@@ -2844,8 +2901,8 @@ export default function SemestralTarget({
                 {/* Status Banner */}
                 <div
                   className={`rounded-2xl border p-6 flex flex-col items-center justify-center text-center space-y-2 ${isVerified
-                      ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100'
-                      : 'border-amber-200 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100'
+                    ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-100'
+                    : 'border-amber-200 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100'
                     }`}
                 >
                   <div className={`p-3 rounded-full ${isVerified ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
@@ -2959,12 +3016,20 @@ export default function SemestralTarget({
                 <div className="grid gap-4 md:grid-cols-2" dir="ltr" lang="en">
                   <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-2" dir="ltr" lang="en">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600">Rater's Comments, Recommendations & Commendations</h4>
-                    <div className="text-xs text-foreground leading-relaxed text-left [direction:ltr]" dangerouslySetInnerHTML={{ __html: rating.recommendation || '-' }} />
+                    <FormattedText
+                      value={rating.recommendation}
+                      className="text-xs text-foreground"
+                      fallback="-"
+                    />
                   </div>
 
                   <div className="rounded-xl border border-border bg-card p-4 shadow-2xs space-y-2" dir="ltr" lang="en">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-600">Strengths</h4>
-                    <div className="text-xs text-foreground leading-relaxed text-left [direction:ltr]" dangerouslySetInnerHTML={{ __html: rating.strengths || '-' }} />
+                    <FormattedText
+                      value={rating.strengths}
+                      className="text-xs text-foreground"
+                      fallback="-"
+                    />
                   </div>
                 </div>
               </div>
@@ -3005,11 +3070,10 @@ export default function SemestralTarget({
                         handleDocUploadFiles(e.dataTransfer.files);
                       }
                     }}
-                    className={`rounded-2xl border border-dashed p-6 transition text-center ${
-                      isDragOverDoc
+                    className={`rounded-2xl border border-dashed p-6 transition text-center ${isDragOverDoc
                         ? 'border-emerald-500 bg-emerald-500/5 dark:bg-emerald-500/10'
                         : 'border-border bg-muted/20'
-                    }`}
+                      }`}
                   >
                     <div className="flex flex-col items-center justify-center gap-3 text-center">
                       <div className="size-14 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -3319,8 +3383,8 @@ export default function SemestralTarget({
                         setActiveSubMenu(null);
                       }}
                       className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors ${!contextMenu?.itemId || (contextMenu.totalSubRows ?? 0) <= 1
-                          ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-slate-500'
-                          : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
+                        ? 'opacity-40 cursor-not-allowed text-slate-400 dark:text-slate-500'
+                        : 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
                         }`}
                     >
                       <MinusCircle className="w-4 h-4 text-rose-500 dark:text-rose-400 shrink-0" />
@@ -3412,12 +3476,12 @@ export default function SemestralTarget({
                                 <span>{history.field_label || history.field_name}</span>
                                 {history.action_type && (
                                   <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit ${history.action_type === 'newly_added'
-                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
-                                      : history.action_type === 'added_sub_target'
-                                        ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300'
-                                        : history.action_type === 'deleted'
-                                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
-                                          : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
+                                    : history.action_type === 'added_sub_target'
+                                      ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-950 dark:text-cyan-300'
+                                      : history.action_type === 'deleted'
+                                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
                                     }`}>
                                     {history.action_type.replace(/_/g, ' ')}
                                   </span>
@@ -4749,15 +4813,14 @@ export default function SemestralTarget({
             <div className="w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-4 border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
               <div className="flex items-start gap-3.5">
                 <div
-                  className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center shadow-sm ${
-                    confirmModal.variant === 'danger'
+                  className={`shrink-0 w-11 h-11 rounded-xl flex items-center justify-center shadow-sm ${confirmModal.variant === 'danger'
                       ? 'bg-red-100 text-red-600 dark:bg-red-950/80 dark:text-red-300 border border-red-300 dark:border-red-800/60'
                       : confirmModal.variant === 'emerald'
                         ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60'
                         : confirmModal.variant === 'warning'
                           ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60'
                           : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                  }`}
+                    }`}
                 >
                   {confirmModal.icon === 'trash' ? (
                     <Trash2 className="w-5 h-5" />
@@ -4796,15 +4859,14 @@ export default function SemestralTarget({
                     setConfirmModal(null);
                     onConf();
                   }}
-                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-md transition cursor-pointer ${
-                    confirmModal.variant === 'danger'
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold shadow-md transition cursor-pointer ${confirmModal.variant === 'danger'
                       ? 'bg-red-600 hover:bg-red-700 text-white'
                       : confirmModal.variant === 'emerald'
                         ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
                         : confirmModal.variant === 'warning'
                           ? 'bg-amber-600 hover:bg-amber-700 text-white'
                           : 'bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900'
-                  }`}
+                    }`}
                 >
                   {confirmModal.confirmText || 'Confirm'}
                 </button>

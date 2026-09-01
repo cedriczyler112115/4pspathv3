@@ -47,12 +47,16 @@ use Illuminate\Support\Str;
     'password',
     'google_id',
     'user_level_id',
+    'can_scorecard',
+    'avatar',
 ])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    protected $appends = ['avatar_url'];
 
     /**
      * Get the attributes that should be cast.
@@ -66,7 +70,25 @@ class User extends Authenticatable
             'password' => 'hashed',
             'user_level_id' => 'int',
             'is_supervisor' => 'boolean',
+            'can_scorecard' => 'int',
         ];
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (! empty($this->avatar)) {
+            if (str_starts_with($this->avatar, 'http://') || str_starts_with($this->avatar, 'https://') || str_starts_with($this->avatar, '/')) {
+                return $this->avatar;
+            }
+
+            return asset('storage/'.$this->avatar);
+        }
+
+        if (isset($this->attributes['google_avatar_url']) && ! empty($this->attributes['google_avatar_url'])) {
+            return $this->attributes['google_avatar_url'];
+        }
+
+        return null;
     }
 
     /**

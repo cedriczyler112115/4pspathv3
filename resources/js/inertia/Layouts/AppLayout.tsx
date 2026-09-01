@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { Link, usePage } from '@inertiajs/react';
+import UserAvatar from '../Components/UserAvatar';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -37,9 +38,10 @@ type AppLayoutProps = PropsWithChildren<{
     email: string;
   } | null;
   sidebar?: any[];
+  headerExtra?: React.ReactNode;
 }>;
 
-export default function AppLayout({ children }: AppLayoutProps) {
+export default function AppLayout({ children, headerExtra }: AppLayoutProps) {
   const { auth, appName = '4Ps PATH v3', navigation } = usePage<{
     auth?: { user?: { name: string; email: string } };
     appName?: string;
@@ -238,8 +240,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                   href="/settings/profile"
                   className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition cursor-pointer"
                 >
-                  <div className="relative size-7 shrink-0 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-[10px] shadow-xs">
-                    {userInitials}
+                  <div className="relative shrink-0">
+                    <UserAvatar user={user} size="sm" fallbackInitials={userInitials} />
                     <span className="absolute bottom-0 right-0 size-1.5 rounded-full bg-emerald-400 ring-1 ring-sidebar" />
                   </div>
                   <div className="flex flex-col min-w-0">
@@ -274,9 +276,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 <Link
                   href="/settings/profile"
                   title={user?.name || 'User Profile'}
-                  className="relative size-8 rounded-full bg-emerald-800 text-white flex items-center justify-center font-bold text-[10px] shadow-xs hover:scale-105 transition-transform cursor-pointer"
+                  className="relative hover:scale-105 transition-transform cursor-pointer"
                 >
-                  {userInitials}
+                  <UserAvatar user={user} size="md" fallbackInitials={userInitials} />
                   <span className="absolute bottom-0 right-0 size-2 rounded-full bg-emerald-400 ring-1.5 ring-sidebar" />
                 </Link>
               </div>
@@ -338,19 +340,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </nav>
           </div>
 
-          {/* RIGHT: Quick Search, Dark Mode Toggle, User Menu */}
+          {/* RIGHT: Header Extra (Scores Bar), Dark Mode Toggle, User Menu */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Quick Search */}
-            <Link
-              href="/search"
-              className="hidden md:flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-input bg-muted/30 text-muted-foreground text-xs hover:bg-muted/70 hover:text-foreground transition"
-            >
-              <Search className="size-3" />
-              <span className="text-[10px]">Search users...</span>
-              <kbd className="ml-1.5 rounded border border-border bg-background px-1 text-[8px] font-mono text-muted-foreground">
-                /
-              </kbd>
-            </Link>
+            {headerExtra}
 
             {/* Dark/Light Mode Toggle */}
             <button
@@ -369,9 +361,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-1.5 h-7 pl-1 pr-2 rounded-lg hover:bg-muted text-foreground transition text-xs font-semibold border border-transparent hover:border-border cursor-pointer"
               >
-                <div className="size-5 rounded-full bg-emerald-800 text-white flex items-center justify-center text-[9px] font-bold shadow-xs">
-                  {userInitials}
-                </div>
+                <UserAvatar user={user} size="xs" fallbackInitials={userInitials} />
                 <span className="hidden sm:inline max-w-[120px] truncate text-xs">
                   {user?.name || 'User'}
                 </span>

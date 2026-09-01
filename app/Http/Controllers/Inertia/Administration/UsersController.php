@@ -50,6 +50,11 @@ class UsersController extends Controller
             'userLevelId' => (string) ($u->user_level_id ?? ''),
             'userLevelName' => $u->user_level_name ?? null,
             'isSupervisor' => (bool) ($u->is_supervisor ?? false),
+            'canScorecard' => (int) ($u->can_scorecard ?? 0),
+            'avatar' => $u->avatar ?? null,
+            'avatarUrl' => ! empty($u->avatar)
+                ? (str_starts_with($u->avatar, 'http') ? $u->avatar : asset('storage/'.$u->avatar))
+                : null,
             'isStatus' => (int) $u->is_status,
         ]);
 
@@ -88,6 +93,26 @@ class UsersController extends Controller
 
     public function update(Request $request, ManageUser $manageUser, int $userId): RedirectResponse
     {
+        if ($request->hasFile('editAvatar')) {
+            $request->validate([
+                'editAvatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+            ]);
+
+            $targetUser = DB::table('users')->where('id', $userId)->first();
+            if ($targetUser?->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($targetUser->avatar)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($targetUser->avatar);
+            }
+
+            $path = $request->file('editAvatar')->store('avatars', 'public');
+            DB::table('users')->where('id', $userId)->update(['avatar' => $path]);
+        } elseif ($request->boolean('removeAvatar')) {
+            $targetUser = DB::table('users')->where('id', $userId)->first();
+            if ($targetUser?->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($targetUser->avatar)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($targetUser->avatar);
+            }
+            DB::table('users')->where('id', $userId)->update(['avatar' => null]);
+        }
+
         $data = $request->validate([
             'editLastName' => ['required', 'string', 'max:255'],
             'editFirstName' => ['required', 'string', 'max:255'],
@@ -101,6 +126,7 @@ class UsersController extends Controller
             'editUserLevelId' => ['nullable', 'string', Rule::exists('user_level', 'level_id')],
             'editContactNumber' => ['required', 'string', 'max:255'],
             'editIsSupervisor' => ['required', 'boolean'],
+            'editCanScorecard' => ['nullable', 'boolean'],
         ]);
 
         $manageUser->update($userId, $data);

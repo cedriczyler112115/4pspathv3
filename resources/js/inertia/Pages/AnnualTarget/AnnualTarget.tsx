@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../Layouts/AppLayout';
+import UserAvatar from '../../Components/UserAvatar';
 import FormattedText, { formatTextValue } from '../../Components/FormattedText';
 import AutoResizingTextarea, { adjustTextareaHeight } from '../../Components/AutoResizingTextarea';
 
@@ -702,7 +703,17 @@ export default function AnnualTarget({
                   <tr className="align-top">
                     <td className="pr-6 whitespace-nowrap">
                       <div className="text-[10px] font-semibold uppercase text-muted-foreground">Full Name</div>
-                      <div className="mt-0.5 font-bold uppercase text-foreground">{userProfile.fullName || '-'}</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground flex items-center gap-2">
+                        <UserAvatar
+                          user={{
+                            name: userProfile.fullName,
+                            avatar_url: (userProfile as any).avatarUrl,
+                            avatar: (userProfile as any).avatar,
+                          }}
+                          size="sm"
+                        />
+                        <span>{userProfile.fullName || '-'}</span>
+                      </div>
                     </td>
                     <td className="pr-6 whitespace-nowrap">
                       <div className="text-[10px] font-semibold uppercase text-muted-foreground">Position</div>

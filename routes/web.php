@@ -6,13 +6,35 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 // Logout handler
-Route::match(['get', 'post'], '/logout', function (Request $request) {
+Route::post('/logout', function (Request $request) {
+    $user = Auth::guard('web')->user();
+    if ($user instanceof \App\Models\User) {
+        app(\App\Services\SidebarMenuTree::class)->forgetUser($user);
+    } else {
+        app(\App\Services\SidebarMenuTree::class)->forget();
+    }
+
     Auth::guard('web')->logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
 
     return redirect('/login');
 })->name('logout');
+
+Route::get('/logout', function (Request $request) {
+    $user = Auth::guard('web')->user();
+    if ($user instanceof \App\Models\User) {
+        app(\App\Services\SidebarMenuTree::class)->forgetUser($user);
+    } else {
+        app(\App\Services\SidebarMenuTree::class)->forget();
+    }
+
+    Auth::guard('web')->logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/login');
+});
 
 // Google OAuth
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])

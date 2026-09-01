@@ -11,31 +11,62 @@ use stdClass;
 final class UserDirectory
 {
     /** @return LengthAwarePaginator<int, stdClass> */
-    public function search(string $search, string $divisionId, string $sectionId, int $perPage): LengthAwarePaginator
-    {
-        return $this->baseQuery([
-            'users.id',
-            'users.last_name',
-            'users.first_name',
-            'users.middle_name',
-            'users.extension_name',
-            'users.email',
-            'users.contact_number',
-            'users.position',
-        ])
+    public function search(
+        string $search,
+        string $divisionId,
+        string $sectionId,
+        string $year,
+        string $semester,
+        int $perPage
+    ): LengthAwarePaginator {
+        return DB::table('users')
+            ->leftJoin('ipc_semester', 'ipc_semester.user_id', '=', 'users.id')
+            ->leftJoin('lib_division', 'users.division_id', '=', 'lib_division.id')
+            ->leftJoin('lib_section', 'users.section_id', '=', 'lib_section.id')
+            ->leftJoin('user_level', 'users.user_level_id', '=', 'user_level.level_id')
+            ->select([
+                'users.id as user_id',
+                'users.last_name',
+                'users.first_name',
+                'users.middle_name',
+                'users.extension_name',
+                'users.email',
+                'users.contact_number',
+                'users.position',
+                'users.designation',
+                'users.avatar',
+                'ipc_semester.id as semester_id',
+                'ipc_semester.year',
+                'ipc_semester.semester',
+                'ipc_semester.final_rating',
+                'ipc_semester.adjectival_rating',
+                'ipc_semester.overall_remarks',
+                'ipc_semester.lock',
+                'ipc_semester.is_ready',
+                DB::raw('COALESCE(lib_division.division_name, users.division) as division_name'),
+                DB::raw('COALESCE(lib_section.section_name, users.section) as section_name'),
+            ])
             ->when($search !== '', function ($query) use ($search): void {
                 $like = '%'.$search.'%';
 
-                $query->where(function ($nameQuery) use ($like): void {
-                    $nameQuery
-                        ->whereRaw("CONCAT_WS(' ', users.last_name, users.first_name, users.middle_name, users.extension_name) LIKE ?", [$like])
-                        ->orWhereRaw("CONCAT_WS(' ', users.first_name, users.middle_name, users.last_name, users.extension_name) LIKE ?", [$like]);
+                $query->where(function ($q) use ($like): void {
+                    $q->whereRaw("CONCAT_WS(' ', users.last_name, users.first_name, users.middle_name, users.extension_name) LIKE ?", [$like])
+                        ->orWhereRaw("CONCAT_WS(' ', users.first_name, users.middle_name, users.last_name, users.extension_name) LIKE ?", [$like])
+                        ->orWhere('users.position', 'like', $like)
+                        ->orWhere('users.designation', 'like', $like)
+                        ->orWhere('users.email', 'like', $like)
+                        ->orWhere('ipc_semester.year', 'like', $like)
+                        ->orWhere('ipc_semester.adjectival_rating', 'like', $like);
                 });
             })
             ->when($divisionId !== '', fn ($query) => $query->where('users.division_id', $divisionId))
             ->when($sectionId !== '', fn ($query) => $query->where('users.section_id', $sectionId))
+            ->when($year !== '', fn ($query) => $query->where('ipc_semester.year', $year))
+            ->when($semester !== '', fn ($query) => $query->where('ipc_semester.semester', $semester))
             ->orderBy('users.last_name')
             ->orderBy('users.first_name')
+            ->orderByDesc('ipc_semester.year')
+            ->orderBy('ipc_semester.semester')
             ->paginate($perPage);
     }
 
@@ -56,6 +87,8 @@ final class UserDirectory
             'users.section_id',
             'users.supervisor_id',
             'users.is_supervisor',
+            'users.can_scorecard',
+            'users.avatar',
             'users.division',
             'users.section',
             'users.is_status',
@@ -97,6 +130,7 @@ final class UserDirectory
             'users.section_id',
             'users.supervisor_id',
             'users.is_supervisor',
+            'users.avatar',
             'users.division',
             'users.section',
             'users.is_status',

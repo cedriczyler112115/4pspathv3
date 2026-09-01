@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../Layouts/AppLayout';
+import UserAvatar from '../../Components/UserAvatar';
 import {
   Users,
   UserCheck,
@@ -233,9 +234,15 @@ export default function MyStaff({
                       {/* STAFF MEMBER */}
                       <td className="px-3 py-2.5 border-r border-border">
                         <div className="flex items-center gap-2.5">
-                          <div className="size-7 shrink-0 rounded-full bg-emerald-700/15 text-emerald-800 dark:text-emerald-300 font-bold text-[10px] flex items-center justify-center border border-emerald-600/20">
-                            {getInitials(row.fullName)}
-                          </div>
+                          <UserAvatar
+                            user={{
+                              name: row.fullName,
+                              avatar_url: (row as any).avatarUrl,
+                              avatar: (row as any).avatar,
+                            }}
+                            size="sm"
+                            fallbackInitials={getInitials(row.fullName)}
+                          />
                           <div>
                             <div className="font-semibold text-foreground text-xs leading-tight">
                               {row.fullName || 'Unnamed Staff'}
@@ -395,9 +402,15 @@ export default function MyStaff({
             {/* MODAL HEADER */}
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="size-8 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
-                  {getInitials(viewingStaff.fullName)}
-                </div>
+                <UserAvatar
+                  user={{
+                    name: viewingStaff.fullName,
+                    avatar_url: (viewingStaff as any).avatarUrl,
+                    avatar: (viewingStaff as any).avatar,
+                  }}
+                  size="md"
+                  fallbackInitials={getInitials(viewingStaff.fullName)}
+                />
                 <div>
                   <h3 className="text-sm font-bold text-foreground">{viewingStaff.fullName}</h3>
                   <p className="text-[11px] text-muted-foreground">Staff Profile Details</p>

@@ -61,6 +61,7 @@ class VerificationController extends Controller
             'users.contact_number',
             'users.position',
             'users.designation',
+            'users.avatar',
             'users.division_id',
             'users.section_id',
             DB::raw('COALESCE(lib_division.division_name, users.division) as division_name'),
@@ -96,6 +97,10 @@ class VerificationController extends Controller
                 'contactNumber' => $r->contact_number,
                 'position' => $r->position,
                 'designation' => $r->designation,
+                'avatar' => $r->avatar ?? null,
+                'avatarUrl' => ! empty($r->avatar)
+                    ? (str_starts_with($r->avatar, 'http') ? $r->avatar : asset('storage/'.$r->avatar))
+                    : null,
                 'divisionName' => $r->division_name,
                 'sectionName' => $r->section_name,
                 'userLevelName' => $r->user_level_name,

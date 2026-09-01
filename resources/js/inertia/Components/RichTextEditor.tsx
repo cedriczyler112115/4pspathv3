@@ -25,16 +25,247 @@ interface RichTextEditorProps {
   readOnly?: boolean;
 }
 
-function cleanHtmlContent(raw: string): string {
-  if (!raw) return '';
-  return raw
-    .replace(/<font[^>]*face=["']?Symbol["']?[^>]*>(.*?)<\/font>/gis, '$1')
-    .replace(/<font[^>]*>(.*?)<\/font>/gis, '$1')
-    .replace(/<!--\[if.*?\]>.*?<!\[endif\]-->/gis, '')
-    .replace(/<o:p>.*?<\/o:p>/gis, '')
-    .replace(/style="[^"]*mso-[^"]*"/gis, '')
-    .replace(/style="[^"]*font-family:\s*Symbol[^"]*"/gis, '')
-    .replace(/class="Mso[^"]*"/gis, '');
+const BULLET_CHAR_REGEX = /^[\s\u00A0]*[\u2022\u00B7\u006F\u00A7\uF0B7\uF0A7\uF0D8\u25CF\u25CB\u25A0\*\-\–\—][\s\u00A0]*/i;
+const NUMBER_PREFIX_REGEX = /^[\s\u00A0]*\(?(\d+|[a-zA-Z]|[ivxmldIVXMLD]+)[\.\)][\s\u00A0]*/;
+
+function cleanNodeAttributes(node: HTMLElement) {
+  const attributes = Array.from(node.attributes);
+  for (const attr of attributes) {
+    if (
+      attr.name.startsWith('mso-') ||
+      (attr.name === 'class' && attr.value.startsWith('Mso')) ||
+      (attr.name === 'style' && /mso-|font-family:\s*(Symbol|Wingdings)/i.test(attr.value))
+    ) {
+      node.removeAttribute(attr.name);
+    }
+  }
+
+  if (node.hasAttribute('style')) {
+    let styleVal = node.getAttribute('style') || '';
+    styleVal = styleVal
+      .replace(/mso-[^;]+;?/gi, '')
+      .replace(/font-family:\s*['"]?(Symbol|Wingdings)['"]?;?/gi, '')
+      .trim();
+    if (styleVal) {
+      node.setAttribute('style', styleVal);
+    } else {
+      node.removeAttribute('style');
+    }
+  }
+
+  Array.from(node.children).forEach((child) => cleanNodeAttributes(child as HTMLElement));
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+export function convertPlainTextToHtml(text: string): string {
+  if (!text) return '';
+  const lines = text.split(/\r?\n/);
+  let html = '';
+  let currentListType: 'ul' | 'ol' | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (currentListType) {
+        html += `</${currentListType}>`;
+        currentListType = null;
+      }
+      continue;
+    }
+
+    const isBullet = BULLET_CHAR_REGEX.test(line);
+    const isNumber = !isBullet && NUMBER_PREFIX_REGEX.test(line);
+
+    if (isBullet) {
+      const cleanContent = line.replace(BULLET_CHAR_REGEX, '');
+      if (currentListType !== 'ul') {
+        if (currentListType) html += `</${currentListType}>`;
+        html += '<ul>';
+        currentListType = 'ul';
+      }
+      html += `<li>${escapeHtml(cleanContent)}</li>`;
+    } else if (isNumber) {
+      const cleanContent = line.replace(NUMBER_PREFIX_REGEX, '');
+      if (currentListType !== 'ol') {
+        if (currentListType) html += `</${currentListType}>`;
+        html += '<ol>';
+        currentListType = 'ol';
+      }
+      html += `<li>${escapeHtml(cleanContent)}</li>`;
+    } else {
+      if (currentListType) {
+        html += `</${currentListType}>`;
+        currentListType = null;
+      }
+      html += `<p>${escapeHtml(line)}</p>`;
+    }
+  }
+
+  if (currentListType) {
+    html += `</${currentListType}>`;
+  }
+
+  return html;
+}
+
+export function cleanAndTransformWordHtml(rawHtml: string): string {
+  if (!rawHtml) return '';
+
+  if (!/<[a-z][\s\S]*>/i.test(rawHtml)) {
+    return convertPlainTextToHtml(rawHtml);
+  }
+
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(rawHtml, 'text/html');
+    const body = doc.body;
+
+    if (!body) return rawHtml;
+
+    const unwantedSelectors = ['style', 'meta', 'link', 'title', 'xml', 'script'];
+    unwantedSelectors.forEach((sel) => {
+      body.querySelectorAll(sel).forEach((el) => el.remove());
+    });
+
+    const removeComments = (parent: Node) => {
+      const children = Array.from(parent.childNodes);
+      for (const child of children) {
+        if (child.nodeType === Node.COMMENT_NODE) {
+          child.remove();
+        } else if (child.nodeType === Node.ELEMENT_NODE) {
+          removeComments(child);
+        }
+      }
+    };
+    removeComments(body);
+
+    const container = doc.createElement('div');
+    let currentList: { type: 'ul' | 'ol'; element: HTMLElement } | null = null;
+
+    const processElement = (el: HTMLElement) => {
+      const styleAttr = el.getAttribute('style') || '';
+      const classAttr = el.className || '';
+      const isMsoList = /mso-list\s*:/i.test(styleAttr) || /MsoList/i.test(classAttr);
+
+      const ignoreSpan = el.querySelector('[style*="mso-list:Ignore"]') || el.querySelector('.mso-list-ignore');
+      let textPrefix = el.textContent || '';
+      if (ignoreSpan) {
+        textPrefix = ignoreSpan.textContent || textPrefix;
+      }
+
+      const isBullet =
+        BULLET_CHAR_REGEX.test(textPrefix) ||
+        (isMsoList && /font-family:\s*(Symbol|Wingdings)/i.test(styleAttr));
+      const isNumber = !isBullet && (NUMBER_PREFIX_REGEX.test(textPrefix) || isMsoList);
+
+      const isListItem = isMsoList || isBullet || isNumber || el.tagName.toLowerCase() === 'li';
+
+      if (isListItem) {
+        const listType: 'ul' | 'ol' = isBullet || (!isNumber && !NUMBER_PREFIX_REGEX.test(textPrefix)) ? 'ul' : 'ol';
+
+        if (ignoreSpan) {
+          ignoreSpan.remove();
+        }
+
+        const removeLeadingPrefix = (node: Node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            let txt = node.nodeValue || '';
+            if (listType === 'ul') {
+              txt = txt.replace(BULLET_CHAR_REGEX, '');
+            } else {
+              txt = txt.replace(NUMBER_PREFIX_REGEX, '');
+            }
+            node.nodeValue = txt;
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const elem = node as HTMLElement;
+            if (!elem.getAttribute('style')?.includes('mso-list:Ignore')) {
+              if (elem.firstChild) {
+                removeLeadingPrefix(elem.firstChild);
+              }
+            }
+          }
+        };
+
+        if (el.firstChild) {
+          removeLeadingPrefix(el.firstChild);
+        }
+
+        const li = doc.createElement('li');
+        while (el.firstChild) {
+          li.appendChild(el.firstChild);
+        }
+
+        cleanNodeAttributes(li);
+
+        if (!currentList || currentList.type !== listType) {
+          const newList = doc.createElement(listType);
+          container.appendChild(newList);
+          currentList = { type: listType, element: newList };
+        }
+        currentList.element.appendChild(li);
+      } else {
+        currentList = null;
+
+        const tagName = el.tagName.toLowerCase();
+        if (tagName === 'ul' || tagName === 'ol') {
+          cleanNodeAttributes(el);
+          el.querySelectorAll('li').forEach((li) => {
+            if (li.firstChild) {
+              let txt = li.firstChild.nodeValue || '';
+              txt = txt.replace(BULLET_CHAR_REGEX, '').replace(NUMBER_PREFIX_REGEX, '');
+              if (li.firstChild.nodeType === Node.TEXT_NODE) {
+                li.firstChild.nodeValue = txt;
+              }
+            }
+          });
+          container.appendChild(el.cloneNode(true));
+        } else if (
+          tagName === 'p' ||
+          tagName === 'h1' ||
+          tagName === 'h2' ||
+          tagName === 'h3' ||
+          tagName === 'h4' ||
+          tagName === 'blockquote'
+        ) {
+          cleanNodeAttributes(el);
+          if (el.textContent?.trim() || el.querySelector('img, br')) {
+            container.appendChild(el.cloneNode(true));
+          }
+        } else if (el.childNodes.length > 0) {
+          Array.from(el.children).forEach((child) => {
+            processElement(child as HTMLElement);
+          });
+        }
+      }
+    };
+
+    const topElements = Array.from(body.children);
+    if (topElements.length === 0 && body.textContent?.trim()) {
+      return convertPlainTextToHtml(body.textContent);
+    }
+
+    topElements.forEach((el) => processElement(el as HTMLElement));
+
+    let result = container.innerHTML;
+    result = result
+      .replace(/<font[^>]*>(.*?)<\/font>/gis, '$1')
+      .replace(/<o:p>.*?<\/o:p>/gis, '')
+      .replace(/class="Mso[^"]*"/gis, '')
+      .replace(/style="[^"]*mso-[^"]*"/gis, '');
+
+    return result || body.innerHTML;
+  } catch (err) {
+    console.error('Error cleaning Word HTML:', err);
+    return rawHtml;
+  }
 }
 
 export default function RichTextEditor({
@@ -47,18 +278,18 @@ export default function RichTextEditor({
 }: RichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [showHtml, setShowHtml] = useState(false);
-  const [htmlContent, setHtmlContent] = useState(cleanHtmlContent(value || ''));
+  const [htmlContent, setHtmlContent] = useState(cleanAndTransformWordHtml(value || ''));
 
   // Initialize innerHTML on mount
   useEffect(() => {
     if (editorRef.current) {
-      editorRef.current.innerHTML = cleanHtmlContent(value || '');
+      editorRef.current.innerHTML = cleanAndTransformWordHtml(value || '');
     }
   }, []);
 
   // Synchronize incoming value only when external update happens and user is NOT typing inside
   useEffect(() => {
-    const cleaned = cleanHtmlContent(value || '');
+    const cleaned = cleanAndTransformWordHtml(value || '');
     if (editorRef.current && document.activeElement !== editorRef.current) {
       if (editorRef.current.innerHTML !== cleaned) {
         editorRef.current.innerHTML = cleaned;
@@ -91,11 +322,15 @@ export default function RichTextEditor({
     const text = e.clipboardData.getData('text/plain');
     const html = e.clipboardData.getData('text/html');
 
+    let cleaned = '';
     if (html) {
-      const cleaned = cleanHtmlContent(html);
-      document.execCommand('insertHTML', false, cleaned);
+      cleaned = cleanAndTransformWordHtml(html);
     } else if (text) {
-      document.execCommand('insertText', false, text);
+      cleaned = convertPlainTextToHtml(text);
+    }
+
+    if (cleaned) {
+      document.execCommand('insertHTML', false, cleaned);
     }
 
     if (editorRef.current) {
@@ -107,7 +342,7 @@ export default function RichTextEditor({
 
   const handleHtmlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
-    const cleaned = cleanHtmlContent(val);
+    const cleaned = cleanAndTransformWordHtml(val);
     setHtmlContent(cleaned);
     onChange(cleaned);
     if (editorRef.current) {

@@ -26,7 +26,10 @@ class HandleInertiaRequests extends Middleware
         return array_merge(parent::share($request), [
             'appName' => config('app.name'),
             'auth.user' => fn () => $request->user()
-                ? $request->user()->only('id', 'name', 'email')
+                ? array_merge(
+                    $request->user()->only('id', 'name', 'email', 'avatar', 'user_level_id', 'can_scorecard'),
+                    ['avatar_url' => $request->user()->avatar_url]
+                )
                 : null,
             'flash' => fn () => [
                 'success' => $request->session()->get('success'),

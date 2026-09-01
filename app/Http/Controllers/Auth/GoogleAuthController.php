@@ -70,6 +70,9 @@ class GoogleAuthController extends Controller
         Auth::login($user, true);
         $request->session()->regenerate();
 
+        app(\App\Services\SidebarMenuTree::class)->forgetUser($user);
+        app(\App\Services\SidebarMenuTree::class)->active($user);
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 }

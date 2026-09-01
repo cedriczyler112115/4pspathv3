@@ -1,7 +1,82 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
-import { LayoutGrid, Plus, RotateCcw, Search, X, Pencil, Trash2, ChevronRight, CornerDownRight } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import { LayoutGrid, Plus, RotateCcw, Search, X, Pencil, Trash2, ChevronRight, CornerDownRight, AlertCircle } from 'lucide-react';
+
+function isValidIconComponent(Comp: any): boolean {
+  if (!Comp) return false;
+  return typeof Comp === 'function' || (typeof Comp === 'object' && (Comp.$$typeof || Comp.render));
+}
+
+function getLucideIcon(name?: string | null) {
+  if (!name) return null;
+
+  try {
+    if ((LucideIcons as any)[name] && isValidIconComponent((LucideIcons as any)[name])) {
+      return (LucideIcons as any)[name];
+    }
+
+    const pascalName = name
+      .split(/[-_]+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join('');
+
+    if ((LucideIcons as any)[pascalName] && isValidIconComponent((LucideIcons as any)[pascalName])) {
+      return (LucideIcons as any)[pascalName];
+    }
+
+    const aliasMap: Record<string, any> = {
+      'dashboard': LucideIcons.LayoutDashboard,
+      'chart-bar': LucideIcons.BarChart3,
+      'chart-bar-square': LucideIcons.BarChart3,
+      'shield-check': LucideIcons.ShieldCheck,
+      'list-bullet': LucideIcons.ListOrdered,
+      'user': LucideIcons.User,
+      'arrow-left-end-on-rectangle': LucideIcons.LogOut,
+      'building-library': LucideIcons.Building2,
+      'user-group': LucideIcons.Users,
+      'users': LucideIcons.UserCheck,
+      'book-open-text': LucideIcons.BookOpen,
+      'magnifying-glass': LucideIcons.Search,
+      'viewfinder-circle': LucideIcons.Target,
+      'document-text': LucideIcons.FileText,
+      'calendar-date-range': LucideIcons.Calendar,
+      'cog': LucideIcons.Settings,
+      'cog-6-tooth': LucideIcons.Settings,
+      'pencil-square': LucideIcons.Pencil,
+      'arrow-path-rounded-square': LucideIcons.RefreshCw,
+      'calendar-days': LucideIcons.CalendarDays,
+      'clipboard-document-check': LucideIcons.CheckSquare,
+      'folder-kanban': LucideIcons.FolderKanban,
+      'sparkles': LucideIcons.Sparkles,
+      'layers': LucideIcons.Layers,
+    };
+
+    if (aliasMap[name.toLowerCase()] && isValidIconComponent(aliasMap[name.toLowerCase()])) {
+      return aliasMap[name.toLowerCase()];
+    }
+  } catch (e) {
+    return LucideIcons.Folder;
+  }
+
+  return LucideIcons.Folder;
+}
+
+function pascalToKebab(str: string): string {
+  return str
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1-$2')
+    .toLowerCase();
+}
+
+const allLucideIcons = Object.keys(LucideIcons)
+  .filter((key) => {
+    if (key === 'default' || key === 'createLucideIcon' || key.startsWith('Lucide') || key === 'icons') return false;
+    const item = (LucideIcons as any)[key];
+    return isValidIconComponent(item);
+  })
+  .map((key) => pascalToKebab(key));
 
 type RowItem = {
   id: number;
@@ -101,25 +176,28 @@ export default function SidebarMenu({
 
   const openCreateModal = (parentId: number | null = null) => {
     setEditingId(null);
+    itemForm.clearErrors();
     itemForm.setData({
-      parent_id: parentId ?? '',
+      parent_id: parentId ? String(parentId) : '',
       label: '',
       key: '',
       href: '',
       icon: '',
       badge_text: '',
       badge_cls: '',
-      sort_order: 0,
+      sort_order: (rows.length + 1) * 10,
       is_active: true,
       user_levels: [],
     });
+    setIconSearch('');
     setShowModal(true);
   };
 
   const openEditModal = (item: RowItem) => {
     setEditingId(item.id);
+    itemForm.clearErrors();
     itemForm.setData({
-      parent_id: item.parent_id ?? '',
+      parent_id: item.parent_id ? String(item.parent_id) : '',
       label: item.label,
       key: item.key ?? '',
       href: item.href ?? '',
@@ -130,6 +208,7 @@ export default function SidebarMenu({
       is_active: item.is_active,
       user_levels: item.user_levels || [],
     });
+    setIconSearch(item.icon ?? '');
     setShowModal(true);
   };
 
@@ -151,9 +230,17 @@ export default function SidebarMenu({
     }
   };
 
-  const filteredIcons = availableIcons.filter((icon) =>
+  const mergedIconList = Array.from(
+    new Set([...allLucideIcons, ...(availableIcons || [])])
+  ).sort();
+
+  const filteredIcons = mergedIconList.filter((icon) =>
     icon.toLowerCase().includes(iconSearch.toLowerCase())
   );
+
+  if (iconSearch.trim() && !filteredIcons.some((i) => i.toLowerCase() === iconSearch.trim().toLowerCase())) {
+    filteredIcons.unshift(iconSearch.trim());
+  }
 
   return (
     <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
@@ -363,9 +450,15 @@ export default function SidebarMenu({
 
                       <td className="px-3 py-2 border-r border-border">
                         {item.icon ? (
-                          <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground border border-border">
-                            {item.icon}
-                          </span>
+                          <div className="inline-flex items-center gap-1.5 rounded-md bg-muted/60 px-2 py-0.5 border border-border">
+                            {(() => {
+                              const IconComp = getLucideIcon(item.icon);
+                              return IconComp ? <IconComp className="size-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" /> : null;
+                            })()}
+                            <span className="font-mono text-[10px] text-foreground">
+                              {item.icon}
+                            </span>
+                          </div>
                         ) : (
                           <span className="text-muted-foreground/50 italic text-[11px]">None</span>
                         )}
@@ -468,6 +561,20 @@ export default function SidebarMenu({
               </div>
 
               <form onSubmit={handleFormSubmit} className="space-y-3">
+                {Object.keys(itemForm.errors).length > 0 && (
+                  <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <AlertCircle className="size-4 shrink-0" />
+                      <span>Please correct the following errors:</span>
+                    </div>
+                    <ul className="list-disc list-inside space-y-0.5 text-[11px] pl-1">
+                      {Object.entries(itemForm.errors).map(([field, msg]) => (
+                        <li key={field}>{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-muted-foreground">Parent Menu Item</label>
@@ -483,6 +590,9 @@ export default function SidebarMenu({
                         </option>
                       ))}
                     </select>
+                    {itemForm.errors.parent_id && (
+                      <p className="text-[10px] font-semibold text-rose-500">{itemForm.errors.parent_id}</p>
+                    )}
                   </div>
 
                   <div className="space-y-1">
@@ -494,6 +604,9 @@ export default function SidebarMenu({
                       className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
                       required
                     />
+                    {itemForm.errors.label && (
+                      <p className="text-[10px] font-semibold text-rose-500">{itemForm.errors.label}</p>
+                    )}
                   </div>
                 </div>
 
@@ -520,45 +633,83 @@ export default function SidebarMenu({
                 </div>
 
                 {/* Icon Selection */}
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-semibold text-muted-foreground">Icon Name</label>
+                    <label className="text-[11px] font-semibold text-muted-foreground">
+                      Icon Name <span className="text-[10px] font-normal text-muted-foreground">({filteredIcons.length} available)</span>
+                    </label>
                     {itemForm.data.icon ? (
-                      <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.2 rounded border border-emerald-500/20 font-mono">
-                        Selected: {itemForm.data.icon}
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-mono">
+                        {(() => {
+                          const IconComp = getLucideIcon(itemForm.data.icon);
+                          return IconComp ? <IconComp className="size-3.5 shrink-0" /> : null;
+                        })()}
+                        <span>Selected: {itemForm.data.icon}</span>
                       </span>
                     ) : null}
                   </div>
-                  <input
-                    value={iconSearch}
-                    onChange={(e) => setIconSearch(e.target.value)}
-                    placeholder="Search available icons..."
-                    className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
-                  />
-                  <div className="max-h-28 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 flex flex-wrap gap-1">
+
+                  <div className="relative">
+                    <input
+                      value={itemForm.data.icon || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        itemForm.setData('icon', val);
+                        setIconSearch(val);
+                      }}
+                      placeholder="Search or type icon name (e.g. user, search, shield-check, building)..."
+                      className="h-8 w-full rounded-lg border border-input bg-background pl-2.5 pr-8 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring font-mono"
+                    />
+                    {itemForm.data.icon ? (
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                        {(() => {
+                          const IconComp = getLucideIcon(itemForm.data.icon);
+                          return IconComp ? <IconComp className="size-4 shrink-0" /> : null;
+                        })()}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-border bg-muted/20 p-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
                     <button
                       type="button"
-                      onClick={() => itemForm.setData('icon', '')}
-                      className={`px-2 py-0.5 text-xs rounded-md ${
-                        !itemForm.data.icon ? 'bg-primary text-primary-foreground font-bold' : 'bg-background text-foreground border border-input'
+                      onClick={() => {
+                        itemForm.setData('icon', '');
+                        setIconSearch('');
+                      }}
+                      className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+                        !itemForm.data.icon
+                          ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
+                          : 'bg-background text-foreground border border-input hover:bg-muted'
                       }`}
                     >
-                      (No Icon)
+                      <X className="size-3.5 shrink-0" />
+                      <span className="truncate text-[11px]">(No Icon)</span>
                     </button>
-                    {filteredIcons.slice(0, 30).map((icon) => (
-                      <button
-                        key={icon}
-                        type="button"
-                        onClick={() => itemForm.setData('icon', icon)}
-                        className={`px-2 py-0.5 text-xs rounded-md ${
-                          itemForm.data.icon === icon
-                            ? 'bg-emerald-600 text-white font-bold'
-                            : 'bg-background text-foreground border border-input hover:bg-muted'
-                        }`}
-                      >
-                        {icon}
-                      </button>
-                    ))}
+                    {filteredIcons.slice(0, 100).map((icon) => {
+                      const IconComp = getLucideIcon(icon);
+                      const isSelected = itemForm.data.icon === icon;
+                      return (
+                        <button
+                          key={icon}
+                          type="button"
+                          onClick={() => {
+                            itemForm.setData('icon', icon);
+                            setIconSearch(icon);
+                          }}
+                          className={`flex items-center gap-1.5 px-2 py-1.5 text-xs rounded-md transition cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                              : 'bg-background text-foreground border border-input hover:bg-muted'
+                          }`}
+                        >
+                          {IconComp ? (
+                            <IconComp className={`size-3.5 shrink-0 ${isSelected ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'}`} />
+                          ) : null}
+                          <span className="truncate font-mono text-[10px]">{icon}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

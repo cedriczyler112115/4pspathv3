@@ -49,6 +49,7 @@ class AnnualTargetController extends Controller
                 'users.last_name',
                 'users.position',
                 'users.designation',
+                'users.avatar',
                 DB::raw('COALESCE(lib_division.division_name, users.division) as division_name'),
                 DB::raw('COALESCE(lib_section.section_name, users.section) as section_name'),
             ])
@@ -139,6 +140,10 @@ class AnnualTargetController extends Controller
                 'designation' => $userProfile->designation ?? '',
                 'divisionName' => $userProfile->division_name ?? '',
                 'sectionName' => $userProfile->section_name ?? '',
+                'avatar' => $userProfile->avatar ?? null,
+                'avatarUrl' => ! empty($userProfile?->avatar)
+                    ? (str_starts_with($userProfile->avatar, 'http') ? $userProfile->avatar : asset('storage/'.$userProfile->avatar))
+                    : null,
             ],
             'isLocked' => $isLocked,
             'years' => $years,

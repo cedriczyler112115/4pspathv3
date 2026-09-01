@@ -132,6 +132,27 @@ class SidebarMenuController extends Controller
 
     private function validatePayload(Request $request, ?int $ignoreId = null): array
     {
+        $input = $request->all();
+        if (array_key_exists('parent_id', $input) && ($input['parent_id'] === '' || $input['parent_id'] === '0')) {
+            $input['parent_id'] = null;
+        }
+        if (array_key_exists('key', $input) && $input['key'] === '') {
+            $input['key'] = null;
+        }
+        if (array_key_exists('href', $input) && $input['href'] === '') {
+            $input['href'] = null;
+        }
+        if (array_key_exists('icon', $input) && $input['icon'] === '') {
+            $input['icon'] = null;
+        }
+        if (array_key_exists('badge_text', $input) && $input['badge_text'] === '') {
+            $input['badge_text'] = null;
+        }
+        if (array_key_exists('badge_cls', $input) && $input['badge_cls'] === '') {
+            $input['badge_cls'] = null;
+        }
+        $request->replace($input);
+
         $data = $request->validate([
             'parent_id' => ['nullable', 'integer', Rule::exists('sidebar_menu_items', 'id')],
             'label' => [
@@ -144,13 +165,13 @@ class SidebarMenuController extends Controller
             ],
             'key' => ['nullable', 'string', 'max:255', Rule::unique('sidebar_menu_items', 'key')->ignore($ignoreId)],
             'href' => ['nullable', 'string', 'max:255'],
-            'icon' => ['nullable', 'string', 'max:255', Rule::in(SidebarIcons::all())],
+            'icon' => ['nullable', 'string', 'max:255'],
             'badge_text' => ['nullable', 'string', 'max:255'],
-            'badge_cls' => ['nullable', 'string', 'max:255', Rule::in(SidebarMenuItem::BADGE_COLORS)],
+            'badge_cls' => ['nullable', 'string', 'max:255'],
             'sort_order' => ['required', 'integer'],
             'is_active' => ['boolean'],
             'user_levels' => ['nullable', 'array'],
-            'user_levels.*' => ['integer', Rule::exists('user_level', 'level_id')],
+            'user_levels.*' => ['integer'],
         ]);
 
         $data['parent_id'] = filled($data['parent_id'] ?? null) ? (int) $data['parent_id'] : null;

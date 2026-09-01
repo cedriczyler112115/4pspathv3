@@ -19,6 +19,31 @@ class HarmonizedIpcController extends Controller
 {
     public function index(Request $request): Response
     {
+        $user = $request->user();
+        $userLevelId = (int) ($user?->user_level_id ?? 0);
+        $isSuperAdmin = ($user?->id === 3 && $userLevelId === 0);
+        $canScorecard = (int) ($user?->can_scorecard ?? 0) === 1;
+
+        if (! $isSuperAdmin && ! $canScorecard) {
+            $hasRoleAccess = DB::table('sidebar_menu_items')
+                ->where('is_active', 1)
+                ->where(function ($q) {
+                    $q->where('label', 'like', '%RPMO%')
+                        ->orWhere('href', 'like', '%rpmo-management%')
+                        ->orWhere('key', 'like', '%rpmo-management%');
+                })
+                ->get()
+                ->some(function ($item) use ($userLevelId) {
+                    $levels = array_filter(array_map('intval', json_decode($item->user_levels ?? '[]', true) ?: []));
+
+                    return empty($levels) || ($userLevelId > 0 && in_array($userLevelId, $levels, true));
+                });
+
+            if (! $hasRoleAccess) {
+                abort(403, __('Unauthorized access to RPMO Management.'));
+            }
+        }
+
         $rawPerPage = (string) $request->input('perPage', '10');
         $isAll = strtolower($rawPerPage) === 'all';
         $perPageInt = $isAll ? 999999 : max(1, (int) $rawPerPage);

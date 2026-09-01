@@ -42,10 +42,11 @@ export default function FormattedText({
   const containsHtml = /<[a-z][\s\S]*>/i.test(formatted);
 
   if (containsHtml) {
+    const cleanedHtml = formatted.replace(/\s*(\r?\n)\s*(<\/?(?:ul|ol|li|p|h[1-6]|blockquote|table|tr|td|th)[^>]*>)/gi, '$2');
     return (
       <span
-        className={`whitespace-pre-line leading-relaxed ${className}`}
-        dangerouslySetInnerHTML={{ __html: formatted.replace(/\n/g, '<br />') }}
+        className={`leading-relaxed ${className} [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_p]:mb-1.5`}
+        dangerouslySetInnerHTML={{ __html: cleanedHtml }}
       />
     );
   }

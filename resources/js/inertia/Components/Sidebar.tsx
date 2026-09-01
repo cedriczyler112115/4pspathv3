@@ -49,6 +49,8 @@ const routeMap: Record<string, string> = {
   '/ipcrf/annualtarget': '/ipcrf/annualtarget',
   '/annualtarget': '/ipcrf/annualtarget',
   '/rpmo-management/harmonized-ipc': '/rpmo-management/harmonized-ipc',
+  '/rpmo-management/pls-scorecard': '/rpmo-management/pls-scorecard',
+  '/pls-scorecard': '/rpmo-management/pls-scorecard',
   '/libraries/harmonized-staff': '/libraries/harmonized-staff',
   '/libraries/users/users-list': '/administration/users',
   '/libraries/users/user-level': '/administration/user-level',

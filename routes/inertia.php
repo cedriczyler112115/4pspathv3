@@ -6,6 +6,7 @@ use App\Http\Controllers\Inertia\Administration\ApplicationSettingsController;
 use App\Http\Controllers\Inertia\Administration\UserLevelController;
 use App\Http\Controllers\Inertia\Libraries\HarmonizedStaffController;
 use App\Http\Controllers\Inertia\RpmoManagement\HarmonizedIpcController;
+use App\Http\Controllers\Inertia\RpmoManagement\PlsScorecardController;
 use App\Http\Controllers\Inertia\Settings\SidebarMenuController;
 use App\Http\Controllers\Inertia\Settings\AppearanceController;
 use App\Http\Controllers\Inertia\Settings\ProfileController;
@@ -88,7 +89,7 @@ if (class_exists(\Inertia\Inertia::class)) {
 
         // Settings
         Route::get('/settings/profile', [ProfileController::class, 'edit'])->name('settings.profile');
-        Route::patch('/settings/profile', [ProfileController::class, 'update']);
+        Route::match(['patch', 'post'], '/settings/profile', [ProfileController::class, 'update']);
         Route::redirect('/myaccount/profile', '/settings/profile')->name('profile.edit');
         Route::get('/settings/mystaff', [MyStaffController::class, 'index'])->name('settings.mystaff');
         Route::get('/settings/security', [SecurityController::class, 'edit'])->name('settings.security');
@@ -125,6 +126,12 @@ if (class_exists(\Inertia\Inertia::class)) {
         Route::delete('/rpmo-management/harmonized-ipc/{indicatorId}', [HarmonizedIpcController::class, 'destroy'])->name('rpmo-management.harmonized-ipc.destroy');
         Route::delete('/rpmo-management/harmonized-ipc-item/{itemId}', [HarmonizedIpcController::class, 'destroyItem'])->name('rpmo-management.harmonized-ipc-item.destroy');
         Route::redirect('/harmonized-ipc', '/rpmo-management/harmonized-ipc');
+
+        Route::get('/rpmo-management/pls-scorecard', [PlsScorecardController::class, 'index'])->name('rpmo-management.pls-scorecard');
+        Route::get('/rpmo-management/pls-scorecard/{ratingId}/pl-rating', [PlsScorecardController::class, 'showPlRating'])->name('rpmo-management.pls-scorecard.pl-rating');
+        Route::patch('/rpmo-management/pls-scorecard/{ratingId}/accomplishment/{itemId}', [PlsScorecardController::class, 'updateAccomplishment'])->name('rpmo-management.pls-scorecard.accomplishment.update');
+        Route::redirect('/rpmo-management/pls-scorecard/pl-rating', '/rpmo-management/pls-scorecard');
+        Route::redirect('/pls-scorecard', '/rpmo-management/pls-scorecard');
 
         Route::middleware('can:access-administration')->group(function (): void {
             Route::get('/administration/users', [UsersController::class, 'index'])->name('administration.users');

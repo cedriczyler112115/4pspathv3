@@ -47,6 +47,10 @@ class MyStaffController extends Controller
             'userLevelId' => (string) ($u->user_level_id ?? ''),
             'userLevelName' => $u->user_level_name ?? null,
             'isSupervisor' => (bool) ($u->is_supervisor ?? false),
+            'avatar' => $u->avatar ?? null,
+            'avatarUrl' => ! empty($u->avatar)
+                ? (str_starts_with($u->avatar, 'http') ? $u->avatar : asset('storage/'.$u->avatar))
+                : null,
             'isStatus' => (int) $u->is_status,
         ]);
 

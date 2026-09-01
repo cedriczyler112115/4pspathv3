@@ -28,8 +28,10 @@ final class ManageUser
             'user_level_id' => isset($attributes['editUserLevelId']) && $attributes['editUserLevelId'] !== '' ? (int) $attributes['editUserLevelId'] : null,
             'contact_number' => $attributes['editContactNumber'] ?: null,
             'is_supervisor' => (int) $attributes['editIsSupervisor'],
+            'can_scorecard' => isset($attributes['editCanScorecard']) ? ((bool) $attributes['editCanScorecard'] ? 1 : 0) : 0,
             'updated_at' => now(),
         ]);
+        app(\App\Services\SidebarMenuTree::class)->forget();
     }
 
     public function delete(int $userId): void

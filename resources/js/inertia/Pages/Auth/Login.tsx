@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import type { FormEvent } from 'react';
+import { useEffect, type FormEvent } from 'react';
 import AuthLayout from '../../Layouts/AuthLayout';
 
 type LoginProps = {
@@ -8,6 +8,15 @@ type LoginProps = {
 };
 
 export default function Login({ canResetPassword, status }: LoginProps) {
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+    } catch (e) {}
+  }, []);
+
   const form = useForm({
     email: '',
     password: '',

@@ -45,6 +45,7 @@ class SemestralVerificationController extends RatingsController
                 'users.last_name',
                 'users.position',
                 'users.designation',
+                'users.avatar',
                 DB::raw('COALESCE(lib_division.division_name, users.division) as division_name'),
                 DB::raw('COALESCE(lib_section.section_name, users.section) as section_name'),
             ])
@@ -55,6 +56,7 @@ class SemestralVerificationController extends RatingsController
         // Query Semestral Targets and Itemlists
         $indicators = DB::table('ipc_sem_targets_indicator as sti')
             ->join('ipc_sem_targets_indicator_itemlist as stii', 'stii.sem_target_id', '=', 'sti.id')
+            ->leftJoin('users as sc_user', 'stii.scorecard_created', '=', 'sc_user.id')
             ->where('sti.semester_id', $ratingId)
             ->select([
                 'sti.id as indicator_id',
@@ -75,6 +77,12 @@ class SemestralVerificationController extends RatingsController
                 'stii.timeliness_score',
                 'stii.average',
                 'stii.verified',
+                'stii.scorecard_quantity_score',
+                'stii.scorecard_quality_score',
+                'stii.scorecard_timeliness_score',
+                'stii.scorecard_remarks',
+                'stii.scorecard_created',
+                DB::raw("TRIM(CONCAT_WS(' ', sc_user.first_name, sc_user.last_name, sc_user.extension_name)) as scorecard_created_by_name"),
             ])
             ->orderBy('sti.kra_category')
             ->orderBy('sti.display_order')
@@ -117,6 +125,12 @@ class SemestralVerificationController extends RatingsController
                 'actQuality' => $row->quality_score ? (float) $row->quality_score : null,
                 'actEfficiency' => $row->quantity_score ? (float) $row->quantity_score : null,
                 'actTimeliness' => $row->timeliness_score ? (float) $row->timeliness_score : null,
+                'scorecardEfficiency' => $row->scorecard_quantity_score !== null ? (string) $row->scorecard_quantity_score : null,
+                'scorecardQuality' => $row->scorecard_quality_score !== null ? (string) $row->scorecard_quality_score : null,
+                'scorecardTimeliness' => $row->scorecard_timeliness_score !== null ? (string) $row->scorecard_timeliness_score : null,
+                'scorecardRemarks' => (string) ($row->scorecard_remarks ?? ''),
+                'scorecardCreated' => $row->scorecard_created ? (int) $row->scorecard_created : null,
+                'scorecardCreatedByName' => $row->scorecard_created_by_name ?: null,
                 'averageScore' => $row->average ? (float) $row->average : null,
                 'attachmentCount' => $attachmentCounts[(int) $row->item_id] ?? 0,
                 'hasAttachments' => ($attachmentCounts[(int) $row->item_id] ?? 0) > 0,
@@ -204,6 +218,10 @@ class SemestralVerificationController extends RatingsController
                 'designation' => $userProfile->designation ?? '',
                 'divisionName' => $userProfile->division_name ?? '',
                 'sectionName' => $userProfile->section_name ?? '',
+                'avatar' => $userProfile->avatar ?? null,
+                'avatarUrl' => ! empty($userProfile?->avatar)
+                    ? (str_starts_with($userProfile->avatar, 'http') ? $userProfile->avatar : asset('storage/'.$userProfile->avatar))
+                    : null,
             ],
             'functionScores' => [
                 'strategicScore' => $strategicScore,

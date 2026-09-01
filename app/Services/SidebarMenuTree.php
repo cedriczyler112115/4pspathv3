@@ -22,7 +22,9 @@ final class SidebarMenuTree
         $currentUser = $user ?? auth()->user();
         $userLevelId = (int) ($currentUser?->user_level_id ?? 0);
         $userKey = ($currentUser?->id === 3 && $userLevelId === 0) ? 'superadmin' : ($userLevelId > 0 ? 'level_'.$userLevelId : 'guest');
-        $cacheKey = self::CACHE_KEY.':'.$userKey;
+        $canScorecard = (int) ($currentUser?->can_scorecard ?? 0);
+        $userId = (int) ($currentUser?->id ?? 0);
+        $cacheKey = self::CACHE_KEY.':u_'.$userId.':lvl_'.$userLevelId.':sc_'.$canScorecard;
 
         $serializedTree = Cache::rememberForever($cacheKey, function () use ($currentUser): array {
             $nodes = SidebarMenuItem::tree(true, $currentUser);
@@ -36,6 +38,23 @@ final class SidebarMenuTree
     public function forget(): void
     {
         Cache::flush();
+    }
+
+    public function forgetUser(?User $user = null): void
+    {
+        if (! $user) {
+            Cache::flush();
+
+            return;
+        }
+
+        $userLevelId = (int) ($user->user_level_id ?? 0);
+        $userKey = ($user->id === 3 && $userLevelId === 0) ? 'superadmin' : ($userLevelId > 0 ? 'level_'.$userLevelId : 'guest');
+        $canScorecard = (int) ($user->can_scorecard ?? 0);
+        $userId = (int) $user->id;
+
+        Cache::forget(self::CACHE_KEY.':u_'.$userId.':lvl_'.$userLevelId.':sc_'.$canScorecard);
+        Cache::forget(self::CACHE_KEY.':'.$userKey.':sc_'.$canScorecard);
     }
 
     public function clearCache(): void

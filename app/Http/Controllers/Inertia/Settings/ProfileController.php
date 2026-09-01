@@ -22,22 +22,26 @@ class ProfileController extends Controller
         $user = $request->user();
 
         return Inertia::render('Settings/Profile', [
-            'user' => $user?->only([
-                'id',
-                'name',
-                'email',
-                'last_name',
-                'first_name',
-                'middle_name',
-                'extension_name',
-                'position',
-                'designation',
-                'division_id',
-                'section_id',
-                'contact_number',
-                'supervisor_id',
-                'is_supervisor',
-            ]),
+            'user' => array_merge(
+                (array) ($user?->only([
+                    'id',
+                    'name',
+                    'email',
+                    'last_name',
+                    'first_name',
+                    'middle_name',
+                    'extension_name',
+                    'position',
+                    'designation',
+                    'division_id',
+                    'section_id',
+                    'contact_number',
+                    'supervisor_id',
+                    'is_supervisor',
+                    'avatar',
+                ]) ?? []),
+                ['avatar_url' => $user?->avatar_url]
+            ),
             'divisions' => DB::table('lib_division')
                 ->orderBy('division_name')
                 ->get(['id', 'division_name']),
@@ -56,6 +60,24 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         abort_if($user === null, 403);
+
+        if ($request->hasFile('avatar')) {
+            $request->validate([
+                'avatar' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+            ]);
+
+            if ($user->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            }
+
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->forceFill(['avatar' => $path])->save();
+        } elseif ($request->boolean('remove_avatar')) {
+            if ($user->avatar && \Illuminate\Support\Facades\Storage::disk('public')->exists($user->avatar)) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->avatar);
+            }
+            $user->forceFill(['avatar' => null])->save();
+        }
 
         $validated = $request->validate($this->profileRules($user->id));
         $validated['supervisor_id'] = $validated['supervisor_id'] ?: null;

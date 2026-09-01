@@ -1,7 +1,8 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
-import { Pencil, Trash2, Users as UsersIcon, Search, RotateCcw, X } from 'lucide-react';
+import UserAvatar from '../../Components/UserAvatar';
+import { Pencil, Trash2, Users as UsersIcon, Search, RotateCcw, X, Camera } from 'lucide-react';
 
 type UserRow = {
   id: number;
@@ -22,6 +23,9 @@ type UserRow = {
   userLevelId: string;
   userLevelName: string | null;
   isSupervisor: boolean;
+  canScorecard?: number;
+  avatar?: string | null;
+  avatarUrl?: string | null;
   isStatus: number;
 };
 
@@ -82,7 +86,9 @@ export default function Users({
 
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [deletingUser, setDeletingUser] = useState<{ id: number; name: string } | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserRow | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const editForm = useForm({
     editLastName: '',
@@ -98,7 +104,57 @@ export default function Users({
     editSupervisorId: '',
     editUserLevelId: '',
     editIsSupervisor: false,
+    editCanScorecard: false,
   });
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingUser) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setAvatarPreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    const formData = new FormData();
+    formData.append('editAvatar', file);
+    formData.append('_method', 'PATCH');
+    formData.append('editLastName', editForm.data.editLastName);
+    formData.append('editFirstName', editForm.data.editFirstName);
+    formData.append('editMiddleName', editForm.data.editMiddleName);
+    formData.append('editExtensionName', editForm.data.editExtensionName);
+    formData.append('editPosition', editForm.data.editPosition);
+    formData.append('editDesignation', editForm.data.editDesignation);
+    formData.append('editDivision', editForm.data.editDivision);
+    formData.append('editSection', editForm.data.editSection);
+    formData.append('editSupervisorId', editForm.data.editSupervisorId);
+    formData.append('editUserLevelId', editForm.data.editUserLevelId);
+    formData.append('editContactNumber', editForm.data.editContactNumber);
+    formData.append('editIsSupervisor', editForm.data.editIsSupervisor ? '1' : '0');
+    formData.append('editCanScorecard', editForm.data.editCanScorecard ? '1' : '0');
+
+    router.post(`/administration/users/${editingUser.id}`, formData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setAvatarPreview(null);
+      },
+    });
+  };
+
+  const handleRemoveAvatar = () => {
+    if (!editingUser) return;
+    router.patch(
+      `/administration/users/${editingUser.id}`,
+      { ...editForm.data, removeAvatar: true },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setAvatarPreview(null);
+        },
+      }
+    );
+  };
 
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
     const data = { ...filterForm.data, ...overrides };
@@ -136,6 +192,7 @@ export default function Users({
       editSupervisorId: row.supervisorId ? String(row.supervisorId) : '',
       editUserLevelId: row.userLevelId ? String(row.userLevelId) : '',
       editIsSupervisor: Boolean(row.isSupervisor),
+      editCanScorecard: Number(row.canScorecard) === 1 || Boolean(row.canScorecard),
     });
     setShowEditModal(true);
   };
@@ -351,7 +408,10 @@ export default function Users({
                       </td>
 
                       <td className="px-3 py-2 font-bold text-foreground border-r border-border">
-                        {row.fullName.toUpperCase()}
+                        <div className="flex items-center gap-2">
+                          <UserAvatar user={{ name: row.fullName, avatar_url: row.avatarUrl, avatar: row.avatar }} size="sm" />
+                          <span className="truncate">{row.fullName.toUpperCase()}</span>
+                        </div>
                       </td>
 
                       <td className="px-3 py-2 text-muted-foreground border-r border-border font-mono text-[11px]">
@@ -473,12 +533,50 @@ export default function Users({
         {showEditModal ? (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
             <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">Edit User Profile</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Update the selected user profile details, roles, and assignments.
-                  </p>
+              <div className="flex items-start justify-between border-b border-border/80 pb-3">
+                <div className="flex items-center gap-3">
+                  <UserAvatar
+                    user={{
+                      name: editingUser?.fullName,
+                      avatar_url: avatarPreview || editingUser?.avatarUrl,
+                      avatar: editingUser?.avatar,
+                    }}
+                    size="lg"
+                    className="shadow-md shrink-0"
+                  />
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Edit User Profile</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Update profile details, avatar, roles, and assignments for <strong className="text-foreground">{editingUser?.fullName}</strong>.
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/jpg"
+                        className="hidden"
+                        onChange={handleAvatarSelect}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="h-6 px-2.5 rounded-md bg-muted hover:bg-muted/80 text-[11px] font-semibold text-foreground inline-flex items-center gap-1 transition cursor-pointer border border-border"
+                      >
+                        <Camera className="size-3" />
+                        <span>Change Photo</span>
+                      </button>
+                      {(editingUser?.avatarUrl || avatarPreview) && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveAvatar}
+                          className="h-6 px-2 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 text-[11px] font-semibold inline-flex items-center gap-1 transition cursor-pointer"
+                        >
+                          <Trash2 className="size-3" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -664,7 +762,7 @@ export default function Users({
                     </select>
                   </div>
 
-                  <div className="space-y-1 sm:col-span-2">
+                  <div className="space-y-2 sm:col-span-2">
                     <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
                       <input
                         type="checkbox"
@@ -674,6 +772,18 @@ export default function Users({
                       />
                       <span className="text-xs text-foreground font-medium">
                         User has Supervisor privileges
+                      </span>
+                    </label>
+
+                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={editForm.data.editCanScorecard}
+                        onChange={(e) => editForm.setData('editCanScorecard', e.target.checked)}
+                        className="size-3.5 rounded border-input text-emerald-600 focus:ring-emerald-500"
+                      />
+                      <span className="text-xs text-foreground font-medium">
+                        User can access RPMO Management / Scorecard (<code className="text-[10px] text-muted-foreground font-mono">can_scorecard = 1</code>)
                       </span>
                     </label>
                   </div>
@@ -705,11 +815,22 @@ export default function Users({
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
             <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
               <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-foreground">Delete User</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    This will permanently remove the user account from the system.
-                  </p>
+                <div className="flex items-center gap-3">
+                  <UserAvatar
+                    user={{
+                      name: deletingUser.fullName,
+                      avatar_url: deletingUser.avatarUrl,
+                      avatar: deletingUser.avatar,
+                    }}
+                    size="md"
+                    className="shrink-0"
+                  />
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Delete User</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      This will permanently remove <strong className="text-foreground">{deletingUser.fullName}</strong> from the system.
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"

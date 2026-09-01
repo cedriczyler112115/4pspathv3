@@ -1,6 +1,8 @@
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
+import React, { useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
-import { UserCircle, Save, Check } from 'lucide-react';
+import UserAvatar from '../../Components/UserAvatar';
+import { UserCircle, Save, Check, Camera, Trash2, Upload } from 'lucide-react';
 
 type Division = { id: number; division_name: string };
 type Section = { id: number; section_name: string; division_id: number };
@@ -30,6 +32,8 @@ type ProfileProps = {
     contact_number?: string | null;
     supervisor_id?: number | null;
     is_supervisor?: boolean | number | null;
+    avatar?: string | null;
+    avatar_url?: string | null;
   };
   divisions: Division[];
   sections: Section[];
@@ -37,6 +41,9 @@ type ProfileProps = {
 };
 
 export default function Profile({ appName, user, divisions, sections, supervisors }: ProfileProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
   const form = useForm({
     name: user?.name ?? '',
     email: user?.email ?? '',
@@ -52,6 +59,40 @@ export default function Profile({ appName, user, divisions, sections, supervisor
     supervisor_id: user?.supervisor_id ? String(user.supervisor_id) : '',
     is_supervisor: Boolean(user?.is_supervisor),
   });
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setAvatarPreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    router.post('/settings/profile', formData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        setAvatarPreview(null);
+      },
+    });
+  };
+
+  const handleRemoveAvatar = () => {
+    router.post(
+      '/settings/profile',
+      { remove_avatar: '1' },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setAvatarPreview(null);
+        },
+      }
+    );
+  };
 
   const filteredSections = form.data.division_id
     ? sections.filter((section) => String(section.division_id) === form.data.division_id)
@@ -80,8 +121,66 @@ export default function Profile({ appName, user, divisions, sections, supervisor
                 <span>Personal Profile Settings</span>
               </h1>
               <p className="text-[11px] text-muted-foreground">
-                Update your personal details, designation, organization hierarchy, and direct supervisor.
+                Update your personal details, profile picture, designation, organization hierarchy, and direct supervisor.
               </p>
+            </div>
+          </div>
+
+          {/* PROFILE PICTURE CARD */}
+          <div className="rounded-xl border border-border bg-muted/30 p-3 sm:p-4 flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative group shrink-0">
+              <UserAvatar
+                user={{
+                  ...user,
+                  avatar_url: avatarPreview || user?.avatar_url,
+                }}
+                size="xl"
+                className="shadow-md"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                title="Change Profile Picture"
+              >
+                <Camera className="size-5" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5 text-center sm:text-left flex-1">
+              <h3 className="text-xs font-bold text-foreground">Profile Picture</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Upload a square profile photo (JPG, PNG, WEBP, max 2MB). Your profile photo replaces round initials across the application.
+              </p>
+
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  className="hidden"
+                  onChange={handleAvatarSelect}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="h-7 px-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                >
+                  <Upload className="size-3.5" />
+                  <span>Upload Photo</span>
+                </button>
+
+                {(user?.avatar_url || avatarPreview) && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveAvatar}
+                    className="h-7 px-3 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-semibold inline-flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span>Remove Photo</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

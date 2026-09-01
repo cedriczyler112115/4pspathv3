@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Eye, Trash2, RotateCcw, Search, ShieldCheck, Clock, Edit3, Flag, AlertTriangle, X } from 'lucide-react';
 import AppLayout from '../../Layouts/AppLayout';
+import UserAvatar from '../../Components/UserAvatar';
 
 type Rating = {
   id: number;
@@ -200,7 +201,17 @@ export default function MyRatings({
                   <tr className="align-top">
                     <td className="pr-6 whitespace-nowrap">
                       <div className="text-[10px] font-semibold uppercase text-muted-foreground">Full Name</div>
-                      <div className="mt-0.5 font-bold uppercase text-foreground">{profile.fullName || '-'}</div>
+                      <div className="mt-0.5 font-bold uppercase text-foreground flex items-center gap-2">
+                        <UserAvatar
+                          user={{
+                            name: profile.fullName,
+                            avatar_url: (profile as any).avatarUrl,
+                            avatar: (profile as any).avatar,
+                          }}
+                          size="sm"
+                        />
+                        <span>{profile.fullName || '-'}</span>
+                      </div>
                     </td>
                     <td className="pr-6 whitespace-nowrap">
                       <div className="text-[10px] font-semibold uppercase text-muted-foreground">Position</div>
