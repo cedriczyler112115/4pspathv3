@@ -516,3 +516,5 @@
 [Tue Sep 1 14:43:23 2026] 127.0.0.1:63941 [GET] URI: /verification/499/semestral-verification
 [Tue Sep 1 14:43:25 2026] 127.0.0.1:55818 [GET] URI: /verification/499/semestral-verification
 [Tue Sep 1 14:43:26 2026] 127.0.0.1:63842 [GET] URI: /verification/499/attachments/10623
+[Tue Sep 1 14:43:42 2026] 127.0.0.1:61157 [GET] URI: /verification/499/semestral-verification
+[Tue Sep 1 14:43:44 2026] 127.0.0.1:63182 [GET] URI: /ipcrf/myratings/499/attachments/10623
