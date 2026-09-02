@@ -1631,6 +1631,7 @@ export default function AnnualTarget({
                     <button
                       key={page}
                       type="button"
+                      data-pagination-number={page}
                       onClick={() => submitFilters({ page })}
                       className="inline-flex cursor-pointer items-center justify-center min-w-8 rounded-lg border border-input bg-background px-2.5 py-1.5 text-xs text-foreground hover:bg-muted transition-colors"
                     >

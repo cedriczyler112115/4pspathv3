@@ -496,6 +496,7 @@ export default function PlsScorecard({
                     <button
                       key={i}
                       type="button"
+                      data-pagination-number={/^\d+$/.test(link.label) ? targetPage : undefined}
                       onClick={() => submitFilters({ page: targetPage })}
                       dangerouslySetInnerHTML={{ __html: link.label }}
                       className={`inline-flex min-w-7 h-7 items-center justify-center rounded-md px-2 text-xs font-semibold transition cursor-pointer ${

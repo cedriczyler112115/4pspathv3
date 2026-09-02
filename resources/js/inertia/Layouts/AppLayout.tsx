@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import UserAvatar from '../Components/UserAvatar';
 import {
   LayoutDashboard,
@@ -68,6 +68,61 @@ export default function AppLayout({ children, headerExtra }: AppLayoutProps) {
     if (isDark) {
       document.documentElement.classList.add('dark');
     }
+  }, []);
+
+  useEffect(() => {
+    let activeButton: HTMLButtonElement | null = null;
+    let originalContent = '';
+    let scrollX = 0;
+    let scrollY = 0;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    let navigationStarted = false;
+
+    const restorePaginationButton = () => {
+      if (!activeButton) return;
+      if (activeButton.isConnected) {
+        activeButton.innerHTML = originalContent;
+        activeButton.disabled = false;
+        activeButton.removeAttribute('aria-busy');
+      }
+      window.scrollTo(scrollX, scrollY);
+      activeButton = null;
+    };
+
+    const handlePaginationClick = (event: MouseEvent) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-pagination-number]');
+      if (!button || button.disabled) return;
+
+      activeButton = button;
+      originalContent = button.innerHTML;
+      scrollX = window.scrollX;
+      scrollY = window.scrollY;
+      navigationStarted = false;
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      button.innerHTML = '<span class="block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" aria-label="Loading page"></span>';
+      fallbackTimer = setTimeout(() => {
+        if (!navigationStarted) restorePaginationButton();
+      }, 100);
+    };
+
+    const removeStartListener = router.on('start', () => {
+      if (activeButton) navigationStarted = true;
+    });
+
+    const removeFinishListener = router.on('finish', () => {
+      if (!activeButton) return;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      requestAnimationFrame(() => requestAnimationFrame(restorePaginationButton));
+    });
+
+    document.addEventListener('click', handlePaginationClick, true);
+    return () => {
+      document.removeEventListener('click', handlePaginationClick, true);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      removeStartListener();
+      removeFinishListener();
+    };
   }, []);
 
   const toggleDarkMode = () => {
@@ -423,4 +478,3 @@ export default function AppLayout({ children, headerExtra }: AppLayoutProps) {
     </div>
   );
 }
-

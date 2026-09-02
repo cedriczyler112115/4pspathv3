@@ -471,6 +471,7 @@ export default function MyRatings({
                     <button
                       key={idx}
                       type="button"
+                      data-pagination-number={/^\d+$/.test(link.label) ? targetPage : undefined}
                       onClick={() => applyFilters({ page: targetPage })}
                       className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         link.active

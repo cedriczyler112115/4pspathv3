@@ -2569,6 +2569,7 @@ export default function SemestralVerification({
                             <button
                               key={page}
                               type="button"
+                              data-pagination-number={page}
                               onClick={() => setCurrentPage(page)}
                               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${page === pageToUse
                                 ? 'bg-emerald-600 text-white shadow-xs'

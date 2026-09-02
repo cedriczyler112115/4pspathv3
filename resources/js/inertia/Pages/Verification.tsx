@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../Layouts/AppLayout';
 import UserAvatar from '../Components/UserAvatar';
-import { readPersistedFilters, savePersistedFilters } from '../lib/filterPersistence';
+import { hasPersistedFilters, readPersistedFilters, savePersistedFilters } from '../lib/filterPersistence';
 import {
   ShieldCheck,
   Search,
@@ -90,6 +90,27 @@ export default function Verification({
   });
 
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const restoredFiltersRef = useRef(false);
+
+  useEffect(() => {
+    if (restoredFiltersRef.current || !hasPersistedFilters(pageKey, user)) return;
+
+    restoredFiltersRef.current = true;
+    const serverFilters = {
+      search: filters.search || '',
+      year: filters.year || '',
+      semester: filters.semester || '',
+      perPage: String(filters.perPage || 10),
+    };
+
+    if (JSON.stringify(persisted) !== JSON.stringify(serverFilters)) {
+      router.post('/verification', { ...persisted, page: 1 }, {
+        preserveState: true,
+        replace: true,
+        preserveScroll: true,
+      });
+    }
+  }, []);
 
   const handleSearchChange = (val: string) => {
     filterForm.setData('search', val);
@@ -151,7 +172,7 @@ export default function Verification({
     if (!row.semesterId) {
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 px-2 py-0.5 text-[10px] font-semibold border border-zinc-500/20">
-          No Rating Record
+          Still in Annual Target state
         </span>
       );
     }
@@ -232,7 +253,7 @@ export default function Verification({
           </div>
 
           {/* FILTERS FORM */}
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
             {/* Search Input */}
             <div className="space-y-1 sm:col-span-2">
               <label className="text-[11px] font-semibold text-muted-foreground">
@@ -298,6 +319,25 @@ export default function Verification({
                 {semesters.map((s) => (
                   <option key={s.value} value={s.value}>
                     {s.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Records Per Page */}
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Records Per Page</label>
+              <select
+                value={filterForm.data.perPage}
+                onChange={(e) => {
+                  filterForm.setData('perPage', e.target.value);
+                  submitFilters({ perPage: e.target.value, page: 1 });
+                }}
+                className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
+              >
+                {perPageOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
@@ -445,31 +485,11 @@ export default function Verification({
 
           {/* PAGINATION FOOTER */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border bg-card px-3 py-2.5 text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <span>
-                Showing <strong className="text-foreground">{records.from ?? 0}</strong> to{' '}
-                <strong className="text-foreground">{records.to ?? 0}</strong> of{' '}
-                <strong className="text-foreground">{records.total}</strong> results
-              </span>
-
-              <div className="flex items-center gap-1 pl-2 border-l border-border">
-                <span className="text-[11px]">Per page:</span>
-                <select
-                  value={filterForm.data.perPage}
-                  onChange={(e) => {
-                    filterForm.setData('perPage', e.target.value);
-                    submitFilters({ perPage: e.target.value });
-                  }}
-                  className="h-7 rounded-md border border-input bg-background px-1.5 text-xs text-foreground outline-hidden focus:ring-1 focus:ring-ring cursor-pointer"
-                >
-                  {perPageOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <span>
+              Showing <strong className="text-foreground">{records.from ?? 0}</strong> to{' '}
+              <strong className="text-foreground">{records.to ?? 0}</strong> of{' '}
+              <strong className="text-foreground">{records.total}</strong> results
+            </span>
 
             {/* Pagination Links */}
             {records.links && records.links.length > 3 && (
@@ -497,6 +517,7 @@ export default function Verification({
                     <button
                       key={i}
                       type="button"
+                      data-pagination-number={/^\d+$/.test(link.label) ? targetPage : undefined}
                       onClick={() => submitFilters({ page: targetPage })}
                       dangerouslySetInnerHTML={{ __html: link.label }}
                       className={`inline-flex min-w-7 h-7 items-center justify-center rounded-md px-2 text-xs font-semibold transition cursor-pointer ${

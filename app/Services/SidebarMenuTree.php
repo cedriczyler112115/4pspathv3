@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Data\SidebarMenuNode;
+use App\Models\ApplicationSetting;
 use App\Models\SidebarMenuItem;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 final class SidebarMenuTree
@@ -32,7 +34,10 @@ final class SidebarMenuTree
             return $this->serializeNodes($nodes);
         });
 
-        return $this->unserializeNodes($serializedTree);
+        $nodes = $this->unserializeNodes($serializedTree);
+        $this->applyVerificationBadge($nodes, $currentUser);
+
+        return $nodes;
     }
 
     public function forget(): void
@@ -95,5 +100,51 @@ final class SidebarMenuTree
 
             return new SidebarMenuNode($item, $children);
         }, $data);
+    }
+
+    /** @param list<SidebarMenuNode> $nodes */
+    private function applyVerificationBadge(array $nodes, ?User $user): void
+    {
+        if (! $user || ! Schema::hasTable('users') || ! Schema::hasTable('ipc_semester')) {
+            return;
+        }
+
+        $defaultYear = ApplicationSetting::defaultYear();
+        $defaultSemester = ApplicationSetting::defaultSemester();
+        $totalStaff = DB::table('users')
+            ->where('users.supervisor_id', $user->id)
+            ->where('users.is_status', 1)
+            ->distinct()
+            ->count('users.id');
+
+        $staffQuery = DB::table('users')
+            ->join('ipc_semester', 'ipc_semester.user_id', '=', 'users.id')
+            ->where('users.supervisor_id', $user->id)
+            ->where('users.is_status', 1)
+            ->where('ipc_semester.year', $defaultYear)
+            ->where('ipc_semester.semester', $defaultSemester);
+
+        $verifiedStaff = (clone $staffQuery)
+            ->whereNotNull('ipc_semester.date_verified')
+            ->distinct()
+            ->count('users.id');
+
+        $badgeText = $verifiedStaff.' / '.$totalStaff;
+        $this->setVerificationBadge($nodes, $badgeText);
+    }
+
+    /** @param list<SidebarMenuNode> $nodes */
+    private function setVerificationBadge(array $nodes, string $badgeText): void
+    {
+        foreach ($nodes as $node) {
+            $href = rtrim((string) ($node->item->href ?? ''), '/');
+            if (in_array($href, ['/verification', '/ipcrf/verification'], true)) {
+                $node->item->badge_text = $badgeText;
+            }
+
+            if ($node->children !== []) {
+                $this->setVerificationBadge($node->children, $badgeText);
+            }
+        }
     }
 }

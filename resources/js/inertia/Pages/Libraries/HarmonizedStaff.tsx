@@ -73,6 +73,7 @@ export default function HarmonizedStaff({
     router.post('/libraries/harmonized-staff', data, {
       preserveState: true,
       replace: true,
+      preserveScroll: true,
     });
   };
 
@@ -338,6 +339,7 @@ export default function HarmonizedStaff({
                     <button
                       key={page}
                       type="button"
+                      data-pagination-number={page}
                       onClick={() => submitFilters({ page })}
                       className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         isActive

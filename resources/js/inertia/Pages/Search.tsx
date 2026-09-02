@@ -175,6 +175,7 @@ export default function Search({
     router.post('/search', payload, {
       preserveState: true,
       replace: true,
+      preserveScroll: true,
     });
     savePersistedFilters(pageKey, user, payload);
   };
@@ -637,6 +638,7 @@ export default function Search({
                     <button
                       key={idx}
                       type="button"
+                      data-pagination-number={/^\d+$/.test(link.label) ? targetPage : undefined}
                       onClick={() => navigateSearch({ page: targetPage })}
                       className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         link.active

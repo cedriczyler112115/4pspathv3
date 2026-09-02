@@ -566,6 +566,7 @@ export default function Users({
                     <button
                       key={idx}
                       type="button"
+                      data-pagination-number={/^\d+$/.test(link.label) ? targetPage : undefined}
                       onClick={() => submitFilters({ page: targetPage })}
                       className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${
                         link.active

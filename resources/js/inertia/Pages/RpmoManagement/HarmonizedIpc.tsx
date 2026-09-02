@@ -1470,6 +1470,7 @@ export default function HarmonizedIpc({
                     <button
                       key={page}
                       type="button"
+                      data-pagination-number={page}
                       onClick={() => submitFilters({ page })}
                       className="inline-flex min-w-7 cursor-pointer items-center justify-center rounded-lg border border-input bg-background px-2.5 py-1 text-xs text-foreground hover:bg-muted transition-colors shadow-2xs"
                     >

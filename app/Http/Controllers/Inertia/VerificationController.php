@@ -24,11 +24,22 @@ class VerificationController extends Controller
         ];
 
         $query = DB::table('users')
-            ->leftJoin('ipc_semester', 'ipc_semester.user_id', '=', 'users.id')
+            ->leftJoin('ipc_semester', function ($join) use ($filters): void {
+                $join->on('ipc_semester.user_id', '=', 'users.id');
+
+                if ($filters['year'] !== '') {
+                    $join->where('ipc_semester.year', $filters['year']);
+                }
+
+                if ($filters['semester'] !== '') {
+                    $join->where('ipc_semester.semester', $filters['semester']);
+                }
+            })
             ->leftJoin('lib_division', 'users.division_id', '=', 'lib_division.id')
             ->leftJoin('lib_section', 'users.section_id', '=', 'lib_section.id')
             ->leftJoin('user_level', 'users.user_level_id', '=', 'user_level.level_id')
-            ->where('users.supervisor_id', $supervisorId);
+            ->where('users.supervisor_id', $supervisorId)
+            ->where('users.is_status', 1);
 
         if ($filters['search'] !== '') {
             $like = '%' . $filters['search'] . '%';
@@ -41,14 +52,6 @@ class VerificationController extends Controller
                     ->orWhere('users.position', 'like', $like)
                     ->orWhere('users.designation', 'like', $like);
             });
-        }
-
-        if ($filters['year'] !== '') {
-            $query->where('ipc_semester.year', $filters['year']);
-        }
-
-        if ($filters['semester'] !== '') {
-            $query->where('ipc_semester.semester', $filters['semester']);
         }
 
         $records = $query->select([
@@ -80,6 +83,10 @@ class VerificationController extends Controller
             'ipc_semester.date_verified',
             'ipc_semester.date_created as semester_date_created',
         ])
+            ->orderByRaw('ipc_semester.date_ready IS NULL')
+            ->orderBy('ipc_semester.date_ready')
+            ->orderByRaw('ipc_semester.lock IS NULL')
+            ->orderByDesc('ipc_semester.lock')
             ->orderBy('users.last_name')
             ->orderBy('users.first_name')
             ->orderByDesc('ipc_semester.year')
