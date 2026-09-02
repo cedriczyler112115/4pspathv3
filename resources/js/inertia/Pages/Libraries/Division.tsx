@@ -1,0 +1,269 @@
+import { Head, router, useForm } from '@inertiajs/react';
+import { useRef, useState } from 'react';
+import AppLayout from '../../Layouts/AppLayout';
+import { readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
+import { Pencil, Trash2, Plus, RotateCcw, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
+
+type DivisionRow = {
+  id: number;
+  divisionName: string;
+  divisionHead: number;
+  divisionSignatory: number | null;
+  divStatus: number;
+  headPos: string;
+};
+
+type Person = { id: number; name: string };
+
+type Props = {
+  appName: string;
+  user: { name: string; email: string } | null;
+  filters: { search: string; perPage: number };
+  divisions: {
+    data: DivisionRow[];
+    from: number | null;
+    to: number | null;
+    total: number;
+    currentPage: number;
+    lastPage: number;
+  };
+  people: Person[];
+  perPageOptions: Array<{ value: number; label: string }>;
+  navigation?: { sidebar?: any[] };
+};
+
+export default function Division({ appName, user, filters, divisions, people, perPageOptions, navigation }: Props) {
+  const pageKey = 'libraries-division';
+  const filterForm = useForm(readPersistedFilters(pageKey, user, {
+    search: filters.search,
+    perPage: String(filters.perPage),
+  }));
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const divisionForm = useForm({
+    divisionName: '',
+    divisionHead: '',
+    divisionSignatory: '',
+    divStatus: '1',
+    headPos: '',
+  });
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const submitFilters = (overrides = {}) => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    const data = { ...filterForm.data, ...overrides };
+    savePersistedFilters(pageKey, user, data);
+    router.post('/libraries/division', data, { preserveState: true, replace: true, preserveScroll: true });
+  };
+
+  const handleSearchChange = (val: string) => {
+    filterForm.setData('search', val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => submitFilters({ search: val, page: 1 }), 350);
+  };
+
+  const resetFilters = () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    filterForm.setData({ search: '', perPage: '10' });
+    savePersistedFilters(pageKey, user, { search: '', perPage: '10' });
+    router.post('/libraries/division', { search: '', perPage: '10', page: 1 }, { replace: true, preserveState: true });
+  };
+
+  const openCreateModal = () => {
+    setEditingId(null);
+    divisionForm.setData({ divisionName: '', divisionHead: '', divisionSignatory: '', divStatus: '1', headPos: '' });
+    setShowModal(true);
+  };
+
+  const openEditModal = (row: DivisionRow) => {
+    setEditingId(row.id);
+    divisionForm.setData({
+      divisionName: row.divisionName,
+      divisionHead: String(row.divisionHead),
+      divisionSignatory: row.divisionSignatory ? String(row.divisionSignatory) : '',
+      divStatus: String(row.divStatus),
+      headPos: row.headPos,
+    });
+    setShowModal(true);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingId !== null) {
+      divisionForm.patch(`/libraries/division/${editingId}`, { onSuccess: () => { setShowModal(false); setEditingId(null); } });
+    } else {
+      divisionForm.post('/libraries/division', { onSuccess: () => setShowModal(false) });
+    }
+  };
+
+  return (
+    <AppLayout appName={appName} user={user} sidebar={navigation?.sidebar ?? []}>
+      <Head title="Division Library - Libraries" />
+
+      <div className="space-y-3">
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-3 mb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="size-8 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <Plus className="size-4.5" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                  <span>Division Library</span>
+                  <span className="rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-mono text-[10px] font-bold px-2 py-0.2 border border-emerald-500/20">
+                    {divisions.total} Total Divisions
+                  </span>
+                </h1>
+                <p className="text-[11px] text-muted-foreground">Manage division names, heads, signatories, and statuses.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={resetFilters} className="h-8 inline-flex items-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer">
+                <RotateCcw className="size-3" /><span>Reset</span>
+              </button>
+              <button type="button" onClick={openCreateModal} className="h-8 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 text-white px-3 text-xs font-semibold hover:bg-emerald-700 transition shadow-xs cursor-pointer">
+                <Plus className="size-3.5" /><span>Add Division</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1 sm:col-span-2">
+              <label className="text-[11px] font-semibold text-muted-foreground">Search Division</label>
+              <div className="relative">
+                <Search className="size-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input value={filterForm.data.search} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Division name or head position..." className="h-8 w-full rounded-lg border border-input bg-background pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground/60 outline-hidden focus:ring-2 focus:ring-ring" />
+                {filterForm.data.search && (
+                  <button type="button" onClick={() => { filterForm.setData('search', ''); if (searchTimerRef.current) clearTimeout(searchTimerRef.current); submitFilters({ search: '', page: 1 }); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="size-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-semibold text-muted-foreground">Per Page</label>
+              <select value={filterForm.data.perPage} onChange={(e) => { filterForm.setData('perPage', e.target.value); submitFilters({ perPage: e.target.value, page: 1 }); }} className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer">
+                {perPageOptions.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-card shadow-2xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] border-collapse text-xs text-left">
+              <thead>
+                <tr className="bg-muted/60 text-[11px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                  <th className="px-3 py-2 text-center w-12 border-r border-border">#</th>
+                  <th className="px-3 py-2 border-r border-border">Division Name</th>
+                  <th className="px-3 py-2 border-r border-border">Division Head</th>
+                  <th className="px-3 py-2 border-r border-border">Division Signatory</th>
+                  <th className="px-3 py-2 border-r border-border text-center w-24">Status</th>
+                  <th className="px-3 py-2 border-r border-border">Head Position</th>
+                  <th className="px-3 py-2 text-center w-24">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {divisions.data.length ? divisions.data.map((row, index) => (
+                  <tr key={row.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-3 py-2 text-center font-mono text-[11px] text-muted-foreground border-r border-border">{(divisions.from ?? 1) + index}</td>
+                    <td className="px-3 py-2 font-bold text-foreground border-r border-border">{row.divisionName}</td>
+                    <td className="px-3 py-2 border-r border-border">{people.find((p) => p.id === row.divisionHead)?.name ?? row.divisionHead}</td>
+                    <td className="px-3 py-2 border-r border-border">{row.divisionSignatory ? (people.find((p) => p.id === row.divisionSignatory)?.name ?? row.divisionSignatory) : '—'}</td>
+                    <td className="px-3 py-2 border-r border-border text-center">{row.divStatus ? <span className="inline-flex rounded-full bg-emerald-500/10 text-emerald-700 px-2 py-0.5 text-[10px] font-bold border border-emerald-500/20">Active</span> : <span className="inline-flex rounded-full bg-muted text-muted-foreground px-2 py-0.5 text-[10px] font-bold border border-border">Inactive</span>}</td>
+                    <td className="px-3 py-2 border-r border-border">{row.headPos}</td>
+                    <td className="px-3 py-2 text-center"><div className="inline-flex items-center justify-center gap-1"><button type="button" onClick={() => openEditModal(row)} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition cursor-pointer"><Pencil className="size-3.5" /></button><button type="button" onClick={() => setDeletingId(row.id)} className="p-1 rounded-md text-rose-600 hover:bg-rose-500/10 transition cursor-pointer"><Trash2 className="size-3.5" /></button></div></td>
+                  </tr>
+                )) : (
+                  <tr><td colSpan={7} className="px-4 py-12 text-center"><div className="flex flex-col items-center justify-center space-y-2"><div className="size-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground"><Search className="size-5" /></div><p className="text-xs font-bold text-foreground">No divisions found</p><p className="text-[11px] text-muted-foreground max-w-sm">No division records matched your filter criteria.</p></div></td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {divisions.lastPage > 1 && (
+            <div className="border-t border-border px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-muted/20">
+              <div className="text-[11px] text-muted-foreground">Showing <span className="font-bold text-foreground">{divisions.from ?? 0}</span> to <span className="font-bold text-foreground">{divisions.to ?? 0}</span> of <span className="font-bold text-foreground">{divisions.total}</span> records</div>
+              <div className="flex items-center gap-1 flex-wrap">
+                {divisions.currentPage === 1 ? <span className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none"><ChevronLeft className="size-3.5" /></span> : <button type="button" onClick={() => submitFilters({ page: divisions.currentPage - 1 })} className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition cursor-pointer"><ChevronLeft className="size-3.5" /></button>}
+                {Array.from({ length: divisions.lastPage }, (_, i) => i + 1).map((page) => {
+                  const isActive = page === divisions.currentPage;
+                  return <button key={page} type="button" data-pagination-number={page} onClick={() => submitFilters({ page })} className={`h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium transition-colors cursor-pointer ${isActive ? 'bg-emerald-600 text-white font-bold shadow-2xs' : 'border border-input bg-background text-foreground hover:bg-muted'}`}>{page}</button>;
+                })}
+                {divisions.currentPage === divisions.lastPage ? <span className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] text-muted-foreground/50 border border-transparent select-none"><ChevronRight className="size-3.5" /></span> : <button type="button" onClick={() => submitFilters({ page: divisions.currentPage + 1 })} className="h-7 min-w-7 px-2 rounded-md flex items-center justify-center text-[11px] font-medium border border-input bg-background text-foreground hover:bg-muted transition cursor-pointer"><ChevronRight className="size-3.5" /></button>}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {showModal ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-2xl rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">{editingId ? 'Edit Division' : 'Add Division'}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{editingId ? 'Update division details.' : 'Enter new division details.'}</p>
+                </div>
+                <button type="button" onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"><X className="size-4" /></button>
+              </div>
+              <form onSubmit={handleFormSubmit} className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[11px] font-semibold text-muted-foreground">Division Name</label>
+                  <input value={divisionForm.data.divisionName} onChange={(e) => divisionForm.setData('divisionName', e.target.value)} className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring" required />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-muted-foreground">Division Head</label>
+                  <select value={divisionForm.data.divisionHead} onChange={(e) => divisionForm.setData('divisionHead', e.target.value)} className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer" required>
+                    <option value="">Select head</option>
+                    {people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-muted-foreground">Division Signatory</label>
+                  <select value={divisionForm.data.divisionSignatory} onChange={(e) => divisionForm.setData('divisionSignatory', e.target.value)} className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer">
+                    <option value="">None</option>
+                    {people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-muted-foreground">Status</label>
+                  <select value={divisionForm.data.divStatus} onChange={(e) => divisionForm.setData('divStatus', e.target.value)} className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer">
+                    <option value="1">Active</option>
+                    <option value="0">Inactive</option>
+                  </select>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <label className="text-[11px] font-semibold text-muted-foreground">Head Position</label>
+                  <input value={divisionForm.data.headPos} onChange={(e) => divisionForm.setData('headPos', e.target.value)} className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring" required />
+                </div>
+                <div className="flex justify-end gap-2 pt-3 border-t border-border sm:col-span-2">
+                  <button type="button" onClick={() => setShowModal(false)} className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition">Cancel</button>
+                  <button type="submit" disabled={divisionForm.processing} className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition">{editingId ? 'Save Changes' : 'Create Division'}</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        ) : null}
+
+        {deletingId !== null ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-5 shadow-2xl space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Delete Division</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">This will permanently delete the selected division record.</p>
+                </div>
+                <button type="button" onClick={() => setDeletingId(null)} className="text-muted-foreground hover:text-foreground p-1 rounded-md transition"><X className="size-4" /></button>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <button type="button" onClick={() => setDeletingId(null)} className="px-3 py-1.5 rounded-lg border border-input bg-background text-xs font-semibold text-foreground hover:bg-muted transition">Cancel</button>
+                <button type="button" onClick={() => router.delete(`/libraries/division/${deletingId}`, { onSuccess: () => setDeletingId(null) })} className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition">Confirm &amp; Delete</button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </AppLayout>
+  );
+}

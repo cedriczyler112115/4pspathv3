@@ -91,6 +91,7 @@ type RowItem = {
   sort_order: number;
   is_active: boolean;
   user_levels: number[];
+  user_ids: number[];
 };
 
 type Row = {
@@ -101,6 +102,12 @@ type Row = {
 type UserLevelOption = {
   level_id: number;
   level_name: string;
+};
+
+type UserOption = {
+  id: number;
+  name: string;
+  email: string;
 };
 
 type ParentOption = {
@@ -115,6 +122,7 @@ type Props = {
   stats: { total: number; active: number; inactive: number; nested: number };
   rows: Row[];
   availableUserLevels: UserLevelOption[];
+  availableUsers: UserOption[];
   parentOptions: ParentOption[];
   availableIcons: string[];
   badgeColors: string[];
@@ -128,6 +136,7 @@ export default function SidebarMenu({
   stats,
   rows,
   availableUserLevels,
+  availableUsers,
   parentOptions,
   availableIcons,
   badgeColors,
@@ -138,6 +147,7 @@ export default function SidebarMenu({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [iconSearch, setIconSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
 
   const filterForm = useForm(readPersistedFilters(pageKey, user, {
     search: filters.search || '',
@@ -166,6 +176,7 @@ export default function SidebarMenu({
     sort_order: 0,
     is_active: true,
     user_levels: [] as number[],
+    user_ids: [] as number[],
   });
 
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -228,8 +239,10 @@ export default function SidebarMenu({
       sort_order: (rows.length + 1) * 10,
       is_active: true,
       user_levels: [],
+      user_ids: [],
     });
     setIconSearch('');
+    setUserSearch('');
     setShowModal(true);
   };
 
@@ -247,8 +260,10 @@ export default function SidebarMenu({
       sort_order: item.sort_order,
       is_active: item.is_active,
       user_levels: item.user_levels || [],
+      user_ids: item.user_ids || [],
     });
     setIconSearch(item.icon ?? '');
+    setUserSearch('');
     setShowModal(true);
   };
 
@@ -276,6 +291,10 @@ export default function SidebarMenu({
 
   const filteredIcons = mergedIconList.filter((icon) =>
     icon.toLowerCase().includes(iconSearch.toLowerCase())
+  );
+
+  const filteredUsers = availableUsers.filter((option) =>
+    `${option.name} ${option.email}`.toLowerCase().includes(userSearch.trim().toLowerCase())
   );
 
   if (iconSearch.trim() && !filteredIcons.some((i) => i.toLowerCase() === iconSearch.trim().toLowerCase())) {
@@ -496,7 +515,7 @@ export default function SidebarMenu({
                       </td>
 
                       <td className="px-3 py-2 border-r border-border">
-                        {item.user_levels && item.user_levels.length > 0 ? (
+                        {(item.user_levels?.length || item.user_ids?.length) ? (
                           <div className="flex flex-wrap gap-1">
                             {item.user_levels.map((lvlId) => {
                               const lvl = availableUserLevels.find((l) => l.level_id === lvlId);
@@ -509,10 +528,21 @@ export default function SidebarMenu({
                                 </span>
                               );
                             })}
+                            {item.user_ids.map((userId) => {
+                              const assignedUser = availableUsers.find((option) => option.id === userId);
+                              return (
+                                <span
+                                  key={`user-${userId}`}
+                                  className="inline-flex items-center rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px] font-bold px-2 py-0.2 border border-amber-500/20"
+                                >
+                                  {assignedUser?.name ?? `User #${userId}`}
+                                </span>
+                              );
+                            })}
                           </div>
                         ) : (
                           <span className="inline-flex items-center rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-bold px-2 py-0.2 border border-emerald-500/20">
-                            All Roles
+                            All Users
                           </span>
                         )}
                       </td>
@@ -813,6 +843,45 @@ export default function SidebarMenu({
                         </label>
                       );
                     })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-muted-foreground">Specific User Access</label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Selected users can view this item in addition to the selected user levels. Leave both lists empty to allow everyone.
+                  </p>
+                  <input
+                    value={userSearch}
+                    onChange={(event) => setUserSearch(event.target.value)}
+                    placeholder="Search active users by name or email..."
+                    className="h-8 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring"
+                  />
+                  <div className="grid gap-2 sm:grid-cols-2 rounded-lg border border-border bg-muted/20 p-2.5 max-h-40 overflow-y-auto">
+                    {filteredUsers.length ? filteredUsers.map((option) => {
+                      const isChecked = itemForm.data.user_ids.includes(option.id);
+                      return (
+                        <label key={option.id} className="flex items-start gap-2 text-xs text-foreground cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(event) => itemForm.setData(
+                              'user_ids',
+                              event.target.checked
+                                ? [...itemForm.data.user_ids, option.id]
+                                : itemForm.data.user_ids.filter((id) => id !== option.id)
+                            )}
+                            className="mt-0.5 size-3.5 rounded border-input text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <span className="min-w-0">
+                            <span className="block font-semibold truncate">{option.name}</span>
+                            <span className="block text-[10px] text-muted-foreground truncate">{option.email}</span>
+                          </span>
+                        </label>
+                      );
+                    }) : (
+                      <p className="col-span-full py-2 text-center text-[11px] text-muted-foreground">No active users found.</p>
+                    )}
                   </div>
                 </div>
 

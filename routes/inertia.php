@@ -4,7 +4,9 @@ use App\Http\Controllers\Inertia\DashboardController;
 use App\Http\Controllers\Inertia\Auth\LoginController;
 use App\Http\Controllers\Inertia\Administration\ApplicationSettingsController;
 use App\Http\Controllers\Inertia\Administration\UserLevelController;
+use App\Http\Controllers\Inertia\Libraries\DivisionController;
 use App\Http\Controllers\Inertia\Libraries\HarmonizedStaffController;
+use App\Http\Controllers\Inertia\Libraries\SectionController;
 use App\Http\Controllers\Inertia\RpmoManagement\HarmonizedIpcController;
 use App\Http\Controllers\Inertia\RpmoManagement\PlsScorecardController;
 use App\Http\Controllers\Inertia\Settings\SidebarMenuController;
@@ -123,6 +125,18 @@ if (class_exists(\Inertia\Inertia::class)) {
         Route::patch('/libraries/harmonized-staff/{id}', [HarmonizedStaffController::class, 'update'])->name('libraries.harmonized-staff.update');
         Route::delete('/libraries/harmonized-staff/{id}', [HarmonizedStaffController::class, 'destroy'])->name('libraries.harmonized-staff.destroy');
         Route::redirect('/harmonized-staff', '/libraries/harmonized-staff');
+
+        Route::match(['get', 'post'], '/libraries/division', [DivisionController::class, 'index'])->name('libraries.division');
+        Route::post('/libraries/division', [DivisionController::class, 'store'])->name('libraries.division.store');
+        Route::patch('/libraries/division/{id}', [DivisionController::class, 'update'])->name('libraries.division.update');
+        Route::delete('/libraries/division/{id}', [DivisionController::class, 'destroy'])->name('libraries.division.destroy');
+        Route::redirect('/division', '/libraries/division');
+
+        Route::match(['get', 'post'], '/libraries/section', [SectionController::class, 'index'])->name('libraries.section');
+        Route::post('/libraries/section', [SectionController::class, 'store'])->name('libraries.section.store');
+        Route::patch('/libraries/section/{id}', [SectionController::class, 'update'])->name('libraries.section.update');
+        Route::delete('/libraries/section/{id}', [SectionController::class, 'destroy'])->name('libraries.section.destroy');
+        Route::redirect('/section', '/libraries/section');
 
         Route::match(['get', 'post'], '/rpmo-management/harmonized-ipc', [HarmonizedIpcController::class, 'index'])->name('rpmo-management.harmonized-ipc');
         Route::match(['get', 'post'], '/rpmo-management/harmonized-ipc/filter', [HarmonizedIpcController::class, 'index'])->name('rpmo-management.harmonized-ipc.filter');

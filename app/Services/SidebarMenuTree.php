@@ -93,6 +93,9 @@ final class SidebarMenuTree
             if (isset($rawItem['user_levels']) && is_array($rawItem['user_levels'])) {
                 $rawItem['user_levels'] = json_encode($rawItem['user_levels']);
             }
+            if (isset($rawItem['user_ids']) && is_array($rawItem['user_ids'])) {
+                $rawItem['user_ids'] = json_encode($rawItem['user_ids']);
+            }
             $item->setRawAttributes($rawItem, true);
             $item->exists = true;
 

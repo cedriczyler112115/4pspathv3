@@ -1,4 +1,4 @@
-import{l as e,o as t,t as n}from"./app-Hq9avAXe.js";var r=e(t(),1),i=n();function a(e,t=`-`){if(e==null)return t;let n=String(e);return n=n.replace(/<br\s*\/?>/gi,`
+import{l as e,o as t,t as n}from"./app-LU_LCMQw.js";var r=e(t(),1),i=n();function a(e,t=`-`){if(e==null)return t;let n=String(e);return n=n.replace(/<br\s*\/?>/gi,`
 `).replace(/&nbsp;/gi,` `).replace(/&amp;/gi,`&`).replace(/&lt;/gi,`<`).replace(/&gt;/gi,`>`).replace(/&quot;/gi,`"`).replace(/&#039;/gi,`'`),n=n.replace(/\r\n/g,`
 `).replace(/\r/g,`
 `).trim(),n||t}function o({value:e,className:t=``,fallback:n=`-`}){let o=a(e,n);if(!o||o===n)return(0,i.jsx)(`span`,{className:`text-slate-400 dark:text-slate-500 ${t}`,children:n});if(/<[a-z][\s\S]*>/i.test(o)){let e=o.replace(/\s*(\r?\n)\s*(<\/?(?:ul|ol|li|p|h[1-6]|blockquote|table|tr|td|th)[^>]*>)/gi,`$2`);return(0,i.jsx)(`span`,{className:`leading-relaxed ${t} [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:my-1.5 [&_li]:my-0.5 [&_p]:mb-1.5`,dangerouslySetInnerHTML:{__html:e}})}let s=o.split(`

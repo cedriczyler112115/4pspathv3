@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Schema;
  * @property string|null $badge_cls
  * @property int $sort_order
  * @property bool $is_active
+ * @property array<int>|null $user_ids
  */
 #[Fillable([
     'parent_id',
@@ -34,6 +35,7 @@ use Illuminate\Support\Facades\Schema;
     'sort_order',
     'is_active',
     'user_levels',
+    'user_ids',
 ])]
 class SidebarMenuItem extends Model
 {
@@ -50,6 +52,7 @@ class SidebarMenuItem extends Model
         'sort_order' => 'int',
         'parent_id' => 'int',
         'user_levels' => 'array',
+        'user_ids' => 'array',
     ];
 
     /**
@@ -147,7 +150,8 @@ class SidebarMenuItem extends Model
 
             $itemMap = $items->keyBy('id');
 
-            $allowedItemIds = $items->filter(function (self $item) use ($userLevelId, $isSuperAdmin, $canScorecard, $itemMap): bool {
+            $userId = (int) $user->id;
+            $allowedItemIds = $items->filter(function (self $item) use ($userId, $userLevelId, $isSuperAdmin, $canScorecard, $itemMap): bool {
                 if ($isSuperAdmin) {
                     return true;
                 }
@@ -172,13 +176,17 @@ class SidebarMenuItem extends Model
                 }
 
                 $allowedLevels = array_filter(array_map('intval', (array) ($item->user_levels ?? [])));
-                $roleAllowed = empty($allowedLevels) || ($userLevelId > 0 && in_array($userLevelId, $allowedLevels, true));
+                $allowedUsers = array_filter(array_map('intval', (array) ($item->user_ids ?? [])));
+                $hasRestrictions = ! empty($allowedLevels) || ! empty($allowedUsers);
+                $roleAllowed = $userLevelId > 0 && in_array($userLevelId, $allowedLevels, true);
+                $userAllowed = in_array($userId, $allowedUsers, true);
+                $accessAllowed = ! $hasRestrictions || $roleAllowed || $userAllowed;
 
                 if ($isRpmoItem) {
-                    return $canScorecard || $roleAllowed;
+                    return $canScorecard || $accessAllowed;
                 }
 
-                return $roleAllowed;
+                return $accessAllowed;
             })->pluck('id')->all();
 
             $finalIds = [];

@@ -4,7 +4,7 @@ import AppLayout from '../../Layouts/AppLayout';
 import UserAvatar from '../../Components/UserAvatar';
 import FormattedText, { formatTextValue } from '../../Components/FormattedText';
 import AutoResizingTextarea, { adjustTextareaHeight } from '../../Components/AutoResizingTextarea';
-import { hasPersistedFilters, readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
+import SearchableSelect from '../../Components/SearchableSelect';
 
 import {
   Plus,
@@ -111,6 +111,10 @@ function formatSemesterLabel(sem: string, semesters: Props['semesters']) {
   return found ? found.label : sem;
 }
 
+function formatStaffLabel(user: { name: string; position?: string }) {
+  return user.position ? `${user.name} (${user.position})` : user.name;
+}
+
 function getPaginationPages(currentPage: number, lastPage: number): (number | string)[] {
   if (lastPage <= 7) {
     return Array.from({ length: lastPage }, (_, i) => i + 1);
@@ -143,8 +147,7 @@ export default function AnnualTarget({
   navigation,
 }: Props) {
   // Filter Form State
-  const pageKey = 'annualtarget';
-  const persisted = readPersistedFilters(pageKey, user, {
+  const filterForm = useForm({
     search: filters.search || '',
     year: filters.year || '',
     category: filters.category || '',
@@ -152,38 +155,6 @@ export default function AnnualTarget({
     perPage: String(filters.perPage || 10),
     duplicates: Boolean(filters.showOnlyDuplicates),
   });
-  const filterForm = useForm({
-    search: persisted.search,
-    year: persisted.year,
-    category: persisted.category,
-    semester: persisted.semester,
-    perPage: persisted.perPage,
-    duplicates: persisted.duplicates,
-  });
-  const restoredFiltersRef = useRef(false);
-
-  useEffect(() => {
-    filterForm.setData(readPersistedFilters(pageKey, user, {
-      search: filters.search || '',
-      year: filters.year || '',
-      category: filters.category || '',
-      semester: filters.semester || '',
-      perPage: String(filters.perPage || 10),
-      duplicates: Boolean(filters.showOnlyDuplicates),
-    }));
-  }, [filters.year, filters.category, filters.semester, filters.search, filters.perPage, filters.showOnlyDuplicates, pageKey, user]);
-
-  useEffect(() => {
-    if (restoredFiltersRef.current || !hasPersistedFilters(pageKey, user)) return;
-    restoredFiltersRef.current = true;
-    const serverFilters = {
-      search: filters.search || '', year: filters.year || '', category: filters.category || '',
-      semester: filters.semester || '', perPage: String(filters.perPage || 10), duplicates: Boolean(filters.showOnlyDuplicates),
-    };
-    if (JSON.stringify(persisted) !== JSON.stringify(serverFilters)) {
-      router.post('/ipcrf/annualtarget/filter', { ...persisted, page: 1 }, { replace: true, preserveScroll: true });
-    }
-  }, []);
 
   // Inline Editing Group State & Pending Sub-targets
   const [editingIndicatorId, setEditingIndicatorId] = useState<number | null>(null);
@@ -224,7 +195,7 @@ export default function AnnualTarget({
     year: Number(filters.year) || new Date().getFullYear(),
     category: 1,
     activity: '',
-    semester: 1,
+    semester: Number(filters.semester) || 1,
     description: '',
     efficiency: '',
     quality: '',
@@ -375,6 +346,12 @@ export default function AnnualTarget({
     setShowCopyModal(true);
   };
 
+  const copyStaffOptions = copyData.staffUsers.map((u) => ({
+    value: String(u.id),
+    label: formatStaffLabel(u),
+    subLabel: u.position || undefined,
+  }));
+
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const submitFilters = (overrides: Record<string, any> = {}) => {
@@ -389,12 +366,20 @@ export default function AnnualTarget({
       page: 1,
       ...overrides,
     };
-    savePersistedFilters(pageKey, user, payload);
     router.post('/ipcrf/annualtarget/filter', payload, {
       replace: true,
       preserveScroll: true,
     });
   };
+
+  const getCurrentFilterPayload = () => ({
+    search: filterForm.data.search,
+    year: filterForm.data.year,
+    category: filterForm.data.category,
+    semester: filterForm.data.semester,
+    perPage: filterForm.data.perPage,
+    duplicates: filterForm.data.duplicates,
+  });
 
   const handleSearchChange = (val: string) => {
     filterForm.setData('search', val);
@@ -430,19 +415,18 @@ export default function AnnualTarget({
       search: '',
       year: filters.year || '',
       category: '',
-      semester: '',
+      semester: filters.semester || '',
       perPage: '10',
       duplicates: false,
     };
     filterForm.setData(resetValues);
-    savePersistedFilters(pageKey, user, resetValues);
     router.post(
       '/ipcrf/annualtarget/filter',
       {
         search: '',
         year: resetValues.year,
         category: '',
-        semester: '',
+        semester: resetValues.semester,
         perPage: '10',
         duplicates: false,
         page: 1,
@@ -546,11 +530,22 @@ export default function AnnualTarget({
   };
 
   const handleSaveInlineEdit = (group: GroupRow) => {
-    inlineEditForm.patch(`/ipcrf/annualtarget/${group.indicatorId}`, {
-      onSuccess: () => {
-        cancelInlineEdit();
+    router.patch(
+      `/ipcrf/annualtarget/${group.indicatorId}`,
+      {
+        activity: inlineEditForm.data.activity,
+        category: inlineEditForm.data.category,
+        editRows: inlineEditForm.data.editRows,
+        pendingSubTargets: inlineEditForm.data.pendingSubTargets,
+        ...getCurrentFilterPayload(),
       },
-    });
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          cancelInlineEdit();
+        },
+      }
+    );
   };
 
   const openAddModalForCategory = (catVal: number) => {
@@ -572,7 +567,17 @@ export default function AnnualTarget({
 
   const handleSaveAddTarget = (e: React.FormEvent) => {
     e.preventDefault();
-    addForm.post('/ipcrf/annualtarget/store', {
+    const query = new URLSearchParams({
+      search: filterForm.data.search || '',
+      year: filterForm.data.year || '',
+      category: filterForm.data.category || '',
+      semester: filterForm.data.semester || '',
+      perPage: filterForm.data.perPage || '',
+      duplicates: filterForm.data.duplicates ? '1' : '',
+    }).toString();
+
+    addForm.post(`/ipcrf/annualtarget/store?${query}`, {
+      preserveScroll: true,
       onSuccess: () => {
         setShowAddModal(false);
       },
@@ -582,16 +587,40 @@ export default function AnnualTarget({
   const handleLockTargets = () => {
     router.post(
       '/ipcrf/annualtarget/lock',
-      { year: filterForm.data.year },
-      { onSuccess: () => setShowLockModal(false) }
+      {
+        search: filterForm.data.search,
+        year: filterForm.data.year,
+        category: filterForm.data.category,
+        semester: filterForm.data.semester,
+        perPage: filterForm.data.perPage,
+        duplicates: filterForm.data.duplicates,
+      },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setShowLockModal(false);
+        },
+      }
     );
   };
 
   const handleUnlockTargets = () => {
     router.post(
       '/ipcrf/annualtarget/unlock',
-      { year: filterForm.data.year },
-      { onSuccess: () => setShowUnlockModal(false) }
+      {
+        search: filterForm.data.search,
+        year: filterForm.data.year,
+        category: filterForm.data.category,
+        semester: filterForm.data.semester,
+        perPage: filterForm.data.perPage,
+        duplicates: filterForm.data.duplicates,
+      },
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setShowUnlockModal(false);
+        },
+      }
     );
   };
 
@@ -2035,21 +2064,18 @@ export default function AnnualTarget({
                       <label className="block text-xs font-semibold text-muted-foreground mb-1">
                         Staff Name
                       </label>
-                      <select
+                      <SearchableSelect
                         value={copyStaffUserId}
-                        onChange={(e) => {
-                          setCopyStaffUserId(e.target.value);
+                        onChange={(val) => {
+                          setCopyStaffUserId(val);
                           setCopyStaffPage(1);
                         }}
-                        className="h-9 w-full rounded-lg border border-input bg-background px-2.5 text-xs text-foreground outline-hidden focus:ring-2 focus:ring-ring cursor-pointer"
-                      >
-                        <option value="">Select Staff</option>
-                        {copyData.staffUsers.map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name} {u.position ? `(${u.position})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        options={copyStaffOptions}
+                        placeholder="Select Staff"
+                        searchPlaceholder="Search staff by name or position..."
+                        uppercase={false}
+                        className="h-9"
+                      />
                     </div>
 
                     <div>
@@ -2543,6 +2569,8 @@ export default function AnnualTarget({
                   type="button"
                   onClick={() => {
                     router.delete(`/ipcrf/annualtarget/${deletingIndicatorId}`, {
+                      data: getCurrentFilterPayload(),
+                      preserveScroll: true,
                       onSuccess: () => setDeletingIndicatorId(null),
                     });
                   }}
@@ -2587,6 +2615,8 @@ export default function AnnualTarget({
                   type="button"
                   onClick={() => {
                     router.delete(`/ipcrf/annualtarget-item/${deletingSubTargetId}`, {
+                      data: getCurrentFilterPayload(),
+                      preserveScroll: true,
                       onSuccess: () => setDeletingSubTargetId(null),
                     });
                   }}

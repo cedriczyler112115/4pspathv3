@@ -29,12 +29,13 @@ class AnnualTargetController extends Controller
         $perPageInt = $isAll ? 999999 : max(1, (int) $rawPerPage);
 
         $selectedYear = $request->filled('year') ? (string) $request->input('year') : ApplicationSetting::defaultYear();
+        $selectedSemester = $request->filled('semester') ? (string) $request->input('semester') : ApplicationSetting::defaultSemester();
 
         $filters = [
             'search' => (string) $request->input('search', ''),
             'year' => $selectedYear,
             'category' => (string) $request->input('category', ''),
-            'semester' => (string) $request->input('semester', ''),
+            'semester' => $selectedSemester,
             'perPage' => $rawPerPage,
             'showOnlyDuplicates' => $request->boolean('duplicates'),
         ];
@@ -196,7 +197,7 @@ class AnnualTargetController extends Controller
             'remarks' => $validated['remarks'] ?? '',
         ]);
 
-        return back()->with('success', __('Annual target added successfully.'));
+        return $this->annualTargetRedirect($request)->with('success', __('Annual target added successfully.'));
     }
 
     public function reorder(Request $request): RedirectResponse
@@ -247,6 +248,8 @@ class AnnualTargetController extends Controller
             'rg_remarks_' => '',
             'display_order' => $maxDisplayOrder + 1,
             'indi_status' => 1,
+            'created_by' => $userId,
+            'modified_by' => $userId,
             'date_created' => now(),
         ]);
 
@@ -325,13 +328,15 @@ class AnnualTargetController extends Controller
                         'rg_remarks_' => (string) ($pending['remarks'] ?? ''),
                         'display_order' => $maxDisplayOrder,
                         'indi_status' => 1,
+                        'created_by' => $userId,
+                        'modified_by' => $userId,
                         'date_created' => now(),
                     ]);
                 }
             }
         });
 
-        return back()->with('success', __('Annual target updated successfully.'));
+        return $this->annualTargetRedirect($request)->with('success', __('Annual target updated successfully.'));
     }
 
     public function destroyIndicator(int $indicatorId): RedirectResponse
@@ -345,14 +350,14 @@ class AnnualTargetController extends Controller
             ->value('target_year');
 
         if ($targetYear && DB::table('ipc_semester')->where('user_id', $userId)->where('year', $targetYear)->exists()) {
-            return back()->with('error', __('Cannot delete target. A rating record for year :year exists in My Ratings.', ['year' => $targetYear]));
+            return $this->annualTargetRedirect(request())->with('error', __('Cannot delete target. A rating record for year :year exists in My Ratings.', ['year' => $targetYear]));
         }
 
         if (app(DeleteAnnualTarget::class)->execute($indicatorId, $userId)) {
-            return back()->with('success', __('Annual target deleted.'));
+            return $this->annualTargetRedirect(request())->with('success', __('Annual target deleted.'));
         }
 
-        return back()->with('error', __('Failed to delete target.'));
+        return $this->annualTargetRedirect(request())->with('error', __('Failed to delete target.'));
     }
 
     public function destroyItem(int $itemId): RedirectResponse
@@ -367,14 +372,33 @@ class AnnualTargetController extends Controller
             ->value('iti.target_year');
 
         if ($targetYear && DB::table('ipc_semester')->where('user_id', $userId)->where('year', $targetYear)->exists()) {
-            return back()->with('error', __('Cannot delete sub-target. A rating record for year :year exists in My Ratings.', ['year' => $targetYear]));
+            return $this->annualTargetRedirect(request())->with('error', __('Cannot delete sub-target. A rating record for year :year exists in My Ratings.', ['year' => $targetYear]));
         }
 
         if (app(DeleteAnnualTarget::class)->executeItem($itemId, $userId)) {
-            return back()->with('success', __('Sub-target deleted.'));
+            return $this->annualTargetRedirect(request())->with('success', __('Sub-target deleted.'));
         }
 
-        return back()->with('error', __('Failed to delete sub-target.'));
+        return $this->annualTargetRedirect(request())->with('error', __('Failed to delete sub-target.'));
+    }
+
+    private function annualTargetRedirect(Request $request): RedirectResponse
+    {
+        $redirectQuery = array_filter([
+            'search' => (string) $request->input('search', ''),
+            'year' => (string) $request->input('year', ''),
+            'category' => (string) $request->input('category', ''),
+            'semester' => (string) $request->input('semester', ''),
+            'perPage' => (string) $request->input('perPage', ''),
+            'duplicates' => $request->boolean('duplicates') ? '1' : null,
+        ], static fn ($value) => $value !== '' && $value !== null);
+
+        $url = url('/ipcrf/annualtarget/filter');
+        if (! empty($redirectQuery)) {
+            $url .= '?'.http_build_query($redirectQuery);
+        }
+
+        return redirect()->to($url);
     }
 
     public function lock(Request $request): RedirectResponse
@@ -578,7 +602,21 @@ class AnnualTargetController extends Controller
             }
         });
 
-        return back()->with('success', __('Annual targets have been saved and locked.'));
+        $redirectQuery = array_filter([
+            'year' => (string) $request->input('year', ''),
+            'search' => (string) $request->input('search', ''),
+            'category' => (string) $request->input('category', ''),
+            'semester' => (string) $request->input('semester', ''),
+            'perPage' => (string) $request->input('perPage', ''),
+            'duplicates' => $request->boolean('duplicates') ? '1' : null,
+        ], static fn ($value) => $value !== '' && $value !== null);
+
+        $url = url('/ipcrf/annualtarget/filter');
+        if (! empty($redirectQuery)) {
+            $url .= '?'.http_build_query($redirectQuery);
+        }
+
+        return redirect()->to($url)->with('success', __('Annual targets have been saved and locked.'));
     }
 
     public function unlock(Request $request): RedirectResponse
@@ -616,7 +654,21 @@ class AnnualTargetController extends Controller
             }
         });
 
-        return back()->with('success', __('Annual targets have been unlocked.'));
+        $redirectQuery = array_filter([
+            'year' => (string) $request->input('year', ''),
+            'search' => (string) $request->input('search', ''),
+            'category' => (string) $request->input('category', ''),
+            'semester' => (string) $request->input('semester', ''),
+            'perPage' => (string) $request->input('perPage', ''),
+            'duplicates' => $request->boolean('duplicates') ? '1' : null,
+        ], static fn ($value) => $value !== '' && $value !== null);
+
+        $url = url('/ipcrf/annualtarget/filter');
+        if (! empty($redirectQuery)) {
+            $url .= '?'.http_build_query($redirectQuery);
+        }
+
+        return redirect()->to($url)->with('success', __('Annual targets have been unlocked.'));
     }
 
     public function getCopyData(Request $request): JsonResponse
@@ -839,6 +891,7 @@ class AnnualTargetController extends Controller
                 'activity' => $sourceIndicator->activity,
                 'remarks' => $sourceIndicator->remarks ?? '',
                 'target_status' => 1,
+                'created_by' => $userId,
                 'date_created' => now(),
             ]);
 
@@ -854,6 +907,8 @@ class AnnualTargetController extends Controller
                     'rg_mov_' => $item->rg_mov_,
                     'rg_remarks_' => $item->rg_remarks_,
                     'indi_status' => 1,
+                    'created_by' => $userId,
+                    'modified_by' => $userId,
                     'date_created' => now(),
                 ]);
             }
@@ -892,6 +947,7 @@ class AnnualTargetController extends Controller
                 'activity' => $sourceIndicator->activity,
                 'remarks' => '',
                 'target_status' => 1,
+                'created_by' => $userId,
                 'date_created' => now(),
             ]);
 
@@ -907,6 +963,8 @@ class AnnualTargetController extends Controller
                     'rg_mov_' => $item->rg_mov_,
                     'rg_remarks_' => $item->rg_remarks_,
                     'indi_status' => 1,
+                    'created_by' => $userId,
+                    'modified_by' => $userId,
                     'date_created' => now(),
                 ]);
             }

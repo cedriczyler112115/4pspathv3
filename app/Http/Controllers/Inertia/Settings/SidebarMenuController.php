@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Inertia\Settings;
 
 use App\Http\Controllers\Controller;
 use App\Models\SidebarMenuItem;
+use App\Models\User;
 use App\Models\UserLevel;
 use App\Services\SidebarMenuTree;
 use App\Support\SidebarIcons;
@@ -88,10 +89,12 @@ class SidebarMenuController extends Controller
                     'sort_order' => $r['item']->sort_order,
                     'is_active' => (bool) $r['item']->is_active,
                     'user_levels' => array_filter(array_map('intval', (array) ($r['item']->user_levels ?? []))),
+                    'user_ids' => array_filter(array_map('intval', (array) ($r['item']->user_ids ?? []))),
                 ],
                 'depth' => $r['depth'],
             ], $filteredRows),
             'availableUserLevels' => $this->availableUserLevels(),
+            'availableUsers' => $this->availableUsers(),
             'parentOptions' => $this->parentOptions(),
             'availableIcons' => SidebarIcons::all(),
             'badgeColors' => SidebarMenuItem::BADGE_COLORS,
@@ -172,6 +175,8 @@ class SidebarMenuController extends Controller
             'is_active' => ['boolean'],
             'user_levels' => ['nullable', 'array'],
             'user_levels.*' => ['integer'],
+            'user_ids' => ['nullable', 'array'],
+            'user_ids.*' => ['integer', Rule::exists('users', 'id')],
         ]);
 
         $data['parent_id'] = filled($data['parent_id'] ?? null) ? (int) $data['parent_id'] : null;
@@ -181,6 +186,7 @@ class SidebarMenuController extends Controller
         $data['badge_text'] = filled($data['badge_text'] ?? null) ? $data['badge_text'] : null;
         $data['badge_cls'] = filled($data['badge_cls'] ?? null) ? $data['badge_cls'] : null;
         $data['user_levels'] = ! empty($data['user_levels']) ? array_values(array_filter(array_map('intval', $data['user_levels']))) : null;
+        $data['user_ids'] = ! empty($data['user_ids']) ? array_values(array_unique(array_filter(array_map('intval', $data['user_ids'])))) : null;
 
         return $data;
     }
@@ -225,5 +231,23 @@ class SidebarMenuController extends Controller
             'id' => (int) $row['item']->id,
             'label' => str_repeat('— ', $row['depth']).$row['item']->label,
         ], $this->rows());
+    }
+
+    private function availableUsers(): array
+    {
+        if (! Schema::hasTable('users')) {
+            return [];
+        }
+
+        return User::query()
+            ->where('is_status', 1)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->map(fn (User $user) => [
+                'id' => (int) $user->id,
+                'name' => (string) $user->name,
+                'email' => (string) $user->email,
+            ])
+            ->all();
     }
 }
