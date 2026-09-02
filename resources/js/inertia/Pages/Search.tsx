@@ -16,6 +16,7 @@ import {
   Calendar,
   FileCheck,
 } from 'lucide-react';
+import { readPersistedFilters, savePersistedFilters } from '../lib/filterPersistence';
 
 type UserRow = {
   id: number;
@@ -131,13 +132,22 @@ export default function Search({
   semesters = [],
   navigation,
 }: Props) {
-  const form = useForm({
+  const pageKey = 'search';
+  const persisted = readPersistedFilters(pageKey, user, {
     search: filters?.search || '',
     division: filters?.division || '',
     section: filters?.section || '',
     year: filters?.year || '',
     semester: filters?.semester || '',
     perPage: String(filters?.perPage || 10),
+  });
+  const form = useForm({
+    search: persisted.search,
+    division: persisted.division,
+    section: persisted.section,
+    year: persisted.year,
+    semester: persisted.semester,
+    perPage: persisted.perPage,
   });
 
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -166,10 +176,12 @@ export default function Search({
       preserveState: true,
       replace: true,
     });
+    savePersistedFilters(pageKey, user, payload);
   };
 
   const handleSearchChange = (val: string) => {
     form.setData('search', val);
+    savePersistedFilters(pageKey, user, { ...form.data, search: val });
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
       navigateSearch({ search: val, page: 1 });
@@ -189,21 +201,25 @@ export default function Search({
       division: divisionId,
       section: newSection,
     }));
+    savePersistedFilters(pageKey, user, { ...form.data, division: divisionId, section: newSection });
     navigateSearch({ division: divisionId, section: newSection, page: 1 });
   };
 
   const handleSectionChange = (sectionId: string) => {
     form.setData('section', sectionId);
+    savePersistedFilters(pageKey, user, { ...form.data, section: sectionId });
     navigateSearch({ section: sectionId, page: 1 });
   };
 
   const handleYearChange = (year: string) => {
     form.setData('year', year);
+    savePersistedFilters(pageKey, user, { ...form.data, year });
     navigateSearch({ year, page: 1 });
   };
 
   const handleSemesterChange = (semester: string) => {
     form.setData('semester', semester);
+    savePersistedFilters(pageKey, user, { ...form.data, semester });
     navigateSearch({ semester, page: 1 });
   };
 
@@ -215,6 +231,7 @@ export default function Search({
 
   const handlePerPageChange = (val: string) => {
     form.setData('perPage', val);
+    savePersistedFilters(pageKey, user, { ...form.data, perPage: val });
     navigateSearch({ perPage: val, page: 1 });
   };
 
@@ -241,6 +258,14 @@ export default function Search({
       },
       { replace: true, preserveState: true }
     );
+    savePersistedFilters(pageKey, user, {
+      search: '',
+      division: '',
+      section: '',
+      year: '',
+      semester: '',
+      perPage: '10',
+    });
   };
 
   return (
@@ -637,4 +662,3 @@ export default function Search({
     </AppLayout>
   );
 }
-

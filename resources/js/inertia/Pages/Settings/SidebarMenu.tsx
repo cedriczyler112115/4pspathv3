@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import React, { useEffect, useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
+import { readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 import * as LucideIcons from 'lucide-react';
 import { LayoutGrid, Plus, RotateCcw, Search, X, Pencil, Trash2, ChevronRight, CornerDownRight, AlertCircle } from 'lucide-react';
 
@@ -132,25 +133,26 @@ export default function SidebarMenu({
   badgeColors,
   navigation,
 }: Props) {
+  const pageKey = 'settings-sidebar-menu';
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [iconSearch, setIconSearch] = useState('');
 
-  const filterForm = useForm({
+  const filterForm = useForm(readPersistedFilters(pageKey, user, {
     search: filters.search || '',
     status: filters.status || 'all',
     hierarchy: filters.hierarchy || 'all',
     userLevel: filters.userLevel || 'all',
-  });
+  }));
 
   useEffect(() => {
-    filterForm.setData({
+    filterForm.setData(readPersistedFilters(pageKey, user, {
       search: filters.search || '',
       status: filters.status || 'all',
       hierarchy: filters.hierarchy || 'all',
       userLevel: filters.userLevel || 'all',
-    });
+    }));
   }, [filters.search, filters.status, filters.hierarchy, filters.userLevel]);
 
   const itemForm = useForm({
@@ -171,6 +173,7 @@ export default function SidebarMenu({
   const submitFilters = (overrides?: Partial<typeof filterForm.data>) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
+    savePersistedFilters(pageKey, user, data);
     router.post('/settings/sidebar-menu/filter', data, {
       replace: true,
       preserveScroll: true,
@@ -203,6 +206,7 @@ export default function SidebarMenu({
   const resetFilters = () => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({ search: '', status: 'all', hierarchy: 'all', userLevel: 'all' });
+    savePersistedFilters(pageKey, user, { search: '', status: 'all', hierarchy: 'all', userLevel: 'all' });
     router.post(
       '/settings/sidebar-menu/filter',
       { search: '', status: 'all', hierarchy: 'all', userLevel: 'all' },

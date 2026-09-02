@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import AppLayout from '../Layouts/AppLayout';
 import {
   Clock,
@@ -19,6 +19,7 @@ import {
   Table as TableIcon,
   Info,
 } from 'lucide-react';
+import { readPersistedFilters, savePersistedFilters } from '../lib/filterPersistence';
 
 type DivisionStat = {
   id: number;
@@ -68,8 +69,13 @@ export default function Dashboard({
   lastUpdated,
   entryPoints = [],
 }: Props) {
-  const [selectedYear, setSelectedYear] = useState(filters.year || '2026');
-  const [selectedSemester, setSelectedSemester] = useState(filters.semester || '2');
+  const pageKey = 'dashboard';
+  const persisted = readPersistedFilters(pageKey, user, {
+    year: filters.year || '',
+    semester: filters.semester || '',
+  });
+  const [selectedYear, setSelectedYear] = useState(persisted.year);
+  const [selectedSemester, setSelectedSemester] = useState(persisted.semester);
   const [isPending, startTransition] = useTransition();
   const [activeChartTab, setActiveChartTab] = useState<'chart' | 'table'>('chart');
   const [hoveredDivision, setHoveredDivision] = useState<DivisionStat | null>(null);
@@ -77,6 +83,7 @@ export default function Dashboard({
   const handleFilterChange = (newYear: string, newSemester: string) => {
     setSelectedYear(newYear);
     setSelectedSemester(newSemester);
+    savePersistedFilters(pageKey, user, { year: newYear, semester: newSemester });
     startTransition(() => {
       router.get(
         '/dashboard',
@@ -89,6 +96,10 @@ export default function Dashboard({
       );
     });
   };
+
+  useEffect(() => {
+    savePersistedFilters(pageKey, user, { year: selectedYear, semester: selectedSemester });
+  }, [pageKey, user, selectedYear, selectedSemester]);
 
   const kpiCards = [
     {
@@ -527,20 +538,20 @@ export default function Dashboard({
                     </div>
                   </div>
 
-                  {/* X-AXIS LABELS (ANGLED FOR CLARITY) */}
+                  {/* X-AXIS LABELS */}
                   <div className="grid grid-cols-[50px_1fr] gap-2 pt-2">
                     <div />
-                    <div className="flex justify-around px-2 text-muted-foreground text-[10px]">
+                    <div className="flex justify-around items-start gap-2 px-2 text-muted-foreground text-[10px]">
                       {divisionStats.map((div) => {
                         const isHovered = hoveredDivision?.id === div.id;
                         return (
                           <div
                             key={div.id}
-                            className="flex-1 text-center truncate px-0.5"
+                            className="flex-1 min-w-0 px-0.5 text-center"
                             title={div.name}
                           >
                             <div
-                              className={`transform -rotate-25 origin-top-left translate-y-1 sm:translate-y-2 whitespace-nowrap text-[10px] max-w-[95px] truncate transition-colors ${
+                              className={`mx-auto max-w-[120px] whitespace-normal break-words leading-tight transition-colors ${
                                 isHovered ? 'font-bold text-foreground' : 'font-medium hover:text-foreground'
                               }`}
                             >

@@ -3,6 +3,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../Layouts/AppLayout';
 import FormattedText, { formatTextValue } from '../../Components/FormattedText';
 import AutoResizingTextarea, { adjustTextareaHeight } from '../../Components/AutoResizingTextarea';
+import { hasPersistedFilters, readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 
 import {
   Plus,
@@ -122,25 +123,47 @@ export default function HarmonizedIpc({
   navigation,
 }: Props) {
   // Filter Form State
-  const filterForm = useForm({
+  const pageKey = 'harmonized-ipc';
+  const persisted = readPersistedFilters(pageKey, user, {
     search: filters.search || '',
-    year: filters.year || String(new Date().getFullYear()),
+    year: filters.year || '',
     category: filters.category || '',
     semester: filters.semester || '',
     position: filters.position || '',
     perPage: String(filters.perPage || 10),
   });
+  const filterForm = useForm({
+    search: persisted.search,
+    year: persisted.year,
+    category: persisted.category,
+    semester: persisted.semester,
+    position: persisted.position,
+    perPage: persisted.perPage,
+  });
+  const restoredFiltersRef = useRef(false);
 
   useEffect(() => {
-    filterForm.setData({
+    filterForm.setData(readPersistedFilters(pageKey, user, {
       search: filters.search || '',
-      year: filters.year || String(new Date().getFullYear()),
+      year: filters.year || '',
       category: filters.category || '',
       semester: filters.semester || '',
       position: filters.position || '',
       perPage: String(filters.perPage || 10),
-    });
-  }, [filters.year, filters.category, filters.semester, filters.position, filters.search, filters.perPage]);
+    }));
+  }, [filters.year, filters.category, filters.semester, filters.position, filters.search, filters.perPage, pageKey, user]);
+
+  useEffect(() => {
+    if (restoredFiltersRef.current || !hasPersistedFilters(pageKey, user)) return;
+    restoredFiltersRef.current = true;
+    const serverFilters = {
+      search: filters.search || '', year: filters.year || '', category: filters.category || '', semester: filters.semester || '',
+      position: filters.position || '', perPage: String(filters.perPage || 10),
+    };
+    if (JSON.stringify(persisted) !== JSON.stringify(serverFilters)) {
+      router.post('/rpmo-management/harmonized-ipc/filter', { ...persisted, page: 1 }, { replace: true, preserveScroll: true });
+    }
+  }, []);
 
   // Inline Editing Group State & Pending Sub-targets
   const [editingIndicatorId, setEditingIndicatorId] = useState<number | null>(null);
@@ -245,6 +268,7 @@ export default function HarmonizedIpc({
       page: 1,
       ...overrides,
     };
+    savePersistedFilters(pageKey, user, payload);
     router.post('/rpmo-management/harmonized-ipc/filter', payload, {
       replace: true,
       preserveScroll: true,
@@ -286,19 +310,21 @@ export default function HarmonizedIpc({
 
   const resetFilters = () => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    filterForm.setData({
+    const resetValues = {
       search: '',
-      year: String(new Date().getFullYear()),
+      year: filters.year || '',
       category: '',
       semester: '',
       position: '',
       perPage: '10',
-    });
+    };
+    filterForm.setData(resetValues);
+    savePersistedFilters(pageKey, user, resetValues);
     router.post(
       '/rpmo-management/harmonized-ipc/filter',
       {
         search: '',
-        year: String(new Date().getFullYear()),
+        year: resetValues.year,
         category: '',
         semester: '',
         position: '',

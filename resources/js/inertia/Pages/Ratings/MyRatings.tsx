@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Eye, Trash2, RotateCcw, Search, ShieldCheck, Clock, Edit3, Flag, AlertTriangle, X } from 'lucide-react';
 import AppLayout from '../../Layouts/AppLayout';
 import UserAvatar from '../../Components/UserAvatar';
+import { readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 
 type Rating = {
   id: number;
@@ -56,11 +57,18 @@ export default function MyRatings({
   ratings,
   navigation,
 }: Props) {
-  const form = useForm({
+  const pageKey = 'ipcrf-myratings';
+  const persisted = readPersistedFilters(pageKey, user, {
     search: filters.search || '',
     year: filters.year || '',
     semester: filters.semester || '',
     perPage: String(filters.perPage || 10),
+  });
+  const form = useForm({
+    search: persisted.search,
+    year: persisted.year,
+    semester: persisted.semester,
+    perPage: persisted.perPage,
   });
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -75,10 +83,12 @@ export default function MyRatings({
       replace: true,
       preserveScroll: true,
     });
+    savePersistedFilters(pageKey, user, data);
   };
 
   const handleSearchChange = (val: string) => {
     form.setData('search', val);
+    savePersistedFilters(pageKey, user, { ...form.data, search: val });
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
       applyFilters({ search: val, page: 1 });
@@ -87,16 +97,19 @@ export default function MyRatings({
 
   const handleYearChange = (val: string) => {
     form.setData('year', val);
+    savePersistedFilters(pageKey, user, { ...form.data, year: val });
     applyFilters({ year: val, page: 1 });
   };
 
   const handleSemesterChange = (val: string) => {
     form.setData('semester', val);
+    savePersistedFilters(pageKey, user, { ...form.data, semester: val });
     applyFilters({ semester: val, page: 1 });
   };
 
   const handlePerPageChange = (val: string) => {
     form.setData('perPage', val);
+    savePersistedFilters(pageKey, user, { ...form.data, perPage: val });
     applyFilters({ perPage: val, page: 1 });
   };
 
@@ -109,6 +122,7 @@ export default function MyRatings({
       perPage: '10',
     });
     router.post('/ipcrf/myratings', { search: '', year: '', semester: '', perPage: '10', page: 1 }, { replace: true, preserveState: true });
+    savePersistedFilters(pageKey, user, { search: '', year: '', semester: '', perPage: '10' });
   };
 
   const confirmDelete = (id: number) => {

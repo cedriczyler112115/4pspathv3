@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../Layouts/AppLayout';
 import UserAvatar from '../Components/UserAvatar';
+import { readPersistedFilters, savePersistedFilters } from '../lib/filterPersistence';
 import {
   ShieldCheck,
   Search,
@@ -80,11 +81,12 @@ export default function Verification({
   perPageOptions,
   navigation,
 }: Props) {
+  const pageKey = 'verification';
+  const persisted = readPersistedFilters(pageKey, user, {
+    search: filters.search || '', year: filters.year || '', semester: filters.semester || '', perPage: String(filters.perPage || 10),
+  });
   const filterForm = useForm({
-    search: filters.search || '',
-    year: filters.year || '',
-    semester: filters.semester || '',
-    perPage: String(filters.perPage || 10),
+    ...persisted,
   });
 
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -100,6 +102,7 @@ export default function Verification({
   const submitFilters = (overrides?: Partial<typeof filterForm.data> & { page?: number }) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
+    savePersistedFilters(pageKey, user, data);
     router.post('/verification', data, {
       preserveState: true,
       replace: true,
@@ -115,6 +118,7 @@ export default function Verification({
       semester: '',
       perPage: '10',
     });
+    savePersistedFilters(pageKey, user, { search: '', year: '', semester: '', perPage: '10' });
     router.post('/verification', { search: '', year: '', semester: '', perPage: '10', page: 1 }, { replace: true, preserveState: true });
   };
 

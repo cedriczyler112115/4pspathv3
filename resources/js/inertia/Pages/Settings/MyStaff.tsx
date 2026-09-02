@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../Layouts/AppLayout';
+import { readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 import UserAvatar from '../../Components/UserAvatar';
 import {
   Users,
@@ -67,10 +68,12 @@ export default function MyStaff({
   perPageOptions,
   navigation,
 }: Props) {
+  const pageKey = 'settings-my-staff';
+  const persisted = readPersistedFilters(pageKey, user, {
+    search: filters.search || '', status: filters.status || '', perPage: String(filters.perPage || 10),
+  });
   const filterForm = useForm({
-    search: filters.search || '',
-    status: filters.status || '',
-    perPage: String(filters.perPage || 10),
+    ...persisted,
   });
 
   const [viewingStaff, setViewingStaff] = useState<StaffRow | null>(null);
@@ -87,6 +90,7 @@ export default function MyStaff({
   const submitFilters = (overrides?: Partial<typeof filterForm.data> & { page?: number }) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
+    savePersistedFilters(pageKey, user, data);
     router.post('/settings/mystaff', data, {
       preserveState: true,
       replace: true,
@@ -101,6 +105,7 @@ export default function MyStaff({
       status: '',
       perPage: '10',
     });
+    savePersistedFilters(pageKey, user, { search: '', status: '', perPage: '10' });
     router.post('/settings/mystaff', { search: '', status: '', perPage: '10', page: 1 }, { replace: true, preserveState: true });
   };
 

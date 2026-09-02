@@ -2,6 +2,7 @@ import { Head, useForm } from '@inertiajs/react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import AuthLayout from '../../Layouts/AuthLayout';
+import { clearPersistedFilters } from '../../lib/filterPersistence';
 
 type LoginProps = {
   appName?: string;
@@ -15,8 +16,7 @@ export default function Login({ appName, canResetPassword, status }: LoginProps)
   useEffect(() => {
     try {
       if (typeof window !== 'undefined') {
-        localStorage.clear();
-        sessionStorage.clear();
+        clearPersistedFilters();
       }
     } catch (e) {}
   }, []);

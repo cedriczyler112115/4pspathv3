@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
+import { readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 import { Pencil, Trash2, Plus, RotateCcw, Search, ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 type PositionRow = {
@@ -36,11 +37,12 @@ export default function HarmonizedStaff({
   perPageOptions,
   navigation,
 }: Props) {
+  const pageKey = 'libraries-harmonized-staff';
   // Filter Form
-  const filterForm = useForm({
+  const filterForm = useForm(readPersistedFilters(pageKey, user, {
     search: filters.search,
     perPage: String(filters.perPage),
-  });
+  }));
 
   // Modal State
   const [showModal, setShowModal] = useState(false);
@@ -67,6 +69,7 @@ export default function HarmonizedStaff({
   const submitFilters = (overrides = {}) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
+    savePersistedFilters(pageKey, user, data);
     router.post('/libraries/harmonized-staff', data, {
       preserveState: true,
       replace: true,
@@ -76,6 +79,7 @@ export default function HarmonizedStaff({
   const resetFilters = () => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData({ search: '', perPage: '10' });
+    savePersistedFilters(pageKey, user, { search: '', perPage: '10' });
     router.post('/libraries/harmonized-staff', { search: '', perPage: '10', page: 1 }, {
       replace: true,
       preserveState: true,

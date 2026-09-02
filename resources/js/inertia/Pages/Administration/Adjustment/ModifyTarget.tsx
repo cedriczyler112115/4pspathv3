@@ -3,6 +3,7 @@ import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '../../../Layouts/AppLayout';
 import AutoResizingTextarea from '../../../Components/AutoResizingTextarea';
 import { toast } from '../../../Components/ToastContainer';
+import { readPersistedFilters, savePersistedFilters } from '../../../lib/filterPersistence';
 import {
   Search,
   Loader2,
@@ -58,10 +59,11 @@ export default function ModifyTarget({
   semesters,
   navigation,
 }: Props) {
+  const pageKey = 'administration-modify-target';
   // Filter form state (only Target ID)
-  const filterForm = useForm({
+  const filterForm = useForm(readPersistedFilters(pageKey, user, {
     target_id: filters.target_id || '',
-  });
+  }));
 
   // Local editing row states keyed by item_id
   const [rowEdits, setRowEdits] = useState<
@@ -208,6 +210,7 @@ export default function ModifyTarget({
 
   const handleTargetIdChange = (val: string) => {
     filterForm.setData('target_id', val);
+    savePersistedFilters(pageKey, user, { target_id: val });
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
       router.post(
@@ -221,6 +224,7 @@ export default function ModifyTarget({
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    savePersistedFilters(pageKey, user, { target_id: filterForm.data.target_id.trim() });
     router.post(
       '/administration/adjustment/modify-target',
       { target_id: filterForm.data.target_id.trim() },
@@ -231,6 +235,7 @@ export default function ModifyTarget({
   const handleClear = () => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     filterForm.setData('target_id', '');
+    savePersistedFilters(pageKey, user, { target_id: '' });
     router.post(
       '/administration/adjustment/modify-target',
       { target_id: '' },

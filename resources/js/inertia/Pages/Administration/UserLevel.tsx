@@ -1,6 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
+import { readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 import { Shield, Plus, RotateCcw, Search, ChevronLeft, ChevronRight, X, Pencil, Trash2, SlidersHorizontal, CheckSquare, Square } from 'lucide-react';
 
 type LevelRow = {
@@ -46,9 +47,10 @@ export default function UserLevel({
   menuAccess,
   navigation,
 }: Props) {
+  const pageKey = 'administration-user-levels';
+  const persisted = readPersistedFilters(pageKey, user, { search: filters.search || '', perPage: String(filters.perPage || 10) });
   const filterForm = useForm({
-    search: filters.search || '',
-    perPage: String(filters.perPage || 10),
+    ...persisted,
   });
 
   const [showLevelModal, setShowLevelModal] = useState(false);
@@ -79,6 +81,7 @@ export default function UserLevel({
   const submitFilters = (overrides?: Partial<typeof filterForm.data> & { page?: number }) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
+    savePersistedFilters(pageKey, user, data);
     router.post('/administration/user-level', data, {
       preserveState: true,
       replace: true,
@@ -91,6 +94,7 @@ export default function UserLevel({
       search: '',
       perPage: '10',
     });
+    savePersistedFilters(pageKey, user, { search: '', perPage: '10' });
     router.post('/administration/user-level', { search: '', perPage: '10', page: 1 }, { replace: true, preserveState: true });
   };
 

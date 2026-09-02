@@ -1,7 +1,8 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AppLayout from '../../Layouts/AppLayout';
 import UserAvatar from '../../Components/UserAvatar';
+import { hasPersistedFilters, readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 import { Pencil, Trash2, Users as UsersIcon, Search, RotateCcw, X, Camera } from 'lucide-react';
 
 type UserRow = {
@@ -75,14 +76,29 @@ export default function Users({
   perPageOptions,
   navigation,
 }: Props) {
-  const filterForm = useForm({
-    search: filters.search || '',
-    division: filters.division || '',
-    section: filters.section || '',
-    user_level_id: filters.user_level_id || '',
-    status: filters.status || '',
-    perPage: String(filters.perPage || 10),
+  const pageKey = 'administration-users';
+  const persisted = readPersistedFilters(pageKey, user, {
+    search: filters.search || '', division: filters.division || '', section: filters.section || '',
+    user_level_id: filters.user_level_id || '', status: filters.status || '', perPage: String(filters.perPage || 10),
   });
+  const filterForm = useForm({
+    ...persisted,
+  });
+  const restoredFiltersRef = useRef(false);
+
+  useEffect(() => {
+    if (restoredFiltersRef.current || !hasPersistedFilters(pageKey, user)) return;
+    restoredFiltersRef.current = true;
+    const serverFilters = {
+      search: filters.search || '', division: filters.division || '', section: filters.section || '',
+      user_level_id: filters.user_level_id || '', status: filters.status || '', perPage: String(filters.perPage || 10),
+    };
+    if (JSON.stringify(persisted) !== JSON.stringify(serverFilters)) {
+      router.post('/administration/users', { ...persisted, page: 1 }, {
+        preserveState: true, replace: true, preserveScroll: true,
+      });
+    }
+  }, []);
 
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -169,6 +185,7 @@ export default function Users({
   const submitFilters = (overrides?: Partial<typeof filterForm.data> & { page?: number }) => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     const data = { ...filterForm.data, ...overrides };
+    savePersistedFilters(pageKey, user, data);
     router.post('/administration/users', data, {
       preserveState: true,
       replace: true,
@@ -186,6 +203,7 @@ export default function Users({
       status: '',
       perPage: '10',
     });
+    savePersistedFilters(pageKey, user, { search: '', division: '', section: '', user_level_id: '', status: '', perPage: '10' });
     router.post(
       '/administration/users',
       {

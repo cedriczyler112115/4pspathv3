@@ -51,6 +51,7 @@ import FormattedText, { formatTextValue } from '../../Components/FormattedText';
 import AutoResizingTextarea, { adjustTextareaHeight } from '../../Components/AutoResizingTextarea';
 import RichTextEditor from '../../Components/RichTextEditor';
 import { toast } from '../../Components/ToastContainer';
+import { readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 
 type ItemAttachment = {
   name: string;
@@ -237,6 +238,10 @@ export default function PlRating({
   historyItemIds = [],
   navigation,
 }: Props) {
+  const filterPageKey = `rpmo-pl-rating-${rating.id}`;
+  const persistedPerformanceFilters = readPersistedFilters(filterPageKey, user, {
+    search: '', category: '', targetStatus: '', perPage: '10', deletedSearch: '',
+  });
   const [activeTab, setActiveTab] = useState<'performance' | 'deleted' | 'checkpoint' | 'feedback' | 'documentation'>('performance');
   const [indicatorsList, setIndicatorsList] = useState<IndicatorGroup[]>(initialIndicators || []);
 
@@ -259,14 +264,18 @@ export default function PlRating({
   const [itemAttachmentCounts, setItemAttachmentCounts] = useState<Record<number, number>>({});
 
   // Filters state for performance tab
-  const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [targetStatusFilter, setTargetStatusFilter] = useState('');
-  const [perPage, setPerPage] = useState('10');
+  const [search, setSearch] = useState(persistedPerformanceFilters.search);
+  const [categoryFilter, setCategoryFilter] = useState(persistedPerformanceFilters.category);
+  const [targetStatusFilter, setTargetStatusFilter] = useState(persistedPerformanceFilters.targetStatus);
+  const [perPage, setPerPage] = useState(persistedPerformanceFilters.perPage);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Search state for deleted targets
-  const [deletedSearch, setDeletedSearch] = useState('');
+  const [deletedSearch, setDeletedSearch] = useState(persistedPerformanceFilters.deletedSearch);
+
+  useEffect(() => {
+    savePersistedFilters(filterPageKey, user, { search, category: categoryFilter, targetStatus: targetStatusFilter, perPage, deletedSearch });
+  }, [filterPageKey, user, search, categoryFilter, targetStatusFilter, perPage, deletedSearch]);
 
   // Context Menu State & Sub-Menu Flyouts
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);

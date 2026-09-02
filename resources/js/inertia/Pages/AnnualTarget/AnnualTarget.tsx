@@ -4,6 +4,7 @@ import AppLayout from '../../Layouts/AppLayout';
 import UserAvatar from '../../Components/UserAvatar';
 import FormattedText, { formatTextValue } from '../../Components/FormattedText';
 import AutoResizingTextarea, { adjustTextareaHeight } from '../../Components/AutoResizingTextarea';
+import { hasPersistedFilters, readPersistedFilters, savePersistedFilters } from '../../lib/filterPersistence';
 
 import {
   Plus,
@@ -142,25 +143,47 @@ export default function AnnualTarget({
   navigation,
 }: Props) {
   // Filter Form State
-  const filterForm = useForm({
+  const pageKey = 'annualtarget';
+  const persisted = readPersistedFilters(pageKey, user, {
     search: filters.search || '',
-    year: filters.year || String(new Date().getFullYear()),
+    year: filters.year || '',
     category: filters.category || '',
     semester: filters.semester || '',
     perPage: String(filters.perPage || 10),
     duplicates: Boolean(filters.showOnlyDuplicates),
   });
+  const filterForm = useForm({
+    search: persisted.search,
+    year: persisted.year,
+    category: persisted.category,
+    semester: persisted.semester,
+    perPage: persisted.perPage,
+    duplicates: persisted.duplicates,
+  });
+  const restoredFiltersRef = useRef(false);
 
   useEffect(() => {
-    filterForm.setData({
+    filterForm.setData(readPersistedFilters(pageKey, user, {
       search: filters.search || '',
-      year: filters.year || String(new Date().getFullYear()),
+      year: filters.year || '',
       category: filters.category || '',
       semester: filters.semester || '',
       perPage: String(filters.perPage || 10),
       duplicates: Boolean(filters.showOnlyDuplicates),
-    });
-  }, [filters.year, filters.category, filters.semester, filters.search, filters.perPage, filters.showOnlyDuplicates]);
+    }));
+  }, [filters.year, filters.category, filters.semester, filters.search, filters.perPage, filters.showOnlyDuplicates, pageKey, user]);
+
+  useEffect(() => {
+    if (restoredFiltersRef.current || !hasPersistedFilters(pageKey, user)) return;
+    restoredFiltersRef.current = true;
+    const serverFilters = {
+      search: filters.search || '', year: filters.year || '', category: filters.category || '',
+      semester: filters.semester || '', perPage: String(filters.perPage || 10), duplicates: Boolean(filters.showOnlyDuplicates),
+    };
+    if (JSON.stringify(persisted) !== JSON.stringify(serverFilters)) {
+      router.post('/ipcrf/annualtarget/filter', { ...persisted, page: 1 }, { replace: true, preserveScroll: true });
+    }
+  }, []);
 
   // Inline Editing Group State & Pending Sub-targets
   const [editingIndicatorId, setEditingIndicatorId] = useState<number | null>(null);
@@ -366,6 +389,7 @@ export default function AnnualTarget({
       page: 1,
       ...overrides,
     };
+    savePersistedFilters(pageKey, user, payload);
     router.post('/ipcrf/annualtarget/filter', payload, {
       replace: true,
       preserveScroll: true,
@@ -402,19 +426,21 @@ export default function AnnualTarget({
 
   const resetFilters = () => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    filterForm.setData({
+    const resetValues = {
       search: '',
-      year: String(new Date().getFullYear()),
+      year: filters.year || '',
       category: '',
       semester: '',
       perPage: '10',
       duplicates: false,
-    });
+    };
+    filterForm.setData(resetValues);
+    savePersistedFilters(pageKey, user, resetValues);
     router.post(
       '/ipcrf/annualtarget/filter',
       {
         search: '',
-        year: String(new Date().getFullYear()),
+        year: resetValues.year,
         category: '',
         semester: '',
         perPage: '10',

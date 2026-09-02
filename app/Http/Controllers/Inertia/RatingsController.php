@@ -2318,15 +2318,31 @@ class RatingsController extends Controller
         $userId = Auth::id();
         abort_if($userId === null, 403);
 
+        $sem = DB::table('ipc_semester as sem')
+            ->leftJoin('users as ratee', 'ratee.id', '=', 'sem.user_id')
+            ->where('sem.id', $ratingId)
+            ->select([
+                'sem.user_id',
+                'ratee.supervisor_id',
+            ])
+            ->first();
+
+        if ($sem === null) {
+            return response()->json([], 404);
+        }
+
         $owned = DB::table('ipc_sem_targets_indicator_itemlist as itl')
             ->join('ipc_sem_targets_indicator as sti', 'sti.id', '=', 'itl.sem_target_id')
             ->join('ipc_semester as sem', 'sem.id', '=', 'sti.semester_id')
             ->where('itl.id', $itemId)
             ->where('sem.id', $ratingId)
-            ->where('sem.user_id', $userId)
             ->exists();
 
-        if (! $owned) {
+        $isRatee = (int) $sem->user_id === (int) $userId;
+        $isSupervisor = (int) ($sem->supervisor_id ?? 0) === (int) $userId;
+        $isAdmin = auth()->user()?->isAdministrator() ?? false;
+
+        if (! $owned || (! $isRatee && ! $isSupervisor && ! $isAdmin)) {
             return response()->json([], 403);
         }
 
